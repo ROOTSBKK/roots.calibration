@@ -2627,61 +2627,114 @@ async function renderPersonList() {
 }
 
 async function renderPersonDetail(name, branch) {
-  document.getElementById('person-detail-title').style.display = 'block';
-  document.getElementById('person-detail-title').textContent = `ประวัติ: ${name} (${branch})`;
   const el = document.getElementById('person-detail');
   el.innerHTML = '<div class="empty">กำลังโหลด...</div>';
-  el.scrollIntoView({behavior:'smooth',block:'start'});
 
   const entries = await loadEntries();
-  const mine = entries.filter(e => e.taster===name && e.branch===branch).sort((a,b)=>b.id.localeCompare(a.id));
-
-  // Shot-level comparison
+  const mine = entries.filter(e => e.taster===name);
   const byShot = {};
   entries.forEach(e => { if(e.shotId){ if(!byShot[e.shotId]) byShot[e.shotId]=[]; byShot[e.shotId].push(e); }});
-  const sharedMine = mine.filter(e => e.shotId && byShot[e.shotId] && byShot[e.shotId].length>1);
 
-  let devHtml = '<div class="empty" style="padding:10px;font-size:12px">ยังไม่มีช็อตร่วมกัน</div>';
-  if (sharedMine.length) {
-    let rows = sharedMine.map(e => {
-      const peers = byShot[e.shotId].filter(p=>p.taster!==name);
-      if (!peers.length) return '';
-      let diffs = [];
-      SCORE_ATTRS.forEach(attr => {
-        const myVal = e.intensity[attr];
-        const peerAvg = peers.reduce((s,p)=>s+p.intensity[attr],0)/peers.length;
-        const diff = myVal - peerAvg;
-        if (Math.abs(diff) >= 1) diffs.push(attr+' '+( diff>0?'▲':'▽'));
-      });
-      const diffCount = diffs.length;
-      const dc = diffCount===0?'var(--green)':diffCount===1?'var(--amber)':'var(--red)';
-      return `<tr>
-        <td><span class="pill pill-blue">${e.shotId}</span></td>
-        <td>${e.date}</td>
-        <td style="color:${dc};font-weight:600">${diffCount}</td>
-        <td style="font-size:11px;color:var(--text2)">${diffs.join(', ')||'—'}</td>
-        <td style="font-size:11px;color:var(--text3)">${peers.map(p=>p.taster).join(', ')}</td>
-      </tr>`;
-    }).filter(Boolean);
-    if (rows.length) {
-      devHtml = `<table><thead><tr><th>ช็อต</th><th>วันที่</th><th>ต่างกัน</th><th>หัวข้อที่ต่าง</th><th>เทียบกับ</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
-    }
+  const sessions = mine.map(myE => {
+    const refs = (byShot[myE.shotId]||[]).filter(e => e.isRefCal || e.taster==='Boss');
+    const team = byShot[myE.shotId]||[];
+    const score = calcCalibrationScore(myE, refs, team);
+    return {entry:myE, score};
+  }).filter(s=>s.score&&s.score.total!==null).sort((a,b)=>(a.entry.date||'').localeCompare(b.entry.date||''));
+
+  if (!sessions.length) {
+    el.innerHTML = `<div class="card"><div class="card-title">${name}</div><div class="empty">ยังไม่มีข้อมูลเพียงพอ</div></div>`;
+    return;
   }
 
-  // Top tags
-  const tagCount = {};
-  mine.forEach(e=>{ ATTRS.forEach(a=>{ (e.tags[a]||[]).forEach(t=>{ tagCount[t]=(tagCount[t]||0)+1; }); }); });
-  const topTags = Object.entries(tagCount).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const avgScore = Math.round(sessions.reduce((s,x)=>s+x.score.total,0)/sessions.length);
+  const scoreColor = avgScore>=85?'var(--green)':avgScore>=65?'var(--amber)':'var(--red)';
+  const levelText = avgScore>=85?'Advanced':avgScore>=65?'Intermediate':'Beginner';
+  const levelClass = avgScore>=85?'pill-green':avgScore>=65?'pill-amber':'pill-red';
+
+  const trendBars = sessions.map(s => {
+    const h = Math.max(8, s.score.total);
+    const col = s.score.total>=85?'var(--green)':s.score.total>=65?'var(--amber)':'var(--red)';
+    return `<div title="${s.score.total}" style="flex:1;min-width:6px;background:${col};border-radius:2px 2px 0 0;height:${h}%"></div>`;
+  }).join('');
+
+  const ATTRS_ALL = ['acidity','sweetness','bitterness','mouthfeel'];
+  const ATTR_LABELS = {acidity:'Acidity',sweetness:'Sweetness',bitterness:'Bitterness',mouthfeel:'Mouthfeel',aftertaste:'Aftertaste'};
+
+  const attrPct = {};
+  ATTRS_ALL.forEach(attr => {
+    let correct=0, total=0;
+    sessions.forEach(s => {
+      const refs = (byShot[s.entry.shotId]||[]).filter(e=>e.isRefCal||e.taster==='Boss');
+      if (!refs.length) return;
+      const refAvg = refs.reduce((sum,e)=>sum+(e.intensity?.[attr]||3),0)/refs.length;
+      const d = Math.abs((s.entry.intensity?.[attr]||3) - refAvg);
+      correct += d===0?1:d<=1?0.5:0; total++;
+    });
+    attrPct[attr] = total>0?Math.round(correct/total*100):null;
+  });
+
+  let aftC=0, aftT=0;
+  sessions.forEach(s => {
+    const refs = (byShot[s.entry.shotId]||[]).filter(e=>e.isRefCal||e.taster==='Boss');
+    if (!refs.length) return;
+    const refAvg = refs.reduce((sum,e)=>sum+(e.aftertasteLength||3),0)/refs.length;
+    const d = Math.abs((s.entry.aftertasteLength||3)-refAvg);
+    aftC += d===0?1:d<=1?0.5:0; aftT++;
+  });
+  attrPct['aftertaste'] = aftT>0?Math.round(aftC/aftT*100):null;
+
+  const attrBars = [...ATTRS_ALL,'aftertaste'].map(attr => {
+    const pct = attrPct[attr];
+    if (pct===null) return '';
+    const col = pct>=80?'var(--green)':pct>=60?'var(--amber)':'var(--red)';
+    const lbl = pct>=80?'ดีมาก':pct>=60?'พัฒนาได้':'อ่อน';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--bg3)">
+      <span style="min-width:80px;font-size:12px;color:var(--text3)">${ATTR_LABELS[attr]}</span>
+      <div style="flex:1;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:${col};border-radius:3px"></div>
+      </div>
+      <span style="min-width:32px;text-align:right;font-size:12px;font-weight:600;color:${col}">${pct}%</span>
+      <span style="font-size:11px;color:${col};min-width:50px">${lbl}</span>
+    </div>`;
+  }).join('');
+
+  const historyRows = sessions.slice().reverse().map(s => {
+    const col = s.score.total>=85?'var(--green)':s.score.total>=65?'var(--amber)':'var(--red)';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--bg3);font-size:12px">
+      <span style="color:var(--text3);min-width:90px">${s.entry.shotId||'—'}</span>
+      <span style="color:var(--text2);flex:1">${s.entry.coffee||''}</span>
+      <span style="font-size:13px;font-weight:600;color:${col}">${s.score.total}</span>
+      <span style="font-size:10px;color:var(--text3)">${s.score.labelRef}·${s.score.labelTeam}</span>
+    </div>`;
+  }).join('');
 
   el.innerHTML = `
-  ${topTags.length?`<div class="card"><div class="card-title">แท็กที่ใช้บ่อย</div><div class="chips">${topTags.map(([t,c])=>`<span class="chip on neu" style="cursor:default">${t} (${c})</span>`).join('')}</div></div>`:''}
-  <div class="section-title">เทียบกับกลุ่ม รายช็อต</div>
-  <div class="card">${devHtml}</div>
-  <div class="section-title">ประวัติการชิมทั้งหมด</div>
-  ${mine.map(renderEntry).join('') || '<div class="empty">ยังไม่มีข้อมูล</div>'}`;
+  <div class="card" style="margin-bottom:10px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <div style="width:44px;height:44px;border-radius:50%;background:var(--bbg);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--blue)">${name.slice(0,2).toUpperCase()}</div>
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:600">${name}</div>
+        <div style="font-size:12px;color:var(--text3)">${branch} · ${sessions.length} sessions</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:30px;font-weight:700;color:${scoreColor}">${avgScore}</div>
+        <span class="pill ${levelClass}" style="font-size:11px">${levelText}</span>
+      </div>
+    </div>
+    <div style="height:50px;display:flex;align-items:flex-end;gap:3px;margin-bottom:4px">${trendBars}</div>
+    <div style="font-size:10px;color:var(--text3)">trend ${sessions.length} sessions →</div>
+  </div>
+  <div class="card" style="margin-bottom:10px">
+    <div class="card-title">ความแม่นยำ per attribute</div>
+    ${attrBars}
+  </div>
+  <div class="card">
+    <div class="card-title">ประวัติ sessions</div>
+    ${historyRows}
+  </div>`;
 }
 
-// Render entry card
 function renderEntry(e) {
   const isArea = AREA_STAFF.includes(e.taster) && e.branch !== 'Area';
   return `<div class="entry">
@@ -2727,216 +2780,155 @@ async function renderTeam() {
   const branch = selectedTeamBranch;
   const staff = STAFF_DATA[branch] || [];
 
-  // Build shot groups
   const byShot = {};
   entries.forEach(e => { if(e.shotId){ if(!byShot[e.shotId]) byShot[e.shotId]=[]; byShot[e.shotId].push(e); }});
   const multiShots = Object.fromEntries(Object.entries(byShot).filter(([,a])=>a.length>1));
 
-  const ATTR_LABELS = {acidity:'Acidity',sweetness:'Sweetness',bitterness:'Bitterness',aftertaste:'Aftertaste',mouthfeel:'Weight'};
+  const ATTR_LABELS = {acidity:'Acidity',sweetness:'Sweetness',bitterness:'Bitterness',aftertaste:'Aftertaste',mouthfeel:'Mouthfeel'};
+  const AFT_LEN = ['','Short','Short-Med','Medium','Med-Long','Long'];
 
-  // Compute per-person stats
-  const rows = staff.map(name => {
-    const mine = entries.filter(e => e.taster===name && e.branch===branch);
-    const shared = mine.filter(e => e.shotId && multiShots[e.shotId]);
+  function statusIcon(diff) {
+    if (diff === 0) return '<span style="color:var(--green);font-weight:600">✓</span>';
+    if (diff === 0.5) return '<span style="color:var(--amber);font-weight:600">≈</span>';
+    return '<span style="color:var(--red);font-weight:600">✗</span>';
+  }
+  function aDiff(my, ref) {
+    const d = Math.abs(my - ref);
+    return d === 0 ? 0 : d <= 1 ? 0.5 : 1;
+  }
 
-    let level = null, levelClass = '', levelText = '-', avgDiff = null, calScore = null;
-    const attrDiffCount = {acidity:0,sweetness:0,bitterness:0,mouthfeel:0};
-    const attrTotal = {acidity:0,sweetness:0,bitterness:0,mouthfeel:0};
+  const shotIds = Object.keys(multiShots).sort().reverse();
 
-    if (shared.length > 0) {
-      // Compute calibration scores
-      const scores = shared.map(myE => {
-        const refEntries = multiShots[myE.shotId].filter(e => e.isRefCal || e.taster === 'Boss');
-        const teamEntries = multiShots[myE.shotId];
-        return calcCalibrationScore(myE, refEntries, teamEntries);
-      }).filter(s => s && s.total !== null);
+  if (!shotIds.length) {
+    el.innerHTML = '<div class="empty">ยังไม่มีข้อมูลช็อตร่วมในสาขานี้</div>';
+    return;
+  }
 
-      if (scores.length > 0) {
-        calScore = Math.round(scores.reduce((s,sc)=>s+sc.total,0)/scores.length);
-        level = calScore >= 85 ? 3 : calScore >= 65 ? 2 : 1;
-        levelClass = level===3?'pill-green':level===2?'pill-amber':'pill-red';
-        levelText = level===3?'Advanced':level===2?'Intermediate':'Beginner';
-      }
-
-      // Weak attrs
-      shared.forEach(myE => {
-        const peers = multiShots[myE.shotId].filter(e => e.taster !== name);
-        if (!peers.length) return;
-        SCORE_ATTRS.forEach(attr => {
-          const myVal = myE.intensity?.[attr]||3;
-          const peerAvg = peers.reduce((s,p)=>s+(p.intensity?.[attr]||3),0)/peers.length;
-          attrTotal[attr]++;
-          if (Math.abs(myVal - peerAvg) >= 1) attrDiffCount[attr]++;
-        });
-      });
+  // Summary per person
+  const personScores = {};
+  staff.forEach(name => {
+    const myEntries = entries.filter(e => e.taster===name);
+    const scores = myEntries.map(myE => {
+      const refs = (byShot[myE.shotId]||[]).filter(e => e.isRefCal || e.taster==='Boss');
+      const team = byShot[myE.shotId]||[];
+      return calcCalibrationScore(myE, refs, team);
+    }).filter(s=>s&&s.total!==null);
+    if (scores.length) {
+      personScores[name] = Math.round(scores.reduce((s,sc)=>s+sc.total,0)/scores.length);
     }
-
-    const weakAttrs = SCORE_ATTRS
-      .filter(a => attrTotal[a] > 0 && (attrDiffCount[a]/attrTotal[a]) >= 0.4)
-      .sort((a,b) => (attrDiffCount[b]/attrTotal[b]) - (attrDiffCount[a]/attrTotal[a]))
-      .map(a => ATTR_LABELS[a]);
-
-    const avgTB = mine.length ? (mine.reduce((s,e)=>s+e.tbScore,0)/mine.length).toFixed(1) : '-';
-    const avgTC = mine.length ? (mine.reduce((s,e)=>s+e.tcScore,0)/mine.length).toFixed(1) : '-';
-
-    return {name, mine:mine.length, shared:shared.length, level, levelClass, levelText, avgDiff, weakAttrs, avgTB, avgTC, calScore};
   });
 
-  // Group by level
-  const grp3 = rows.filter(r=>r.level===3).sort((a,b)=>b.calScore-a.calScore);
-  const grp2 = rows.filter(r=>r.level===2).sort((a,b)=>b.calScore-a.calScore);
-  const grp1 = rows.filter(r=>r.level===1).sort((a,b)=>b.calScore-a.calScore);
-  const grpNull = rows.filter(r=>!r.level);
+  let html = '';
 
-  // Summary pills
-  const withLevel = rows.filter(r=>r.level);
-  const lvl3 = grp3.length, lvl2 = grp2.length, lvl1 = grp1.length, noData = grpNull.length;
+  // Summary card
+  const summaryRows = Object.entries(personScores).sort((a,b)=>b[1]-a[1]).map(([name, avg]) => {
+    const col = avg>=85?'var(--green)':avg>=65?'var(--amber)':'var(--red)';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:0.5px solid var(--bg3)">
+      <div style="min-width:70px;font-size:13px">${name}</div>
+      <div style="flex:1;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden">
+        <div style="width:${avg}%;height:100%;background:${col};border-radius:3px"></div>
+      </div>
+      <div style="font-size:13px;font-weight:600;color:${col};min-width:28px;text-align:right">${avg}</div>
+    </div>`;
+  }).join('');
 
-  function personCard(r) {
-    const weakHtml = r.weakAttrs.length
-      ? r.weakAttrs.map(a=>`<span style="font-size:11px;font-weight:600;color:var(--red)">${a}</span>`).join(' ')
-      : `<span style="font-size:11px;color:var(--text3)">—</span>`;
-    const barColor = r.level===3?'var(--green)':r.level===2?'var(--amber)':'var(--red)';
-    const scoreColor = r.calScore>=85?'var(--green)':r.calScore>=65?'var(--amber)':'var(--red)';
-    return `<div onclick="showPersonFromTeam('${r.name}','${branch}')" style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--bg);border-radius:var(--r2);border-left:3px solid ${barColor};cursor:pointer;margin-bottom:6px">
-      <div style="font-size:22px;font-weight:800;color:${r.calScore!==null?scoreColor:'var(--text3)'};min-width:44px;text-align:center">${r.calScore!==null?r.calScore:'—'}</div>
-      <div style="flex:1">
-        <div style="font-size:14px;font-weight:600">${r.name}${r.name==='Boss'||AREA_STAFF.includes(r.name)?` <span style="font-size:10px;color:var(--blue);font-weight:500">★ Area</span>`:''}
-        </div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px">${r.weakAttrs.length?'อ่อน: '+r.weakAttrs.join(', '):'ไม่มีจุดอ่อนชัดเจน'}</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:11px;color:var(--text2)">TB ${r.avgTB} / TC ${r.avgTC}</div>
-        <div style="font-size:11px;color:var(--text3)">${r.shared} ช็อตร่วม</div>
-      </div>
+  if (summaryRows) {
+    html += `<div class="card" style="margin-bottom:12px">
+      <div class="card-title">สรุปคะแนนเฉลี่ยรายคน</div>
+      ${summaryRows}
     </div>`;
   }
 
-  function levelSection(title, color, pill, items) {
-    if (!items.length) return '';
-    return `<div class="section-title" style="color:${color}">${title}</div>
-    <div style="margin-bottom:8px">${items.map(r=>personCard(r)).join('')}</div>`;
-  }
+  // Per-shot breakdown
+  shotIds.forEach(shotId => {
+    const shotEntries = multiShots[shotId];
+    const refEntries = shotEntries.filter(e => e.isRefCal || e.taster === 'Boss');
+    if (!refEntries.length) return;
 
-  let html = `
-  <div class="card" style="margin-bottom:12px">
-    <div class="card-title">${branch} — ${staff.length} คน</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <span class="pill pill-green">✓ Advanced ${lvl3}</span>
-      <span class="pill pill-amber">◎ Intermediate ${lvl2}</span>
-      <span class="pill pill-red">✗ Beginner ${lvl1}</span>
-      <span class="pill" style="background:var(--bg2);color:var(--text3);border:1px solid var(--bg3)">— ไม่มีข้อมูล ${noData}</span>
-    </div>
-  </div>`;
+    const refAvgInt = attr => refEntries.reduce((s,e)=>s+(e.intensity?.[attr]||3),0)/refEntries.length;
+    const refAvgLen = () => refEntries.reduce((s,e)=>s+(e.aftertasteLength||3),0)/refEntries.length;
+    const refAvgTB = refEntries.reduce((s,e)=>s+e.tbScore,0)/refEntries.length;
+    const refAvgTC = refEntries.reduce((s,e)=>s+e.tcScore,0)/refEntries.length;
+    const refMajorTags = attr => {
+      const all = refEntries.flatMap(e=>e.tags?.[attr]||[]);
+      const freq = {}; all.forEach(t=>freq[t]=(freq[t]||0)+1);
+      return Object.keys(freq).filter(t=>freq[t]>=Math.ceil(refEntries.length*0.5));
+    };
+    const refMajorFlavor = () => {
+      const all = refEntries.flatMap(e=>e.flavorCategories||[]);
+      const freq = {}; all.forEach(t=>freq[t]=(freq[t]||0)+1);
+      return Object.keys(freq).filter(t=>freq[t]>=Math.ceil(refEntries.length*0.5));
+    };
 
-  html += levelSection('✓ Advanced — คะแนน 85–100', 'var(--green)', 'pill-green', grp3);
-  html += levelSection('◎ Intermediate — คะแนน 65–84', 'var(--amber)', 'pill-amber', grp2);
-  html += levelSection('✗ Beginner — คะแนน 0–64', 'var(--red)', 'pill-red', grp1);
+    const refNames = refEntries.map(e=>e.taster).join(' + ');
+    const firstEntry = shotEntries[0];
+    const tasters = shotEntries.filter(e => !refEntries.includes(e));
 
-  if (grpNull.length) {
-    html += `<div class="section-title" style="color:var(--text3)">ยังไม่มีข้อมูล</div><div style="margin-bottom:8px">`;
-    grpNull.forEach(r => {
-      html += `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--bg);border-radius:var(--r2);border-left:3px solid var(--bg3);margin-bottom:6px">
-        <div style="font-size:22px;font-weight:800;color:var(--text3);min-width:44px;text-align:center">—</div>
-        <div style="flex:1"><div style="font-size:14px;font-weight:600">${r.name}</div>
-        <div style="font-size:11px;color:var(--text3)">ยังไม่ได้ชิมช็อตร่วมกัน</div></div>
-      </div>`;
-    });
-    html += `</div>`;
-  }
+    const tasterCards = tasters.map(e => {
+      const score = calcCalibrationScore(e, refEntries, shotEntries);
+      const col = score?.total>=85?'var(--green)':score?.total>=65?'var(--amber)':'var(--red)';
+      const lvl = score?.total>=85?'Advanced':score?.total>=65?'Intermediate':'Beginner';
+      const lvlCls = score?.total>=85?'pill-green':score?.total>=65?'pill-amber':'pill-red';
 
-  // Weak attrs summary
-  const allWeak = {};
-  rows.forEach(r => { r.weakAttrs.forEach(a => { allWeak[a]=(allWeak[a]||0)+1; }); });
-  const sortedWeak = Object.entries(allWeak).sort((a,b)=>b[1]-a[1]);
-  if (sortedWeak.length) {
-    html += `<div class="card"><div class="card-title">จุดอ่อนที่พบบ่อยในสาขา</div><div style="display:flex;flex-direction:column;gap:8px">`;
-    sortedWeak.forEach(([attr, count]) => {
-      const pct = Math.round(count/staff.length*100);
-      html += `<div>
-        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px">
-          <span>${attr}</span><span style="color:var(--red);font-weight:600">${count} คน (${pct}%)</span>
+      const attrRows = SCORE_ATTRS.map(attr => {
+        const myVal = e.intensity?.[attr]||3;
+        const refVal = refAvgInt(attr);
+        const d = aDiff(myVal, refVal);
+        const myTags = (e.tags?.[attr]||[]).join(', ')||'—';
+        const refTags = refMajorTags(attr).join(', ')||'—';
+        return `<div style="display:flex;gap:6px;padding:3px 0;border-bottom:0.5px solid var(--bg3);font-size:11px">
+          <span style="min-width:72px;color:var(--text3)">${ATTR_LABELS[attr]}</span>
+          <span>${statusIcon(d)}</span>
+          <span style="flex:1;color:var(--text2)"><b>${INTLABELS[myVal-1]}</b> vs <b>${refVal.toFixed(1)}</b> · <span style="color:var(--text3)">${myTags}</span></span>
+        </div>`;
+      }).join('');
+
+      const lenD = aDiff(e.aftertasteLength||3, refAvgLen());
+      const flavorMatch = (e.flavorCategories||[]).some(f=>refMajorFlavor().includes(f));
+      const tbD = aDiff(e.tbScore, refAvgTB);
+      const tcD = aDiff(e.tcScore, refAvgTC);
+
+      return `<div style="border:0.5px solid var(--bg3);border-radius:var(--r2);margin-bottom:6px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2)">
+          <div style="font-size:20px;font-weight:700;color:${score?.total!==null?col:'var(--text3)'};min-width:36px;text-align:center">${score?.total!==null?score.total:'—'}</div>
+          <div style="flex:1;font-size:13px;font-weight:600">${e.taster}</div>
+          <span class="pill ${lvlCls}" style="font-size:10px">${lvl}</span>
         </div>
-        <div class="agree-bar"><div class="agree-fill" style="width:${pct}%;background:var(--red)"></div></div>
+        <div style="padding:6px 10px">
+          ${attrRows}
+          <div style="display:flex;gap:6px;padding:3px 0;border-bottom:0.5px solid var(--bg3);font-size:11px">
+            <span style="min-width:72px;color:var(--text3)">Aft. Length</span>
+            <span>${statusIcon(lenD)}</span>
+            <span style="color:var(--text2)"><b>${AFT_LEN[e.aftertasteLength||3]}</b> vs <b>${refAvgLen().toFixed(1)}</b></span>
+          </div>
+          <div style="display:flex;gap:6px;padding:3px 0;border-bottom:0.5px solid var(--bg3);font-size:11px">
+            <span style="min-width:72px;color:var(--text3)">Flavor</span>
+            <span>${flavorMatch?'<span style="color:var(--green)">✓</span>':'<span style="color:var(--text3)">—</span>'}</span>
+            <span style="color:var(--text2)">${(e.flavorCategories||[]).join(', ')||'—'} <span style="color:var(--text3)">vs ${refMajorFlavor().join(', ')||'—'}</span></span>
+          </div>
+          <div style="display:flex;gap:12px;padding:3px 0;font-size:11px">
+            <span style="color:var(--text3)">TB <b>${e.tbScore.toFixed(1)}</b> vs ${refAvgTB.toFixed(1)} ${statusIcon(tbD)}</span>
+            <span style="color:var(--text3)">TC <b>${e.tcScore.toFixed(1)}</b> vs ${refAvgTC.toFixed(1)} ${statusIcon(tcD)}</span>
+            ${score?`<span style="margin-left:auto;color:var(--text3)">${score.labelRef} · ${score.labelTeam}</span>`:''}
+          </div>
+        </div>
       </div>`;
-    });
-    html += `</div></div>`;
-  }
+    }).join('');
 
-  el.innerHTML = html;
+    html += `<div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:600">${shotId}</div>
+        <div style="font-size:11px;color:var(--text3)">${firstEntry.coffee||''} · ${shotEntries.length} คน</div>
+      </div>
+      <div style="background:var(--bbg);border-radius:var(--r2);padding:7px 10px;margin-bottom:8px;font-size:11px;color:var(--blue)">
+        Ref: ${refNames} · Acidity avg ${refAvgInt('acidity').toFixed(1)} · TB avg ${refAvgTB.toFixed(1)} · TC avg ${refAvgTC.toFixed(1)}
+      </div>
+      ${tasterCards}
+    </div>`;
+  });
+
+  el.innerHTML = html || '<div class="empty">ยังไม่มีข้อมูลเพียงพอ</div>';
 }
-
-// ── Touch tooltip ──
-const GLOSSARY = {
-  'lipid content':'ปริมาณไขมันในเมล็ดกาแฟ — ช่วยให้เนื้อกาแฟลื่นและ creamy',
-  'lipid':'ไขมันในเมล็ดกาแฟ ช่วยให้ mouthfeel ลื่นและ creamy',
-  'mucosa':'เยื่อเมือกที่บุผิวในปากและลิ้น รับสัมผัสจากของเหลว',
-  'colloid':'อนุภาคขนาดเล็กมากแขวนลอยในของเหลว ทำให้กาแฟมีความข้นและ body',
-  'colloidal':'อนุภาคขนาดเล็กมากแขวนลอยในของเหลว',
-  'polysaccharide':'น้ำตาลสายยาวที่ให้ความข้นและ body กับกาแฟ',
-  'melanoidin':'สารสีน้ำตาลเกิดจาก Maillard reaction ระหว่างคั่ว ให้ความหวานและ body',
-  'melanoidins':'สารสีน้ำตาลเกิดจาก Maillard reaction ระหว่างคั่ว',
-  'mucilage':'เนื้อเมือกที่หุ้มเมล็ดกาแฟ ส่งผลต่อ sweetness และ body',
-  'chlorogenic acid':'กรดที่พบมากในกาแฟดิบ ให้ความขมและฝาด ลดลงเมื่อคั่ว',
-  'diterpene':'ไขมันในกาแฟ เช่น cafestol และ kahweol ส่งผลต่อ creamy mouthfeel',
-  'cafestol':'สาร diterpene ในกาแฟ ส่งผลต่อ creamy mouthfeel',
-  'kahweol':'สาร diterpene ในกาแฟ ส่งผลต่อ creamy mouthfeel',
-  'pyrolysis':'การสลายตัวของสารด้วยความร้อนระหว่างคั่ว เปลี่ยนแป้งและน้ำตาลเป็นกลิ่นรส',
-  'TDS':'Total Dissolved Solids — ความเข้มข้นของสารละลายในกาแฟ วัดเป็น % เช่น espresso 8-12%',
-  'tannin':'สารจากพืชที่ทำให้รู้สึกฝาดและแห้งในปาก',
-  'tannin-like':'สารที่ให้ความฝาดคล้าย tannin',
-  'malic acid':'กรดแอปเปิ้ล ให้รสเปรี้ยวสะอาดและ crisp พบมากใน Ethiopia, Colombia',
-  'citric acid':'กรดส้ม ให้รสเปรี้ยวสดใส พบมากใน Kenya, Ethiopia Washed',
-  'acetic acid':'กรดน้ำส้มสายชู เกิดจาก over-fermentation ให้รสเปรี้ยวแสบ',
-  'phosphoric acid':'กรดที่ให้ความ bright และสะอาด ไม่เปรี้ยวมาก พบใน Kenya, Rwanda',
-  'tartaric acid':'กรดองุ่น ให้รสชาติคล้ายไวน์ พบใน Natural process',
-  'maillard reaction':'ปฏิกิริยาระหว่างน้ำตาลและโปรตีนเมื่อถูกความร้อน ทำให้เกิดสีน้ำตาลและกลิ่นรสซับซ้อน',
-  'extraction yield':'% ของสารที่ถูกสกัดออกจากกาแฟ ช่วง ideal คือ 18-22%',
-  'viscosity':'ความหนืดของของเหลว — กาแฟที่ viscosity สูงจะรู้สึก syrupy',
-  'centipoise':'หน่วยวัดความหนืด น้ำ = 1 cP, espresso ประมาณ 1.5-3 cP',
-  'bimodal':'การกระจายตัวสองยอด เช่น grinder ที่สึกจะผลิตผงสองขนาด ทำให้ gritty',
-  'emulsion':'การผสมกันของน้ำมันและน้ำโดยมีตัวกลาง เช่น crema ใน espresso',
-  'crema':'ฟองสีน้ำตาลทองบน espresso เกิดจาก CO₂ และ lipid emulsion',
-  'vanillin':'สารให้กลิ่นวานิลลา พบใน lignin ของเมล็ดกาแฟ ถูก release ตอนคั่ว',
-  'lignin':'ส่วนประกอบของผนังเซลล์พืช มี vanillin เป็นองค์ประกอบ',
-  'sucrose':'น้ำตาลทรายธรรมดา พบมากในเมล็ดกาแฟดิบ ถูก pyrolysis ตอนคั่ว',
-  'fructose':'น้ำตาลผลไม้ ให้ความหวานสูงกว่า sucrose ละลายออกมาระหว่าง extraction',
-  'furans':'สารอินทรีย์ที่เกิดจากการ caramelization ให้กลิ่น caramel และ nutty',
-  'starch':'แป้ง — พบในเมล็ดกาแฟดิบ ถ้าคั่วไม่สมบูรณ์จะทำให้รู้สึก chalky',
-  'cellulose':'เยื่อใยพืชในผนังเซลล์เมล็ดกาแฟ ถ้า pyrolysis ไม่สมบูรณ์ทำให้ chalky',
-  'channeling':'น้ำไหลผ่านช่องทางเดียวใน puck แทนที่จะกระจายทั่ว ทำให้ extraction uneven',
-  'soluble solids':'สารที่ละลายออกมาจากกาแฟระหว่างการสกัด ถ้าน้อยเกินไปทำให้ thin',
-  'grassy':'กลิ่นหญ้าสด เกิดจากการคั่วที่ไม่สมบูรณ์หรือเมล็ดที่ยังไม่พร้อม',
-  'vegetal':'กลิ่นผักดิบ บ่งบอกถึง under-development หรือ defect ในเมล็ด',
-  'seamless':'ผสมกลืนกันได้อย่างไม่มีรอยต่อ ทุก element ทำงานร่วมกันอย่างเป็นธรรมชาติ',
-  'unresolved':'element ที่ยังค้างอยู่ ไม่ได้รับการ support จาก element อื่น',
-  'lingering':'ค้างอยู่นานกว่าที่ควร มักใช้กับ bitterness หรือ astringency',
-  'dominant':'โดดออกมาจนครอบงำ element อื่น ทำให้ balance เสีย',
-  'astringency':'ความฝาดแห้งในปาก เกิดจาก tannin หรือ phenolic ที่จับกับ protein ในน้ำลาย',
-  'ferment fault':'ข้อบกพร่องจากการ ferment เกินไป ให้กลิ่นเปรี้ยวแสบหรือกลิ่นผิดปกติ',
-  'mid-palate':'กลางปาก — ช่วงกลางของการจิบ หลังจาก attack แรกและก่อน finish',
-  'complexity':'ความซับซ้อนและหลายมิติของรสชาติ มีหลาย note ที่เปลี่ยนแปลงระหว่างชิม',
-  'finish':'รสที่ค้างอยู่หลังกลืน ยาวหรือสั้น สะอาดหรือขุ่น',
-  'attack':'รสชาติแรกที่รับรู้ได้เมื่อกาแฟแตะลิ้น',
-  'body':'ความหนาแน่นและน้ำหนักของกาแฟในปาก',
-  'defect':'ข้อบกพร่องที่เกิดจากกระบวนการผลิตหรือสกัดผิดพลาด',
-  'astringent':'ความฝาดแห้ง เกิดจากสาร phenolic จับกับ protein ในน้ำลาย',
-  'integrate':'ผสมผสานกันได้อย่างกลมกลืน ไม่มี element ใดโดดออกมา',
-  'evolving':'เปลี่ยนแปลงและพัฒนาขึ้นระหว่างชิม ไม่ใช่ flat one-dimensional',
-  'JND':'Just Noticeable Difference — ความต่างน้อยสุดที่มนุษย์สังเกตได้',
-  'harsh':'ขม แสบ หรือรุนแรงเกินไป มักจากการ over-extract หรือ dark roast',
-  'tactile weight':'น้ำหนักที่รู้สึกได้บนลิ้นจากความหนาแน่นของกาแฟ',
-  'burr':'ใบมีดในเครื่องบด ถ้าสึกจะผลิตผงกาแฟที่ขนาดไม่สม่ำเสมอ',
-  'particle':'อนุภาคของแข็งขนาดเล็ก',
-  'saliva':'น้ำลาย ช่วย buffer acidity และรับรสชาติ',
-};
-
-document.addEventListener('click', e => {
-  const tt = e.target.closest('.tt');
-  document.querySelectorAll('.tt.tt-open').forEach(el => { if(el !== tt) el.classList.remove('tt-open'); });
-  if (tt) { e.preventDefault(); tt.classList.toggle('tt-open'); }
-  else document.querySelectorAll('.tt.tt-open').forEach(el => el.classList.remove('tt-open'));
-});
 
 function wrapGlossary(el) {
   if (!el) return;
