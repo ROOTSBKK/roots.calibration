@@ -2651,13 +2651,16 @@ async function renderPersonDetail(name, branch) {
   const scoreColor = avgScore>=85?'var(--green)':avgScore>=65?'var(--amber)':'var(--red)';
   const levelText = avgScore>=85?'Advanced':avgScore>=65?'Intermediate':'Beginner';
   const levelClass = avgScore>=85?'pill-green':avgScore>=65?'pill-amber':'pill-red';
+  const ini = name.slice(0,2).toUpperCase();
 
+  // Trend bars
   const trendBars = sessions.map(s => {
     const h = Math.max(8, s.score.total);
     const col = s.score.total>=85?'var(--green)':s.score.total>=65?'var(--amber)':'var(--red)';
     return `<div title="${s.score.total}" style="flex:1;min-width:6px;background:${col};border-radius:2px 2px 0 0;height:${h}%"></div>`;
   }).join('');
 
+  // Per-attribute accuracy
   const ATTRS_ALL = ['acidity','sweetness','bitterness','mouthfeel'];
   const ATTR_LABELS = {acidity:'Acidity',sweetness:'Sweetness',bitterness:'Bitterness',mouthfeel:'Mouthfeel',aftertaste:'Aftertaste'};
 
@@ -2668,13 +2671,13 @@ async function renderPersonDetail(name, branch) {
       const refs = (byShot[s.entry.shotId]||[]).filter(e=>e.isRefCal||e.taster==='Boss');
       if (!refs.length) return;
       const refAvg = refs.reduce((sum,e)=>sum+(e.intensity?.[attr]||3),0)/refs.length;
-      const d = Math.abs((s.entry.intensity?.[attr]||3) - refAvg);
+      const d = Math.abs((s.entry.intensity?.[attr]||3)-refAvg);
       correct += d===0?1:d<=1?0.5:0; total++;
     });
     attrPct[attr] = total>0?Math.round(correct/total*100):null;
   });
 
-  let aftC=0, aftT=0;
+  let aftC=0,aftT=0;
   sessions.forEach(s => {
     const refs = (byShot[s.entry.shotId]||[]).filter(e=>e.isRefCal||e.taster==='Boss');
     if (!refs.length) return;
@@ -2689,49 +2692,57 @@ async function renderPersonDetail(name, branch) {
     if (pct===null) return '';
     const col = pct>=80?'var(--green)':pct>=60?'var(--amber)':'var(--red)';
     const lbl = pct>=80?'ดีมาก':pct>=60?'พัฒนาได้':'อ่อน';
-    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--bg3)">
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--bg3)">
       <span style="min-width:80px;font-size:12px;color:var(--text3)">${ATTR_LABELS[attr]}</span>
-      <div style="flex:1;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden">
-        <div style="width:${pct}%;height:100%;background:${col};border-radius:3px"></div>
+      <div style="flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:${col};border-radius:3px;transition:width .3s"></div>
       </div>
-      <span style="min-width:32px;text-align:right;font-size:12px;font-weight:600;color:${col}">${pct}%</span>
-      <span style="font-size:11px;color:${col};min-width:50px">${lbl}</span>
+      <span style="min-width:36px;text-align:right;font-size:13px;font-weight:600;color:${col}">${pct}%</span>
+      <span style="font-size:11px;color:${col};min-width:54px">${lbl}</span>
     </div>`;
   }).join('');
 
+  // Session history
   const historyRows = sessions.slice().reverse().map(s => {
     const col = s.score.total>=85?'var(--green)':s.score.total>=65?'var(--amber)':'var(--red)';
-    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--bg3);font-size:12px">
-      <span style="color:var(--text3);min-width:90px">${s.entry.shotId||'—'}</span>
-      <span style="color:var(--text2);flex:1">${s.entry.coffee||''}</span>
-      <span style="font-size:13px;font-weight:600;color:${col}">${s.score.total}</span>
-      <span style="font-size:10px;color:var(--text3)">${s.score.labelRef}·${s.score.labelTeam}</span>
+    const lvl = s.score.total>=85?'Advanced':s.score.total>=65?'Intermediate':'Beginner';
+    const lvlCls = s.score.total>=85?'pill-green':s.score.total>=65?'pill-amber':'pill-red';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--bg3)">
+      <span style="color:var(--text3);min-width:96px;font-size:12px">${s.entry.shotId||'—'}</span>
+      <span style="color:var(--text2);flex:1;font-size:12px">${s.entry.coffee||''}</span>
+      <span class="pill ${lvlCls}" style="font-size:10px">${lvl}</span>
+      <span style="font-size:14px;font-weight:700;color:${col};min-width:32px;text-align:right">${s.score.total}</span>
     </div>`;
   }).join('');
 
   el.innerHTML = `
   <div class="card" style="margin-bottom:10px">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
-      <div style="width:44px;height:44px;border-radius:50%;background:var(--bbg);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--blue)">${name.slice(0,2).toUpperCase()}</div>
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+      <div style="width:48px;height:48px;border-radius:50%;background:var(--bbg);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:var(--blue);flex-shrink:0;border:2px solid var(--bborder)">${ini}</div>
       <div style="flex:1">
-        <div style="font-size:15px;font-weight:600">${name}</div>
+        <div style="font-size:16px;font-weight:600">${name}</div>
         <div style="font-size:12px;color:var(--text3)">${branch} · ${sessions.length} sessions</div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:30px;font-weight:700;color:${scoreColor}">${avgScore}</div>
+        <div style="font-size:34px;font-weight:700;color:${scoreColor};line-height:1">${avgScore}</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:3px">avg</div>
         <span class="pill ${levelClass}" style="font-size:11px">${levelText}</span>
       </div>
     </div>
-    <div style="height:50px;display:flex;align-items:flex-end;gap:3px;margin-bottom:4px">${trendBars}</div>
-    <div style="font-size:10px;color:var(--text3)">trend ${sessions.length} sessions →</div>
+
+    <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Trend</div>
+    <div style="height:52px;display:flex;align-items:flex-end;gap:3px;margin-bottom:4px">${trendBars}</div>
+    <div style="font-size:10px;color:var(--text3)">← ${sessions.length} sessions ล่าสุด</div>
   </div>
+
   <div class="card" style="margin-bottom:10px">
     <div class="card-title">ความแม่นยำ per attribute</div>
     ${attrBars}
   </div>
+
   <div class="card">
     <div class="card-title">ประวัติ sessions</div>
-    ${historyRows}
+    ${historyRows || '<div class="empty">ยังไม่มีข้อมูล</div>'}
   </div>`;
 }
 
@@ -2823,12 +2834,14 @@ async function renderTeam() {
   // Summary card
   const summaryRows = Object.entries(personScores).sort((a,b)=>b[1]-a[1]).map(([name, avg]) => {
     const col = avg>=85?'var(--green)':avg>=65?'var(--amber)':'var(--red)';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:0.5px solid var(--bg3)">
-      <div style="min-width:70px;font-size:13px">${name}</div>
+    const ini = name.slice(0,2).toUpperCase();
+    return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:0.5px solid var(--bg3)">
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--text2);flex-shrink:0">${ini}</div>
+      <div style="min-width:60px;font-size:13px;font-weight:500">${name}</div>
       <div style="flex:1;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden">
         <div style="width:${avg}%;height:100%;background:${col};border-radius:3px"></div>
       </div>
-      <div style="font-size:13px;font-weight:600;color:${col};min-width:28px;text-align:right">${avg}</div>
+      <div style="font-size:14px;font-weight:700;color:${col};min-width:28px;text-align:right">${avg}</div>
     </div>`;
   }).join('');
 
@@ -2860,15 +2873,54 @@ async function renderTeam() {
       return Object.keys(freq).filter(t=>freq[t]>=Math.ceil(refEntries.length*0.5));
     };
 
-    const refNames = refEntries.map(e=>e.taster).join(' + ');
     const firstEntry = shotEntries[0];
+
+    // Round to nearest 0.5
+    function round5(v) { return Math.round(v * 2) / 2; }
+
+    // Ref cards (side by side)
+    const refCards = refEntries.map(e => {
+      const ini = e.taster.slice(0,2).toUpperCase();
+      const myTags = attr => (e.tags?.[attr]||[]).join(', ')||'—';
+      const intLabel = v => INTLABELS[v-1]||v;
+      return `<div style="flex:1;background:var(--bbg);border:1px solid var(--bborder);border-radius:var(--r2);padding:10px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0">${ini}</div>
+          <div>
+            <div style="font-size:13px;font-weight:600">★ ${e.taster}</div>
+            <div style="font-size:10px;color:var(--blue)">Reference</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text2);line-height:1.8">
+          <div>Acidity: <b>${intLabel(e.intensity?.acidity||3)}</b> · ${myTags('acidity')}</div>
+          <div>Sweetness: <b>${intLabel(e.intensity?.sweetness||3)}</b> · ${myTags('sweetness')}</div>
+          <div>Bitterness: <b>${intLabel(e.intensity?.bitterness||3)}</b> · ${myTags('bitterness')}</div>
+          <div>Mouthfeel: <b>${intLabel(e.intensity?.mouthfeel||3)}</b> · ${myTags('mouthfeel')}</div>
+          <div>Aftertaste: <b>${AFT_LEN[e.aftertasteLength||3]}</b> · ${myTags('aftertaste')}</div>
+          <div style="margin-top:4px;padding-top:4px;border-top:0.5px solid var(--bborder)">
+            TB: <b>${round5(e.tbScore).toFixed(1)}</b> · TC: <b>${round5(e.tcScore).toFixed(1)}</b>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const consensusHtml = `<div style="background:var(--bbg);border-radius:var(--r2);padding:7px 10px;margin-top:8px;font-size:11px;color:var(--blue)">
+      Consensus → Acidity avg <b>${round5(refAvgInt('acidity')).toFixed(1)}</b> · 
+      Sweetness avg <b>${round5(refAvgInt('sweetness')).toFixed(1)}</b> · 
+      TB avg <b>${round5(refAvgTB).toFixed(1)}</b> · 
+      TC avg <b>${round5(refAvgTC).toFixed(1)}</b>
+    </div>`;
+
+    // Taster cards (non-ref only)
     const tasters = shotEntries.filter(e => !refEntries.includes(e));
 
     const tasterCards = tasters.map(e => {
+      const isRef = false;
       const score = calcCalibrationScore(e, refEntries, shotEntries);
       const col = score?.total>=85?'var(--green)':score?.total>=65?'var(--amber)':'var(--red)';
       const lvl = score?.total>=85?'Advanced':score?.total>=65?'Intermediate':'Beginner';
       const lvlCls = score?.total>=85?'pill-green':score?.total>=65?'pill-amber':'pill-red';
+      const initials = e.taster.slice(0,2).toUpperCase();
 
       const attrRows = SCORE_ATTRS.map(attr => {
         const myVal = e.intensity?.[attr]||3;
@@ -2889,10 +2941,14 @@ async function renderTeam() {
       const tcD = aDiff(e.tcScore, refAvgTC);
 
       return `<div style="border:0.5px solid var(--bg3);border-radius:var(--r2);margin-bottom:6px;overflow:hidden">
-        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2)">
-          <div style="font-size:20px;font-weight:700;color:${score?.total!==null?col:'var(--text3)'};min-width:36px;text-align:center">${score?.total!==null?score.total:'—'}</div>
-          <div style="flex:1;font-size:13px;font-weight:600">${e.taster}</div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg2)">
+          <div style="width:36px;height:36px;border-radius:50%;background:${isRef?'var(--bbg)':'var(--bg3)'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:${isRef?'var(--blue)':'var(--text2)'};flex-shrink:0">${initials}</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">${isRef?'★ ':''} ${e.taster}</div>
+            ${isRef?'<div style="font-size:10px;color:var(--blue)">Reference Calibrator</div>':''}
+          </div>
           <span class="pill ${lvlCls}" style="font-size:10px">${lvl}</span>
+          <div style="font-size:22px;font-weight:700;color:${score?.total!==null?col:'var(--text3)'};min-width:36px;text-align:right">${score?.total!==null?score.total:'—'}</div>
         </div>
         <div style="padding:6px 10px">
           ${attrRows}
@@ -2916,13 +2972,14 @@ async function renderTeam() {
     }).join('');
 
     html += `<div class="card" style="margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <div style="font-size:13px;font-weight:600">${shotId}</div>
         <div style="font-size:11px;color:var(--text3)">${firstEntry.coffee||''} · ${shotEntries.length} คน</div>
       </div>
-      <div style="background:var(--bbg);border-radius:var(--r2);padding:7px 10px;margin-bottom:8px;font-size:11px;color:var(--blue)">
-        Ref: ${refNames} · Acidity avg ${refAvgInt('acidity').toFixed(1)} · TB avg ${refAvgTB.toFixed(1)} · TC avg ${refAvgTC.toFixed(1)}
-      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">★ Reference Calibrators</div>
+      <div style="display:flex;gap:8px;margin-bottom:4px">${refCards}</div>
+      ${consensusHtml}
+      <div style="font-size:11px;font-weight:600;color:var(--text3);margin:10px 0 6px;text-transform:uppercase;letter-spacing:.04em">👥 ทีม</div>
       ${tasterCards}
     </div>`;
   });
