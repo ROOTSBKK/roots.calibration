@@ -3100,29 +3100,44 @@ document.querySelectorAll('.dots').forEach(c => {
   });
   paintDots(attr);
 });
-document.querySelectorAll('.chips').forEach(group => {
-  const attr = group.dataset.attr;
-  group.querySelectorAll('.chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      const v = chip.dataset.v;
-      if (attr.startsWith('flavor-')) {
-        if (!flavorTags[attr]) flavorTags[attr] = [];
-        if (flavorTags[attr].includes(v)) { flavorTags[attr] = flavorTags[attr].filter(x=>x!==v); chip.classList.remove('on'); }
-        else { flavorTags[attr].push(v); chip.classList.add('on'); }
-      } else {
-        if (tags[attr].includes(v)) { tags[attr] = tags[attr].filter(x=>x!==v); chip.classList.remove('on'); }
-        else { tags[attr].push(v); chip.classList.add('on'); }
-      }
-    });
-  });
-});
-document.addEventListener('DOMContentLoaded', () => {
+// Event Delegation — useCapture=true ยิงก่อน element อื่นๆ
+document.addEventListener('click', function(e) {
+  const chip = e.target.closest('.chip');
+  if (chip) {
+    const group = chip.closest('.chips');
+    if (!group) return;
+    const attr = group.dataset.attr;
+    const v = chip.dataset.v;
+    if (attr && attr.startsWith('flavor-')) {
+      if (!flavorTags[attr]) flavorTags[attr] = [];
+      if (flavorTags[attr].includes(v)) { flavorTags[attr] = flavorTags[attr].filter(x=>x!==v); chip.classList.remove('on'); }
+      else { flavorTags[attr].push(v); chip.classList.add('on'); }
+    } else if (attr) {
+      if (!tags[attr]) tags[attr] = [];
+      if (tags[attr].includes(v)) { tags[attr] = tags[attr].filter(x=>x!==v); chip.classList.remove('on'); }
+      else { tags[attr].push(v); chip.classList.add('on'); }
+    }
+    return;
+  }
+  const dot = e.target.closest('.iDot');
+  if (dot) {
+    const group = dot.closest('.dots');
+    if (!group) return;
+    const attr = group.dataset.attr;
+    if (attr) { intensity[attr] = +dot.dataset.v; paintDots(attr); }
+    return;
+  }
+}, true);
+
+populateBranchDropdowns();
+ATTRS.forEach(a => { if(!tags[a]) tags[a] = []; });
+updateLengthLabel(3);
+setTimeout(() => {
+  ATTRS.forEach(a => paintDots(a));
   ['page-guide','page-acidity-guide','page-fruity-guide','page-sweetness-guide','page-scoring-guide'].forEach(id => {
     wrapGlossary(document.getElementById(id));
   });
-});
-ATTRS.forEach(a => { tags[a] = []; });
-updateLengthLabel(3);
+}, 100);
 
 </script>
 
