@@ -2885,12 +2885,20 @@ async function renderTeam() {
       const ini = e.taster.slice(0,2).toUpperCase();
       const myTags = attr => (e.tags?.[attr]||[]).join(', ')||'—';
       const intLabel = v => INTLABELS[v-1]||v;
+      const refScore = calcCalibrationScore(e, refEntries, shotEntries);
+      const refCol = refScore?.total>=85?'var(--green)':refScore?.total>=65?'var(--amber)':'var(--red)';
+      const refLvl = refScore?.total>=85?'Advanced':refScore?.total>=65?'Intermediate':'Beginner';
+      const refLvlCls = refScore?.total>=85?'pill-green':refScore?.total>=65?'pill-amber':'pill-red';
       return `<div style="flex:1;background:var(--bbg);border:1px solid var(--bborder);border-radius:var(--r2);padding:10px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
           <div style="width:32px;height:32px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0">${ini}</div>
-          <div>
+          <div style="flex:1">
             <div style="font-size:13px;font-weight:600">★ ${e.taster}</div>
             <div style="font-size:10px;color:var(--blue)">Reference</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:20px;font-weight:700;color:${refScore?.total!==null?refCol:'var(--text3)'}">${refScore?.total!==null?refScore.total:'—'}</div>
+            <span class="pill ${refLvlCls}" style="font-size:9px">${refLvl}</span>
           </div>
         </div>
         <div style="font-size:11px;color:var(--text2);line-height:1.8">
