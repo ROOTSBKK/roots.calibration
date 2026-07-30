@@ -3121,6 +3121,7 @@ function showToast(msg) {
 }
 
 function showPersonFromTeam(name, branch) {
+  window.scrollTo({top:0, behavior:'instant'});
   document.getElementById('person-modal-overlay').style.display = 'block';
   document.getElementById('person-modal').style.display = 'block';
   document.getElementById('person-modal-content').innerHTML = '<div class="empty">กำลังโหลด...</div>';
