@@ -3474,7 +3474,7 @@ document.addEventListener('mouseover', e => {
   window.hideTT();
 });
 document.addEventListener('mousemove', e => {
-  if (ttEl && ttEl.classList.contains('show')) showTT(ttEl.textContent, e.clientX, e.clientY);
+  const _tt = document.getElementById('tt-popup'); if (_tt && _tt.classList.contains('show')) window.showTT(_tt.textContent, e.clientX, e.clientY);
 });
 
 // Mobile long press
