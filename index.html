@@ -2161,11 +2161,40 @@ async function createNewShot() {
     branchCal: branchCal || null
   };
 
+function resetTastingFields() {
+  // Clears only the sensory-input fields (dots/chips/notes/scores) — NOT
+  // branch, taster, or shot metadata, which stay as auto-filled from the shot.
+  document.getElementById('f-is-ref-cal').checked = false;
+  document.getElementById('ref-cal-banner').style.display = 'none';
+  document.getElementById('f-tb').value = 3;
+  document.getElementById('f-tc').value = 3;
+  document.getElementById('f-flavor').value = '';
+  aftertasteLength = 3;
+  const aftSlider = document.getElementById('f-aft-length');
+  if (aftSlider) { aftSlider.value = 3; updateLengthLabel(3); }
+  ATTRS.forEach(a => {
+    if (intensity[a] !== undefined) { intensity[a] = 3; paintDots(a); }
+    tags[a] = [];
+    document.querySelectorAll('.chips[data-attr="'+a+'"] .chip').forEach(c => c.classList.remove('on'));
+    const n = document.getElementById('note-'+a); if(n) n.value = '';
+  });
+  Object.keys(flavorTags).forEach(k => {
+    flavorTags[k] = [];
+    document.querySelectorAll(`.chips[data-attr="${k}"] .chip`).forEach(c => c.classList.remove('on'));
+  });
+  document.getElementById('form-summary').style.display = 'none';
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = false;
+  btn.textContent = 'สรุปและบันทึก';
+  btn.style.opacity = '1';
+}
+
   try {
     await window.storage.set(storageKey, JSON.stringify(shotData), true, branch);
     closeShotModal();
     await loadShotDropdown(id);
     autoFillFromShot(shotData);
+    resetTastingFields();
     showToast('✓ เปิดช็อต ' + id + ' · ' + (coffee||'ไม่มีชื่อกาแฟ'));
   } catch(e) { showToast('Error: ' + e.message); }
 }
