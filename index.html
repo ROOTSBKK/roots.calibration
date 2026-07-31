@@ -46,6 +46,8 @@ textarea{min-height:52px;resize:vertical}
 .iLabel{font-size:11px;color:var(--text3);margin-left:4px}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .chip{font-size:12px;padding:5px 10px;border-radius:20px;border:1px solid var(--bg3);background:var(--bg);cursor:pointer;color:var(--text2)}
+#tt-popup{position:fixed;background:#18181A;color:#F8F7F4;font-size:12px;line-height:1.6;padding:8px 12px;border-radius:10px;max-width:220px;z-index:9999;pointer-events:none;display:none;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+#tt-popup.show{display:block}
 .chip.pos.on{background:var(--gbg);border-color:var(--gborder);color:var(--green)}
 .chip.neg.on{background:var(--rbg);border-color:var(--rborder);color:var(--red)}
 .chip.neu.on{background:var(--bbg);border-color:var(--bborder);color:var(--blue)}
@@ -246,7 +248,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     <div class="lbl" style="margin-top:10px">Positive</div>
     <div class="chips" data-attr="bitterness"><button class="chip pos" data-v="Chocolatey" onclick="handleChip(this)">Chocolatey</button><button class="chip pos" data-v="Dark Chocolate" onclick="handleChip(this)">Dark Chocolate</button><button class="chip pos" data-v="Balanced" onclick="handleChip(this)">Balanced</button></div>
     <div class="lbl" style="margin-top:8px">Negative</div>
-    <div class="chips" data-attr="bitterness"><button class="chip neg" data-v="Harsh" onclick="handleChip(this)">Harsh</button><button class="chip neg" data-v="Ashy" onclick="handleChip(this)">Ashy</button><button class="chip neg" data-v="Medicine" onclick="handleChip(this)">Medicine</button><button class="chip neg" data-v="Lingering" onclick="handleChip(this)">Lingering</button></div>
+    <div class="chips" data-attr="bitterness"><button class="chip neg" data-v="Harsh" onclick="handleChip(this)">Harsh</button><button class="chip neg" data-v="Ashy" onclick="handleChip(this)">Ashy</button><button class="chip neg" data-v="Medicine" onclick="handleChip(this)">Medicine</button></div>
     <input type="text" id="note-bitterness" placeholder="โน้ตสั้นๆ (ถ้ามี)" style="margin-top:8px">
   </div>
 
@@ -265,7 +267,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
       <span id="lbl-aft-length" style="font-size:12px;font-weight:600;color:var(--blue)">Medium</span>
     </div>
     <div class="lbl" style="margin-top:10px">Positive</div>
-    <div class="chips" data-attr="aftertaste"><button class="chip pos" data-v="Clean" onclick="handleChip(this)">Clean</button><button class="chip pos" data-v="Pleasant" onclick="handleChip(this)">Pleasant</button><button class="chip pos" data-v="Sweetness" onclick="handleChip(this)">Sweetness</button><button class="chip pos" data-v="Bitter Sweet" onclick="handleChip(this)">Bitter Sweet</button></div>
+    <div class="chips" data-attr="aftertaste"><button class="chip pos" data-v="Clean" onclick="handleChip(this)">Clean</button><button class="chip pos" data-v="Pleasant" onclick="handleChip(this)">Pleasant</button><button class="chip pos" data-v="Sweetness" onclick="handleChip(this)">Sweetness</button><button class="chip pos" data-v="Bitter Sweet" onclick="handleChip(this)">Bitter Sweet</button><button class="chip pos" data-v="Lingering" onclick="handleChip(this)">Lingering</button></div>
     <div class="lbl" style="margin-top:8px">Negative</div>
     <div class="chips" data-attr="aftertaste"><button class="chip neg" data-v="Unpleasant" onclick="handleChip(this)">Unpleasant</button><button class="chip neg" data-v="Astringent" onclick="handleChip(this)">Astringent</button><button class="chip neg" data-v="Bitterness" onclick="handleChip(this)">Bitterness</button><button class="chip neg" data-v="Dryness" onclick="handleChip(this)">Dryness</button><button class="chip neg" data-v="Fades fast" onclick="handleChip(this)">Fades fast</button></div>
     <input type="text" id="note-aftertaste" placeholder="โน้ตสั้นๆ (ถ้ามี)" style="margin-top:8px">
@@ -3279,6 +3281,113 @@ function handleDot(btn) {
   if (attr) { intensity[attr] = +btn.dataset.v; paintDots(attr); }
 }
 
+// ── Tooltip System ──
+const TOOLTIP_DICT = {
+  'Bright':'ความเปรี้ยวที่สดใส มีชีวิตชีวา รับรู้ได้ชัดเจนที่ด้านข้างลิ้น',
+  'Vibrant':'เปรี้ยวที่มีพลัง คล้าย Bright แต่ intense กว่า',
+  'Crisp':'เปรี้ยวกระฉับกระเฉง สะอาด ตัดปาก คล้ายแอปเปิล',
+  'Balanced':'ความเปรี้ยวหรือขมที่กลมกล่อม ไม่โดดเด่นเกินไป',
+  'Tangy':'เปรี้ยวแหลม มีความเข้มข้น คล้ายส้มหรือมะนาว',
+  'Dull':'เปรี้ยวแบบไม่มีชีวิตชีวา ราบเรียบ ขาดมิติ',
+  'Flat':'ความเปรี้ยวหายไป รู้สึกจืดชืด ขาดโครงสร้าง',
+  'Sharp':'เปรี้ยวแหลมคม บางครั้งรู้สึกระคายเคือง',
+  'Sour':'เปรี้ยวเกินไป ไม่น่าพึงพอใจ อาจเกิดจาก under-extraction',
+  'Citric':'เปรี้ยวแบบส้ม มะนาว กระฉับกระเฉง',
+  'Malic':'เปรี้ยวแบบแอปเปิล นุ่มกว่า citric',
+  'Phosphoric':'เปรี้ยวที่ให้ความรู้สึก juicy คล้าย grape',
+  'Caramel-like':'ความหวานที่มีกลิ่นคาราเมล อุ่น และลึก',
+  'Honey-like':'หวานละเอียดอ่อน มีกลิ่นดอกไม้จางๆ คล้ายน้ำผึ้ง',
+  'Clean Sweet':'ความหวานที่บริสุทธิ์ ไม่มีรสชาติอื่นเจือปน',
+  'Sugary':'หวานชัดเจนแบบน้ำตาล',
+  'Mild Sweet':'หวานเบาๆ ไม่จัด รับรู้ได้แต่ไม่โดดเด่น',
+  'No Sweetness':'ไม่มีความหวานที่รับรู้ได้',
+  'Chocolatey':'ขมแบบช็อกโกแลตดาร์ก นุ่มและน่าพึงพอใจ',
+  'Dark Chocolate':'ขมเข้มข้นแบบดาร์กช็อกโกแลต มีความซับซ้อน',
+  'Harsh':'ขมแบบหยาบกร้าน ระคายเคือง ไม่น่าพึงพอใจ',
+  'Ashy':'ขมแบบเถ้า หรือไหม้เกินไป มักเกิดจาก over-roast',
+  'Medicine':'ขมแบบยา ผิดปกติ อาจเกิดจากการสกัดผิดพลาด',
+  'Clean':'ไม่มีรสค้างหลังกลืน สะอาด บริสุทธิ์',
+  'Pleasant':'รสที่ค้างอยู่น่าพึงพอใจ อยากดื่มต่อ',
+  'Sweetness':'รสหวานที่ค้างอยู่หลังกลืน บ่งบอกถึงคุณภาพสูง',
+  'Bitter Sweet':'ขมหวานที่สมดุล เหมือนดาร์กช็อกโกแลต',
+  'Lingering':'รสที่ค้างนาน ยาวนาน มักเป็นสัญญาณของกาแฟที่ดี',
+  'Unpleasant':'รสค้างที่ไม่น่าพึงพอใจ อยากล้างปาก',
+  'Astringent':'รู้สึกฝาดและแห้งในปากหลังกลืน คล้ายกินชาเข้มข้น',
+  'Bitterness':'ขมค้างอยู่ในปากนาน อาจเกิดจาก over-extraction',
+  'Dryness':'ความแห้งในปากหลังกลืน ขาด juiciness',
+  'Fades fast':'รสหายไปเร็วมาก ขาดความลึก',
+  'Silky':'เนื้อสัมผัสเนียนนุ่มมาก ลื่นไหลในปาก',
+  'Velvety':'นุ่มหนาแน่น คล้ายกำมะหยี่ รู้สึกอุ่นในปาก',
+  'Creamy':'ครีมมี่ มีน้ำหนัก คล้ายนม',
+  'Juicy':'รู้สึก juicy มีน้ำ กระตุ้นน้ำลาย',
+  'Round':'กลมกล่อม ไม่มีมุมแหลม สมดุล',
+  'Smooth':'เรียบ ไหลลื่น ไม่มีความขรุขระ',
+  'Thin':'บาง ขาดน้ำหนัก body น้อย',
+  'Watery':'เหมือนน้ำ ขาด body และ texture',
+  'Rough':'หยาบ ไม่เรียบ อาจระคายเคือง',
+  'Coating':'เคลือบปาก รู้สึกหนัก residue มาก',
+};
+
+const ATTR_TOOLTIP = {
+  'Acidity':'ความเปรี้ยวของกาแฟ รับรู้ที่ด้านข้างลิ้น เกี่ยวข้องกับ organic acids เช่น citric, malic, phosphoric',
+  'Sweetness':'ความหวานที่รับรู้ได้โดยไม่ต้องเติมน้ำตาล สัมพันธ์กับ sucrose และ sugar compounds',
+  'Bitterness':'ความขมที่รับรู้ที่โคนลิ้น เกิดจาก caffeine, chlorogenic acids และ melanoidins',
+  'Aftertaste':'รสชาติที่ค้างอยู่หลังกลืน ทั้งระยะเวลาและคุณภาพของรส',
+  'Mouthfeel':'เนื้อสัมผัสและน้ำหนักในปาก เกิดจาก oil, protein และ dissolved solids',
+  'Taste Balance':'ความสมดุลโดยรวมของรสชาติ ให้ 0-6 โดย 0=ไม่สมดุล 6=สมดุลสมบูรณ์',
+  'Tactile':'ความรู้สึกสัมผัสโดยรวม ให้ 0-6 โดย 0=หยาบ/ระคายเคือง 6=นุ่มเนียนสมบูรณ์',
+};
+
+const ttEl = document.getElementById('tt-popup');
+let ttTimer = null;
+
+function showTT(text, x, y) {
+  if (!ttEl || !text) return;
+  ttEl.textContent = text;
+  ttEl.classList.add('show');
+  const pad = 12;
+  const tw = ttEl.offsetWidth || 200;
+  const th = ttEl.offsetHeight || 60;
+  let left = x + pad;
+  let top = y - th / 2;
+  if (left + tw > window.innerWidth - pad) left = x - tw - pad;
+  if (top < pad) top = pad;
+  if (top + th > window.innerHeight - pad) top = window.innerHeight - th - pad;
+  ttEl.style.left = left + 'px';
+  ttEl.style.top = top + 'px';
+}
+
+function hideTT() {
+  if (ttEl) ttEl.classList.remove('show');
+  clearTimeout(ttTimer);
+}
+
+// Desktop hover
+document.addEventListener('mouseover', e => {
+  const chip = e.target.closest('.chip');
+  if (chip && TOOLTIP_DICT[chip.dataset.v]) { showTT(TOOLTIP_DICT[chip.dataset.v], e.clientX, e.clientY); return; }
+  const lbl = e.target.closest('.lbl');
+  if (lbl && ATTR_TOOLTIP[lbl.textContent.trim()]) { showTT(ATTR_TOOLTIP[lbl.textContent.trim()], e.clientX, e.clientY); return; }
+  hideTT();
+});
+document.addEventListener('mousemove', e => {
+  if (ttEl && ttEl.classList.contains('show')) showTT(ttEl.textContent, e.clientX, e.clientY);
+});
+
+// Mobile long press
+document.addEventListener('touchstart', e => {
+  const chip = e.target.closest('.chip');
+  const lbl = e.target.closest('.lbl');
+  const target = chip || lbl;
+  if (!target) return;
+  const txt = chip ? TOOLTIP_DICT[chip.dataset.v] : ATTR_TOOLTIP[lbl.textContent.trim()];
+  if (!txt) return;
+  const t = e.touches[0];
+  ttTimer = setTimeout(() => showTT(txt, t.clientX, t.clientY), 500);
+}, {passive:true});
+document.addEventListener('touchend', hideTT, {passive:true});
+document.addEventListener('touchmove', () => clearTimeout(ttTimer), {passive:true});
+
 // Init
 populateBranchDropdowns();
 ATTRS.forEach(a => { if(!tags[a]) tags[a] = []; });
@@ -3291,6 +3400,8 @@ setTimeout(() => {
 }, 100);
 
 </script>
+
+<div id="tt-popup"></div>
 
 <!-- Person Modal -->
 <div id="person-modal-overlay" onclick="closePersonModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9500;backdrop-filter:blur(2px)"></div>
