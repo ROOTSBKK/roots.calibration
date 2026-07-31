@@ -2632,13 +2632,19 @@ async function loadMaster() {
 let selectedBranchFilter = '';
 
 async function loadPersonPage() {
-  // Build branch filter tabs
+  // Build branch filter tabs — non-admins are locked to their own branch
   const tabsEl = document.getElementById('branch-filter-tabs');
-  tabsEl.innerHTML = `<button class="btab active" onclick="filterBranch('',this)">ทุกสาขา</button>`;
-  ALL_BRANCHES.forEach(b => {
-    tabsEl.innerHTML += `<button class="btab" onclick="filterBranch('${b}',this)">${b}</button>`;
-  });
-  selectedBranchFilter = '';
+  if (window._isAdmin()) {
+    tabsEl.innerHTML = `<button class="btab active" onclick="filterBranch('',this)">ทุกสาขา</button>`;
+    ALL_BRANCHES.forEach(b => {
+      tabsEl.innerHTML += `<button class="btab" onclick="filterBranch('${b}',this)">${b}</button>`;
+    });
+    selectedBranchFilter = '';
+  } else {
+    const myBranch = window._currentUser && window._currentUser.branch;
+    tabsEl.innerHTML = `<button class="btab active" disabled>${myBranch||''}</button>`;
+    selectedBranchFilter = myBranch || '';
+  }
   renderPersonList();
 }
 
@@ -2869,10 +2875,16 @@ let selectedTeamBranch = ALL_BRANCHES[0];
 async function loadTeamPage() {
   const tabsEl = document.getElementById('team-branch-tabs');
   tabsEl.innerHTML = '';
-  ALL_BRANCHES.forEach((b, i) => {
-    tabsEl.innerHTML += `<button class="btab${i===0?' active':''}" onclick="switchTeamBranch('${b}',this)">${b}</button>`;
-  });
-  selectedTeamBranch = ALL_BRANCHES[0];
+  if (window._isAdmin()) {
+    ALL_BRANCHES.forEach((b, i) => {
+      tabsEl.innerHTML += `<button class="btab${i===0?' active':''}" onclick="switchTeamBranch('${b}',this)">${b}</button>`;
+    });
+    selectedTeamBranch = ALL_BRANCHES[0];
+  } else {
+    const myBranch = window._currentUser && window._currentUser.branch;
+    tabsEl.innerHTML = `<button class="btab active" disabled>${myBranch||''}</button>`;
+    selectedTeamBranch = myBranch || ALL_BRANCHES[0];
+  }
   renderTeam();
 }
 
