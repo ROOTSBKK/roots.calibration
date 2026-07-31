@@ -1511,7 +1511,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, Timestamp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, Timestamp, query, where } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
 const cfg = {
   apiKey:"AIzaSyASqWQL08s1np9HEm-0_WIv0tQ9r3WmzZE",
@@ -1525,12 +1525,17 @@ const cfg = {
 const fbApp = initializeApp(cfg);
 const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
+// exposed so the classic <script> below (where STAFF_DIRECTORY lives) can
+// run the one-time staff-seeding helper — see window._seedStaffDirectory
+window._db=db; window._fsdoc=doc; window._fssetDoc=setDoc;
 
 window.storage = {
-  async set(key,value,shared=false){
+  async set(key,value,shared=false,branch=null){
     try{
       const k=key.replace(/[:/]/g,'__');
-      await setDoc(doc(db,shared?'shared':'private',k),{key,value,ts:Timestamp.now()});
+      const payload={key,value,ts:Timestamp.now()};
+      if(branch) payload.branch=branch;
+      await setDoc(doc(db,shared?'shared':'private',k),payload);
       return {key,value,shared};
     }catch(e){console.error(e);return null;}
   },
@@ -1542,12 +1547,17 @@ window.storage = {
       return {key:s.data().key,value:s.data().value,shared};
     }catch(e){return null;}
   },
-  async list(prefix='',shared=false){
+  // branchFilter: pass a branch name to restrict the query server-side to
+  // that branch's docs (required once Firestore rules enforce per-branch
+  // reads — an unfiltered collection scan will be denied for non-admins).
+  async list(prefix='',shared=false,branchFilter=null){
     try{
-      const s=await getDocs(collection(db,shared?'shared':'private'));
+      let q=collection(db,shared?'shared':'private');
+      if(branchFilter) q=query(q,where('branch','==',branchFilter));
+      const s=await getDocs(q);
       const keys=s.docs.map(d=>d.data().key).filter(k=>k&&k.startsWith(prefix));
       return {keys,prefix,shared};
-    }catch(e){return {keys:[],prefix,shared};}
+    }catch(e){console.error(e);return {keys:[],prefix,shared};}
   },
   async delete(key,shared=false){
     try{
@@ -1557,8 +1567,38 @@ window.storage = {
   }
 };
 
+// Area staff (Boss + area reviewers) keep cross-branch visibility; everyone
+// else is scoped to their own branch, both in the UI and in every query.
+window._isAdmin = function(){
+  const u=window._currentUser;
+  return !!u && u.branch==='Area';
+};
+
+// ONE-TIME MIGRATION — run once from the browser console while logged in
+// as Boss: window._migrateBranchField()
+// Old cal:/shot: docs only have `branch` inside the JSON `value` string, not
+// as a real Firestore field, so branch-scoped queries can't see them. This
+// copies branch out to a top-level field on every doc that's missing it.
+window._migrateBranchField = async function(){
+  if(!window._isAdmin()){ console.warn('Admin only.'); return; }
+  const snap = await getDocs(collection(db,'shared'));
+  let fixed=0, skipped=0;
+  for(const d of snap.docs){
+    const data=d.data();
+    if(data.branch){ skipped++; continue; }
+    try{
+      const parsed=JSON.parse(data.value);
+      if(parsed && parsed.branch){
+        await setDoc(doc(db,'shared',d.id),{...data,branch:parsed.branch});
+        fixed++;
+      }else skipped++;
+    }catch(e){ skipped++; }
+  }
+  console.log(`Migration done. Fixed: ${fixed}, skipped: ${skipped}`);
+};
+
 async function lookupStaff(email){
-  const key=email.toLowerCase().replace('@','_at_');
+  const key=email.toLowerCase();
   const s=await getDoc(doc(db,'staff',key));
   return s.exists()?s.data():null;
 }
@@ -1571,6 +1611,11 @@ function initApp(user){
   setTimeout(()=>{
     const br=document.getElementById('f-branch');
     if(br){br.value=user.branch;if(window.updateStaffList)window.updateStaffList();}
+    const bsel=document.getElementById('b-select');
+    if(!window._isAdmin()){
+      if(br)br.disabled=true;
+      if(bsel){bsel.value=user.branch;bsel.disabled=true;}
+    }
     setTimeout(()=>{
       const tr=document.getElementById('f-taster');
       if(tr)tr.value=user.name;
@@ -1712,6 +1757,24 @@ const STAFF_DIRECTORY = [
   {name:'Nu',     branch:'Area',       email:'anuwat.rootsbkk@gmail.com'},
   {name:'Ball',   branch:'Area',       email:'ball.rootsbkk@gmail.com'},
 ];
+// ONE-TIME SETUP — run once from the browser console while logged in as
+// Boss: window._seedStaffDirectory()
+// Writes every STAFF_DIRECTORY entry to staff/{email} in Firestore (doc ID
+// = lowercase email, no transformation) so the security rules can look up
+// a signed-in user's branch directly by their auth email.
+window._seedStaffDirectory = async function(){
+  if(!window._db){ console.warn('Firestore not ready yet — reload and try again.'); return; }
+  let n=0;
+  for(const s of STAFF_DIRECTORY){
+    const key=s.email.toLowerCase();
+    await window._fssetDoc(window._fsdoc(window._db,'staff',key),{
+      name:s.name, branch:s.branch, email:key, role:s.role||null
+    });
+    n++;
+  }
+  console.log(`Seeded ${n} staff records.`);
+};
+
 const ALL_BRANCHES = Object.keys(STAFF_DATA);
 const ATTRS = ['acidity','sweetness','bitterness','aftertaste','mouthfeel'];
 const SCORE_ATTRS = ['acidity','sweetness','bitterness','mouthfeel']; // aftertaste uses length not intensity
@@ -2044,7 +2107,7 @@ async function createNewShot() {
 
   let existingShots = [];
   try {
-    const keys = await window.storage.list('shot:', true);
+    const keys = await window.storage.list('shot:', true, document.getElementById('f-branch').value || null);
     if (keys && keys.keys) {
       await Promise.all(keys.keys.map(async k => {
         try {
@@ -2094,7 +2157,7 @@ async function createNewShot() {
   };
 
   try {
-    await window.storage.set(storageKey, JSON.stringify(shotData), true);
+    await window.storage.set(storageKey, JSON.stringify(shotData), true, branch);
     closeShotModal();
     await loadShotDropdown(id);
     autoFillFromShot(shotData);
@@ -2109,7 +2172,7 @@ async function loadShotDropdown(selectId) {
   sel.innerHTML = '<option value="">— เลือกช็อต หรือเปิดช็อตใหม่ —</option>';
   if (!branch) return;
   try {
-    const keys = await window.storage.list('shot:', true);
+    const keys = await window.storage.list('shot:', true, document.getElementById('f-branch').value || null);
     if (!keys || !keys.keys || !keys.keys.length) return;
     const now = Date.now();
     const shots = [];
@@ -2146,7 +2209,7 @@ async function onShotSelect() {
   badge.textContent = '📌 ' + v;
   // ค้นหา shot data จาก storage โดย list prefix แล้วหา id ที่ตรง
   try {
-    const keys = await window.storage.list('shot:', true);
+    const keys = await window.storage.list('shot:', true, document.getElementById('f-branch').value || null);
     if (!keys || !keys.keys) return;
     for (const k of keys.keys) {
       try {
@@ -2276,7 +2339,7 @@ async function submitForm() {
   };
 
   try {
-    await window.storage.set(entry.id, JSON.stringify(entry), true);
+    await window.storage.set(entry.id, JSON.stringify(entry), true, branch);
     await showFormSummary(entry);
     showToast('บันทึกแล้ว ✓');
   } catch(e) { showToast('Error: '+e.message); }
@@ -2439,7 +2502,8 @@ function resetForm() {
 // Load all entries
 async function loadEntries() {
   try {
-    const keys = await window.storage.list('cal:', true);
+    const branchFilter = window._isAdmin() ? null : (window._currentUser && window._currentUser.branch);
+    const keys = await window.storage.list('cal:', true, branchFilter);
     if (!keys || !keys.keys || !keys.keys.length) return [];
     const entries = [];
     await Promise.all(keys.keys.map(async k => {
