@@ -2219,19 +2219,28 @@ function resetTastingFields() {
     // away (doesn't touch submitted cal: results, only the shot: pointer).
     try {
       const allKeys = await window.storage.list('shot:', true, branch);
+      console.log('[shot-cleanup] found', allKeys && allKeys.keys ? allKeys.keys.length : 0, 'shot keys for branch', branch);
       if (allKeys && allKeys.keys) {
+        let deletedCount = 0;
         await Promise.all(allKeys.keys.map(async k => {
           if (k === storageKey) return;
           try {
             const r = await window.storage.get(k, true);
             if (r) {
               const s = JSON.parse(r.value);
-              if (s.branch === branch && s.id !== id) await window.storage.delete(k, true);
+              if (s.branch === branch && s.id !== id) {
+                const res = await window.storage.delete(k, true);
+                if (res) { deletedCount++; }
+                else { console.error('[shot-cleanup] delete returned null for', k); }
+              }
+            } else {
+              console.error('[shot-cleanup] could not read', k);
             }
-          } catch(e) {}
+          } catch(e) { console.error('[shot-cleanup] error on', k, e); }
         }));
+        console.log('[shot-cleanup] deleted', deletedCount, 'old shot(s)');
       }
-    } catch(e) {}
+    } catch(e) { console.error('[shot-cleanup] list failed', e); }
     closeShotModal();
     await loadShotDropdown(id);
     autoFillFromShot(shotData);
