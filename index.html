@@ -1597,6 +1597,30 @@ window._migrateBranchField = async function(){
   console.log(`Migration done. Fixed: ${fixed}, skipped: ${skipped}`);
 };
 
+// ONE-TIME CLEANUP — run once from the browser console while logged in as
+// Boss: window._wipeTastingData()
+// Deletes every cal: (calibration entry) and shot: (shot session) document
+// from the 'shared' collection — i.e. all demo tasting data. Does NOT touch
+// the 'staff' collection, so the Staff Directory / logins are unaffected.
+// Asks for a typed confirmation before deleting anything, since this cannot
+// be undone.
+window._wipeTastingData = async function(){
+  if(!window._isAdmin()){ console.warn('Admin only.'); return; }
+  const snap = await getDocs(collection(db,'shared'));
+  const targets = snap.docs.filter(d => {
+    const k = d.data().key || '';
+    return k.startsWith('cal:') || k.startsWith('shot:');
+  });
+  if(!targets.length){ console.log('Nothing to delete — no cal:/shot: records found.'); return; }
+  const ok = confirm(`This will permanently delete ${targets.length} tasting/shot records (Staff Directory is kept). Type OK to confirm.`);
+  if(!ok){ console.log('Cancelled.'); return; }
+  let deleted=0;
+  for(const d of targets){
+    try{ await deleteDoc(doc(db,'shared',d.id)); deleted++; }catch(e){ console.error('Failed to delete',d.id,e); }
+  }
+  console.log(`Wipe done. Deleted: ${deleted} of ${targets.length}.`);
+};
+
 async function lookupStaff(email){
   const key=email.toLowerCase();
   const s=await getDoc(doc(db,'staff',key));
@@ -2191,6 +2215,23 @@ function resetTastingFields() {
 
   try {
     await window.storage.set(storageKey, JSON.stringify(shotData), true, branch);
+    // New shot opened — clear any other open shots for this branch right
+    // away (doesn't touch submitted cal: results, only the shot: pointer).
+    try {
+      const allKeys = await window.storage.list('shot:', true, branch);
+      if (allKeys && allKeys.keys) {
+        await Promise.all(allKeys.keys.map(async k => {
+          if (k === storageKey) return;
+          try {
+            const r = await window.storage.get(k, true);
+            if (r) {
+              const s = JSON.parse(r.value);
+              if (s.branch === branch && s.id !== id) await window.storage.delete(k, true);
+            }
+          } catch(e) {}
+        }));
+      }
+    } catch(e) {}
     closeShotModal();
     await loadShotDropdown(id);
     autoFillFromShot(shotData);
