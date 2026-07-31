@@ -3406,23 +3406,25 @@ const ttEl = document.getElementById('tt-popup');
 let ttTimer = null;
 
 function showTT(text, x, y) {
-  if (!ttEl || !text) return;
-  ttEl.textContent = text;
-  ttEl.classList.add('show');
+  const el = document.getElementById('tt-popup');
+  if (!el || !text) return;
+  el.textContent = text;
+  el.classList.add('show');
   const pad = 12;
-  const tw = ttEl.offsetWidth || 200;
-  const th = ttEl.offsetHeight || 60;
+  const tw = el.offsetWidth || 200;
+  const th = el.offsetHeight || 60;
   let left = x + pad;
   let top = y - th / 2;
   if (left + tw > window.innerWidth - pad) left = x - tw - pad;
   if (top < pad) top = pad;
   if (top + th > window.innerHeight - pad) top = window.innerHeight - th - pad;
-  ttEl.style.left = left + 'px';
-  ttEl.style.top = top + 'px';
+  el.style.left = left + 'px';
+  el.style.top = top + 'px';
 }
 
 function hideTT() {
-  if (ttEl) ttEl.classList.remove('show');
+  const el = document.getElementById('tt-popup');
+  if (el) el.classList.remove('show');
   clearTimeout(ttTimer);
 }
 
