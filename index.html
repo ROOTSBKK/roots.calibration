@@ -3402,10 +3402,9 @@ const ATTR_TOOLTIP = {
   'Tactile':'ความรู้สึกสัมผัสโดยรวม ให้ 0-6 โดย 0=หยาบ/ระคายเคือง 6=นุ่มเนียนสมบูรณ์',
 };
 
-const ttEl = document.getElementById('tt-popup');
 let ttTimer = null;
 
-function showTT(text, x, y) {
+window.showTT = function(text, x, y) {
   const el = document.getElementById('tt-popup');
   if (!el || !text) return;
   el.textContent = text;
@@ -3420,21 +3419,21 @@ function showTT(text, x, y) {
   if (top + th > window.innerHeight - pad) top = window.innerHeight - th - pad;
   el.style.left = left + 'px';
   el.style.top = top + 'px';
-}
+};
 
-function hideTT() {
+window.hideTT = function() {
   const el = document.getElementById('tt-popup');
   if (el) el.classList.remove('show');
   clearTimeout(ttTimer);
-}
+};
 
 // Desktop hover
 document.addEventListener('mouseover', e => {
   const chip = e.target.closest('.chip');
-  if (chip && TOOLTIP_DICT[chip.dataset.v]) { showTT(TOOLTIP_DICT[chip.dataset.v], e.clientX, e.clientY); return; }
+  if (chip && TOOLTIP_DICT[chip.dataset.v]) { window.showTT(TOOLTIP_DICT[chip.dataset.v], e.clientX, e.clientY); return; }
   const lbl = e.target.closest('.lbl');
-  if (lbl && ATTR_TOOLTIP[lbl.textContent.trim()]) { showTT(ATTR_TOOLTIP[lbl.textContent.trim()], e.clientX, e.clientY); return; }
-  hideTT();
+  if (lbl && ATTR_TOOLTIP[lbl.textContent.trim()]) { window.showTT(ATTR_TOOLTIP[lbl.textContent.trim()], e.clientX, e.clientY); return; }
+  window.hideTT();
 });
 document.addEventListener('mousemove', e => {
   if (ttEl && ttEl.classList.contains('show')) showTT(ttEl.textContent, e.clientX, e.clientY);
@@ -3449,9 +3448,9 @@ document.addEventListener('touchstart', e => {
   const txt = chip ? TOOLTIP_DICT[chip.dataset.v] : ATTR_TOOLTIP[lbl.textContent.trim()];
   if (!txt) return;
   const t = e.touches[0];
-  ttTimer = setTimeout(() => showTT(txt, t.clientX, t.clientY), 500);
+  ttTimer = setTimeout(() => window.showTT(txt, t.clientX, t.clientY), 500);
 }, {passive:true});
-document.addEventListener('touchend', hideTT, {passive:true});
+document.addEventListener('touchend', window.hideTT, {passive:true});
 document.addEventListener('touchmove', () => clearTimeout(ttTimer), {passive:true});
 
 // Init
