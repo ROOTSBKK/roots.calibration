@@ -215,7 +215,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     </div>
     <div class="row">
       <div class="col"><div class="lbl">Water Temp (°C)</div><input type="number" id="f-temp" value="93" step="0.5" style="width:100%"></div>
-      <div class="col"><div class="lbl">Pressure (bar)</div><input type="number" id="f-pressure" value="9" step="0.5" style="width:100%"></div>
+      <div class="col"><div class="lbl">Water Flow Rate (g/s)</div><input type="number" id="f-pressure" value="9" step="0.5" style="width:100%"></div>
     </div>
   </div>
 
@@ -1352,7 +1352,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
       <div><b>ชื่อกาแฟ</b> — ใส่ชื่อเมล็ดหรือ origin เช่น Ethiopia Yirgacheffe</div>
       <div><b>Lot</b> — ใส่หมายเลข Lot ถ้ามี เพื่อ track ย้อนหลังได้</div>
       <div><b>Dose / Time / Yield</b> — ใส่น้ำหนักและเวลาจริงที่ใช้ ระบบคำนวณ Ratio ให้อัตโนมัติ</div>
-      <div><b>Water Temp / Pressure</b> — อุณหภูมิน้ำ (°C) และแรงดัน (bar) ที่ใช้สกัด</div>
+      <div><b>Water Temp / Water Flow Rate</b> — อุณหภูมิน้ำ (°C) และอัตราการไหลของน้ำ (g/s) ที่ใช้สกัด</div>
       <div><b>รหัสช็อต</b> — <b>หัวหน้า</b>กด "สร้างช็อตใหม่" ครั้งเดียว ระบบสร้างรหัสอัตโนมัติในรูปแบบ <b>สาขา-วันที่-ลำดับ</b> เช่น THO-0723-01 และแสดงใน dropdown ของทุกคนในสาขาทันที — <b>พนักงาน</b>แค่เลือกจาก dropdown ไม่ต้องพิมพ์ รหัสหมดอายุอัตโนมัติหลัง 24 ชั่วโมง</div>
     </div>
   </div>
@@ -1497,7 +1497,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
       </div>
       <div class="row">
         <div class="col"><div class="lbl">Water Temp (°C)</div><input type="number" id="sm-temp" value="93" step="0.5"></div>
-        <div class="col"><div class="lbl">Pressure (bar)</div><input type="number" id="sm-pressure" value="9" step="0.5"></div>
+        <div class="col"><div class="lbl">Water Flow Rate (g/s)</div><input type="number" id="sm-pressure" value="9" step="0.5"></div>
       </div>
     </div>
     <button class="btn btn-primary" onclick="createNewShot()" style="margin-top:16px">เปิดช็อต</button>
@@ -2908,7 +2908,7 @@ function renderEntry(e) {
     <div class="entry-header">
       <div><div class="entry-name">${e.taster}${isArea?` <span class="pill pill-purple" style="font-size:10px;padding:1px 6px">Area</span>`:''}
       </div>
-      <div class="entry-meta">${e.time} · ${e.dose}g → ${e.yield}g · ${e.extractTime||'—'}s · 1:${(e.yield/e.dose).toFixed(1)}${e.waterTemp?' · '+e.waterTemp+'°C':''}${e.pressure?' · '+e.pressure+'bar':''}${e.shotId?' · 📌 '+e.shotId:''}${e.coffee?' · '+e.coffee:''}${e.lot?' · Lot '+e.lot:''}</div></div>
+      <div class="entry-meta">${e.time} · ${e.dose}g → ${e.yield}g · ${e.extractTime||'—'}s · 1:${(e.yield/e.dose).toFixed(1)}${e.waterTemp?' · '+e.waterTemp+'°C':''}${e.pressure?' · '+e.pressure+'g/s':''}${e.shotId?' · 📌 '+e.shotId:''}${e.coffee?' · '+e.coffee:''}${e.lot?' · Lot '+e.lot:''}</div></div>
     </div>
     <div class="entry-scores">
       <span class="pill ${pillClass(e.tbScore)}">TB ${e.tbScore.toFixed(1)}</span>
@@ -3275,7 +3275,7 @@ async function exportCSV() {
   if (!entries.length) { showToast('ยังไม่มีข้อมูล'); return; }
   const headers = [
     'วันที่','เวลา','สาขา','ชื่อผู้ชิม','Reference Cal','รหัสช็อต','ชื่อกาแฟ','Lot',
-    'Dose (g)','Time (s)','Yield (g)','Ratio','Water Temp (°C)','Pressure (bar)',
+    'Dose (g)','Time (s)','Yield (g)','Ratio','Water Temp (°C)','Water Flow Rate (g/s)',
     'Acidity Intensity','Acidity Tags',
     'Sweetness Intensity','Sweetness Tags',
     'Bitterness Intensity','Bitterness Tags',
