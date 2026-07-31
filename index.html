@@ -1600,7 +1600,12 @@ window._migrateBranchField = async function(){
 async function lookupStaff(email){
   const key=email.toLowerCase();
   const s=await getDoc(doc(db,'staff',key));
-  return s.exists()?s.data():null;
+  if(s.exists()) return s.data();
+  // fallback to the old key format (pre-migration) so login still works
+  // until window._seedStaffDirectory() has been run
+  const oldKey=key.replace('@','_at_');
+  const s2=await getDoc(doc(db,'staff',oldKey));
+  return s2.exists()?s2.data():null;
 }
 
 function initApp(user){
