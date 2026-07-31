@@ -403,13 +403,21 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
 <div id="page-master" class="page">
   <div class="card">
     <div class="card-title">สรุปทุกสาขา</div>
+    <select id="master-range" onchange="loadMaster()" style="margin-bottom:10px">
+      <option value="all">ทั้งหมด</option>
+      <option value="7">7 วันล่าสุด</option>
+      <option value="30">30 วันล่าสุด</option>
+    </select>
     <div id="master-table"></div>
   </div>
+  <div class="section-title">สถานะ Calibration ตามสาขา</div>
+  <div class="card"><div style="font-size:12px;color:var(--text2);margin-bottom:8px">ล่าสุดที่แต่ละสาขาบันทึกผลชิม (ไม่ขึ้นกับตัวกรองช่วงวันด้านบน)</div><div id="branch-freshness"></div></div>
   <div class="section-title">Inter-rater: ช็อตที่ชิมร่วมกัน</div>
   <div class="card"><div style="font-size:12px;color:var(--text2);margin-bottom:8px">ช็อตที่มีผู้ชิม ≥2 คน — เทียบความสอดคล้อง</div><div id="inter-rater"></div></div>
   <div class="section-title">30 รายการล่าสุด</div>
   <div id="master-entries"></div>
   <button class="btn btn-secondary" onclick="exportCSV()" style="margin-top:8px">⬇ Export ทั้งหมดเป็น CSV</button>
+  <button class="btn btn-secondary" onclick="printReport()" style="margin-top:8px">🖨️ พิมพ์รายงาน / Export PDF</button>
 </div>
 
 <!-- ═══ TEAM ═══ -->
@@ -2621,26 +2629,59 @@ async function loadMaster() {
   document.getElementById('master-table').innerHTML = '<div class="empty">กำลังโหลด...</div>';
   const entries = await loadEntries();
   if (!entries.length) {
-    ['master-table','inter-rater','master-entries'].forEach(id => document.getElementById(id).innerHTML = '<div class="empty">ยังไม่มีข้อมูล</div>');
+    ['master-table','inter-rater','master-entries','branch-freshness'].forEach(id => document.getElementById(id).innerHTML = '<div class="empty">ยังไม่มีข้อมูล</div>');
     return;
   }
 
-  // Branch summary table
-  const byBranch = {};
+  // Branch freshness (last calibrated per branch) — always full data, not
+  // affected by the date-range filter below.
+  const branchesToShow = window._isAdmin() ? ALL_BRANCHES : [window._currentUser.branch];
+  const lastByBranch = {};
   entries.forEach(e => {
-    if (!byBranch[e.branch]) byBranch[e.branch] = {count:0,tbSum:0,tcSum:0};
-    byBranch[e.branch].count++;
-    byBranch[e.branch].tbSum += e.tbScore;
-    byBranch[e.branch].tcSum += e.tcScore;
+    if (!lastByBranch[e.branch] || e.date > lastByBranch[e.branch]) lastByBranch[e.branch] = e.date;
   });
-  let tbl = '<table><thead><tr><th>สาขา</th><th>ช็อต</th><th>TB เฉลี่ย</th><th>Tactile เฉลี่ย</th></tr></thead><tbody>';
-  Object.entries(byBranch).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([b,d]) => {
-    const avgTB = (d.tbSum/d.count).toFixed(2);
-    const avgTC = (d.tcSum/d.count).toFixed(2);
-    tbl += `<tr><td><b>${b}</b></td><td>${d.count}</td><td><span class="pill ${pillClass(+avgTB)}">${avgTB}</span></td><td><span class="pill ${pillClass(+avgTC)}">${avgTC}</span></td></tr>`;
+  const todayD = new Date();
+  let freshHtml = '<table><thead><tr><th>สาขา</th><th>Calibrate ล่าสุด</th><th>สถานะ</th></tr></thead><tbody>';
+  branchesToShow.sort().forEach(b => {
+    const last = lastByBranch[b];
+    const days = last ? Math.floor((todayD - new Date(last)) / 86400000) : null;
+    let statusText, statusColor;
+    if (days === null) { statusText = 'ไม่มีข้อมูลเลย'; statusColor = 'var(--red)'; }
+    else if (days <= 1) { statusText = days===0?'วันนี้':'เมื่อวาน'; statusColor = 'var(--green)'; }
+    else if (days <= 3) { statusText = `${days} วันที่แล้ว`; statusColor = 'var(--amber)'; }
+    else { statusText = `${days} วันที่แล้ว ⚠️`; statusColor = 'var(--red)'; }
+    freshHtml += `<tr><td><b>${b}</b></td><td>${last||'—'}</td><td><span style="color:${statusColor};font-weight:700">${statusText}</span></td></tr>`;
   });
-  tbl += '</tbody></table>';
-  document.getElementById('master-table').innerHTML = tbl;
+  freshHtml += '</tbody></table>';
+  document.getElementById('branch-freshness').innerHTML = freshHtml;
+
+  // Date-range filter for the branch summary table
+  const range = document.getElementById('master-range').value;
+  let filtered = entries;
+  if (range !== 'all') {
+    const cutoff = new Date(todayD - (+range)*86400000).toISOString().slice(0,10);
+    filtered = entries.filter(e => e.date >= cutoff);
+  }
+  if (!filtered.length) {
+    document.getElementById('master-table').innerHTML = '<div class="empty">ไม่มีข้อมูลในช่วงที่เลือก</div>';
+  } else {
+    // Branch summary table
+    const byBranch = {};
+    filtered.forEach(e => {
+      if (!byBranch[e.branch]) byBranch[e.branch] = {count:0,tbSum:0,tcSum:0};
+      byBranch[e.branch].count++;
+      byBranch[e.branch].tbSum += e.tbScore;
+      byBranch[e.branch].tcSum += e.tcScore;
+    });
+    let tbl = '<table><thead><tr><th>สาขา</th><th>ช็อต</th><th>TB เฉลี่ย</th><th>Tactile เฉลี่ย</th></tr></thead><tbody>';
+    Object.entries(byBranch).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([b,d]) => {
+      const avgTB = (d.tbSum/d.count).toFixed(2);
+      const avgTC = (d.tcSum/d.count).toFixed(2);
+      tbl += `<tr><td><b>${b}</b></td><td>${d.count}</td><td><span class="pill ${pillClass(+avgTB)}">${avgTB}</span></td><td><span class="pill ${pillClass(+avgTC)}">${avgTC}</span></td></tr>`;
+    });
+    tbl += '</tbody></table>';
+    document.getElementById('master-table').innerHTML = tbl;
+  }
 
   // Inter-rater
   const byShot = {};
@@ -2676,6 +2717,43 @@ async function loadMaster() {
   document.getElementById('master-entries').innerHTML =
     entries.sort((a,b)=>b.id.localeCompare(a.id)).slice(0,30)
     .map(e=>`<div style="font-size:11px;color:var(--text3);padding:0 2px;margin-bottom:2px">${e.branch} · ${e.shotId||'—'}</div>`+renderEntry(e)).join('');
+}
+
+function printReport() {
+  const range = document.getElementById('master-range').value;
+  const rangeLabel = range==='all' ? 'ทั้งหมด' : range==='7' ? '7 วันล่าสุด' : '30 วันล่าสุด';
+  const now = new Date();
+  const genStamp = now.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'}) + ' ' + now.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+  const tableHtml = document.getElementById('master-table').innerHTML;
+  const freshHtml = document.getElementById('branch-freshness').innerHTML;
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Roots BKK — Calibration Report</title>
+  <style>
+    body{font-family:'Sarabun','Segoe UI',sans-serif;color:#1a1a1a;padding:30px;max-width:800px;margin:0 auto}
+    h1{font-size:20px;margin-bottom:4px}
+    .meta{font-size:12px;color:#666;margin-bottom:24px}
+    h2{font-size:15px;margin-top:28px;margin-bottom:8px;border-bottom:2px solid #333;padding-bottom:4px}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{border:1px solid #ccc;padding:6px 10px;text-align:left}
+    th{background:#f0f0f0}
+    span[style*="var(--green)"]{color:#0a7d2c!important}
+    span[style*="var(--amber)"]{color:#b8860b!important}
+    span[style*="var(--red)"]{color:#c0392b!important}
+    .pill{padding:2px 8px;border-radius:10px;font-weight:600;display:inline-block}
+    .pill-green{background:#d4edda;color:#0a7d2c}
+    .pill-amber{background:#fff3cd;color:#8a6d00}
+    .pill-red{background:#f8d7da;color:#c0392b}
+    @media print{ body{padding:10px} }
+  </style></head><body>
+    <h1>Roots BKK — รายงานสรุป Calibration</h1>
+    <div class="meta">ช่วงข้อมูล: ${rangeLabel} · สร้างรายงานเมื่อ ${genStamp}</div>
+    <h2>สรุปคะแนนตามสาขา (${rangeLabel})</h2>
+    ${tableHtml}
+    <h2>สถานะ Calibration ล่าสุดตามสาขา</h2>
+    ${freshHtml}
+  </body></html>`);
+  w.document.close();
+  setTimeout(() => w.print(), 400);
 }
 
 // ── Person / Level page ──
