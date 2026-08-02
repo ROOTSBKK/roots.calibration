@@ -3027,7 +3027,7 @@ async function renderTeam() {
   const el = document.getElementById('team-content');
   el.innerHTML = '<div class="empty">กำลังโหลด...</div>';
 
-  const entries = await loadEntries();
+  const entries = (await loadEntries()).filter(e => e.branch === selectedTeamBranch);
   const branch = selectedTeamBranch;
   const staff = STAFF_DATA[branch] || [];
 
