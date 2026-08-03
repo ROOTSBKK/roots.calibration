@@ -2201,7 +2201,7 @@ async function createNewShot() {
   const storageKey = 'shot:' + id + ':' + Date.now();
   const shotData = {
     id, branch,
-    label: `${id} · ${timeStr} (${taster})`,
+    label: `${id}${coffee?' · '+coffee:''} · ${timeStr} (${taster})`,
     createdBy: taster, time: timeStr, created: Date.now(),
     coffee, lot, dose, extractTime: extractT,
     yield: yieldW, waterTemp: temp, pressure, tds,
@@ -2263,7 +2263,7 @@ async function loadShotDropdown(selectId) {
         const r = await window.storage.get(k, true);
         if (r) {
           const s = JSON.parse(r.value);
-          // กรองเฉพาะสาขาที่เลือก และไม่เกิน 24 ชั่วโมง
+          // กรองเฉพาะสาขาที่เลือก และไม่เกิน 1 ชั่วโมง
           if (s.branch === branch && now - s.created < SHOT_TTL) {
             shots.push(s);
           } else if (now - s.created >= SHOT_TTL) {
@@ -2680,9 +2680,14 @@ async function loadMaster() {
       const allTags={};
       arr.forEach(e=>{ ATTRS.forEach(a=>{ (e.tags[a]||[]).forEach(t=>{ allTags[t]=(allTags[t]||0)+1; }); }); });
       const majTags = Object.entries(allTags).filter(([,c])=>c>arr.length/2).map(([t])=>t);
+      const first = arr[0];
       html += `<div style="border:1px solid var(--bg3);border-radius:var(--r2);padding:10px;margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;margin-bottom:6px">
           <span class="pill pill-blue">📌 ${shotId}</span><span style="font-size:11px;color:var(--text3)">${arr.length} คน</span>
+        </div>
+        <div style="background:var(--bg2);border-radius:var(--r2);padding:7px 9px;margin-bottom:8px;font-size:11.5px;color:var(--text2);line-height:1.6">
+          <div style="font-weight:700;color:var(--text)">${first.coffee||'ไม่ระบุชื่อกาแฟ'}${first.lot?' · Lot '+first.lot:''}</div>
+          <div>Dose <b>${first.dose||'—'}g</b> → Yield <b>${first.yield||'—'}g</b> · Ratio <b>1:${first.dose?(first.yield/first.dose).toFixed(1):'—'}</b>${first.tds?' · TDS <b>'+first.tds+'%</b>':''}${first.ext?' · EXT <b>'+first.ext+'%</b>':''}</div>
         </div>
         <div style="font-size:11px;margin-bottom:5px;flex-wrap:wrap;display:flex;gap:6px">${arr.map(e=>`<span><b>${e.taster}</b> TB${e.tbScore}/TC${e.tcScore}</span>`).join('')}</div>
         <div style="font-size:11px;color:var(--text3);margin-bottom:3px">TB range: ${tbSpread.toFixed(1)} · TC range: ${tcSpread.toFixed(1)} · Agreement: <span style="color:${ac};font-weight:700">${(agreeScore*100).toFixed(0)}%</span></div>
@@ -3201,9 +3206,14 @@ async function renderTeam() {
     }).join('');
 
     html += `<div class="card" style="margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div style="font-size:13px;font-weight:600">${shotId}</div>
-        <div style="font-size:11px;color:var(--text3)">${firstEntry.coffee||''} · ${shotEntries.length} คน</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="font-size:13px;font-weight:600">📌 ${shotId}</div>
+        <div style="font-size:11px;color:var(--text3)">${shotEntries.length} คน</div>
+      </div>
+      <div style="background:var(--bg2);border-radius:var(--r2);padding:8px 10px;margin-bottom:10px;font-size:12px;color:var(--text2);line-height:1.7">
+        <div style="font-weight:700;color:var(--text)">${firstEntry.coffee||'ไม่ระบุชื่อกาแฟ'}${firstEntry.lot?' · Lot '+firstEntry.lot:''}</div>
+        <div>Dose <b>${firstEntry.dose||'—'}g</b> → Yield <b>${firstEntry.yield||'—'}g</b> · Ratio <b>1:${firstEntry.dose?(firstEntry.yield/firstEntry.dose).toFixed(1):'—'}</b> · Time <b>${firstEntry.extractTime||'—'}s</b></div>
+        <div>${firstEntry.waterTemp?'Water Temp <b>'+firstEntry.waterTemp+'°C</b> · ':''}${firstEntry.pressure?'Flow Rate <b>'+firstEntry.pressure+'g/s</b> · ':''}${firstEntry.tds?'TDS <b>'+firstEntry.tds+'%</b> · ':''}${firstEntry.ext?'EXT <b>'+firstEntry.ext+'%</b>':''}</div>
       </div>
       <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">★ Reference Calibrators</div>
       <div style="display:flex;gap:8px;margin-bottom:4px">${refCards}</div>
