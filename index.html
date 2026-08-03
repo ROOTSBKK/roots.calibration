@@ -2393,8 +2393,8 @@ async function submitForm() {
   if (dist>=8) {
     if (exState==='sour') exDiag = stState==='strong'?'เปรี้ยวไป → เพิ่มยีลด์':'เปรี้ยวไป → บดละเอียดขึ้น';
     else if (exState==='bitter') exDiag = stState==='weak'?'ขมไป → ลดยีลด์':'ขมไป → บดหยาบขึ้น';
-    else if (stState==='weak') exDiag = 'จางไป → เพิ่มโดส';
-    else exDiag = 'เข้มไป → ลดโดส หรือเพิ่มยีลด์';
+    else if (stState==='weak') exDiag = 'จางไป → บดละเอียดขึ้น หรือลดยีลด์';
+    else exDiag = 'เข้มไป → เพิ่มยีลด์ หรือบดหยาบขึ้น';
   }
 
   const iL = INTLABELS;
