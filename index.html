@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Roots BKK — Espresso Calibration</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#18181A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Calibration">
 <style>
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -2461,8 +2468,30 @@ async function loadShotDropdown(selectId) {
       } catch(e) {}
     }));
     shots.sort((a,b) => b.created - a.created);
+
+    // Count how many people have already tasted each shot, so joiners can
+    // tell at a glance whether to pick an existing shot instead of opening
+    // a new one.
+    let countByShot = {};
+    try {
+      const entryKeys = await window.storage.list('cal:', true, branch);
+      if (entryKeys && entryKeys.keys) {
+        await Promise.all(entryKeys.keys.map(async k => {
+          try {
+            const r = await window.storage.get(k, true);
+            if (r) {
+              const e = JSON.parse(r.value);
+              if (e.shotId) countByShot[e.shotId] = (countByShot[e.shotId] || 0) + 1;
+            }
+          } catch(err) {}
+        }));
+      }
+    } catch(err) {}
+
     shots.forEach(s => {
-      sel.innerHTML += `<option value="${s.id}"${s.id===cur?' selected':''}>${s.label}</option>`;
+      const n = countByShot[s.id] || 0;
+      const countLabel = n > 0 ? ` (${n} คนชิมแล้ว)` : ' (ยังไม่มีคนชิม)';
+      sel.innerHTML += `<option value="${s.id}"${s.id===cur?' selected':''}>${s.label}${countLabel}</option>`;
     });
     if (cur) {
       sel.value = cur;
