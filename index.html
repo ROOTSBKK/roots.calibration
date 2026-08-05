@@ -2345,15 +2345,24 @@ async function createNewShot() {
     }
   }
 
-  const seq = existingShots.length > 0
-    ? Math.max(...existingShots.map(s => {
-        const parts = s.id.split('-');
-        return parseInt(parts[parts.length-1]) || 0;
-      })) + 1
-    : 1;
+  // Shot ID now references the coffee name (e.g. THO-0803-HouseBlend) instead
+  // of a plain running number — easier to tell shots apart in the dropdown.
+  // If the same coffee name is opened again today, append 2, 3, ... to it.
+  function coffeeSlug(name) {
+    const clean = (name || '').trim();
+    if (!clean) return 'Shot';
+    return clean.replace(/[^a-zA-Z0-9ก-๙]/g, '').slice(0, 24) || 'Shot';
+  }
+  const usedCoffeeSlugs = existingShots.map(s => coffeeSlug(s.coffee));
+  function nextCoffeeIdPart(coffeeName) {
+    const base = coffeeSlug(coffeeName);
+    const occurrences = usedCoffeeSlugs.filter(s => s === base).length;
+    usedCoffeeSlugs.push(base);
+    return occurrences === 0 ? base : base + (occurrences + 1);
+  }
 
-  async function buildAndSaveShot(coffee, lot, dose, extractT, yieldW, tds, seqNum) {
-    const id = branchCode + '-' + dateStr + '-' + seqNum.toString().padStart(2,'0');
+  async function buildAndSaveShot(coffee, lot, dose, extractT, yieldW, tds, idPart) {
+    const id = branchCode + '-' + dateStr + '-' + idPart;
     const storageKey = 'shot:' + id + ':' + Date.now();
     const shotData = {
       id, branch,
@@ -2404,7 +2413,7 @@ function resetTastingFields() {
     const yieldA  = +document.getElementById('sm-yield').value || 36;
     const tdsA    = +document.getElementById('sm-tds').value || 0;
 
-    const shotA = await buildAndSaveShot(coffeeA, lotA, doseA, timeA, yieldA, tdsA, seq);
+    const shotA = await buildAndSaveShot(coffeeA, lotA, doseA, timeA, yieldA, tdsA, nextCoffeeIdPart(coffeeA));
     let toastMsg = '✓ เปิดช็อต ' + shotA.id + ' · ' + (coffeeA||'ไม่มีชื่อกาแฟ');
 
     if (dualMode) {
@@ -2414,7 +2423,7 @@ function resetTastingFields() {
       const timeB   = +document.getElementById('sm2-time').value || 27;
       const yieldB  = +document.getElementById('sm2-yield').value || 36;
       const tdsB    = +document.getElementById('sm2-tds').value || 0;
-      const shotB = await buildAndSaveShot(coffeeB, lotB, doseB, timeB, yieldB, tdsB, seq+1);
+      const shotB = await buildAndSaveShot(coffeeB, lotB, doseB, timeB, yieldB, tdsB, nextCoffeeIdPart(coffeeB));
       toastMsg = `✓ เปิด 2 ช็อต — ${shotA.id} (${coffeeA||'ไม่มีชื่อ'}) และ ${shotB.id} (${coffeeB||'ไม่มีชื่อ'})`;
     }
 
