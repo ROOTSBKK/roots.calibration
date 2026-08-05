@@ -1499,6 +1499,10 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
       <div style="font-size:16px;font-weight:700">เปิดช็อตใหม่</div>
       <button onclick="closeShotModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">✕</button>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;background:var(--abg);border:1px solid var(--aborder);border-radius:var(--r2);padding:10px;margin-bottom:10px;cursor:pointer">
+      <input type="checkbox" id="sm-dual-mode" onchange="toggleDualShot()" style="width:16px;height:16px;accent-color:var(--amber)">
+      <span style="font-size:12.5px;color:var(--amber);font-weight:600">เปิด 2 ช็อตพร้อมกัน (กาแฟ/Recipe คนละแบบ) — กรอกครั้งเดียว ได้ 2 รหัสช็อตแยกกัน</span>
+    </label>
     <div style="display:flex;flex-direction:column;gap:10px">
 
       <div style="background:var(--bbg);border:1px solid var(--bborder);border-radius:var(--r2);padding:10px">
@@ -1519,6 +1523,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
         </div>
       </div>
 
+      <div id="shot-a-label" style="display:none;font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.04em;margin-top:4px">ช็อต A</div>
       <div><div class="lbl">ชื่อกาแฟ</div><input type="text" id="sm-coffee" placeholder="เช่น Ethiopia Yirgacheffe"></div>
       <div><div class="lbl">Lot</div><input type="text" id="sm-lot" placeholder="เช่น Lot 24A"></div>
       <div class="row">
@@ -1530,6 +1535,21 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
         <div class="col"><div class="lbl">Water Temp (°C)</div><input type="number" id="sm-temp" value="93" step="0.5"></div>
         <div class="col"><div class="lbl">Water Flow Rate (g/s)</div><input type="number" id="sm-pressure" value="9" step="0.5"></div>
         <div class="col"><div class="lbl">TDS (%)</div><input type="number" id="sm-tds" step="0.1" placeholder="เช่น 9.5"></div>
+      </div>
+
+      <div id="shot-b-fields" style="display:none;flex-direction:column;gap:10px;border-top:2px dashed var(--aborder);padding-top:12px;margin-top:4px">
+        <div style="font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.04em">ช็อต B</div>
+        <div><div class="lbl">ชื่อกาแฟ</div><input type="text" id="sm2-coffee" placeholder="เช่น House Blend"></div>
+        <div><div class="lbl">Lot</div><input type="text" id="sm2-lot" placeholder="เช่น Lot 24B"></div>
+        <div class="row">
+          <div class="col"><div class="lbl">Dose (g)</div><input type="number" id="sm2-dose" value="18" step="0.5"></div>
+          <div class="col"><div class="lbl">Time (s)</div><input type="number" id="sm2-time" value="27" step="1"></div>
+          <div class="col"><div class="lbl">Yield (g)</div><input type="number" id="sm2-yield" value="36" step="0.5"></div>
+        </div>
+        <div class="row">
+          <div class="col"><div class="lbl">TDS (%)</div><input type="number" id="sm2-tds" step="0.1" placeholder="เช่น 9.5"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text3)">Water Temp / Flow Rate / Ref. Calibration / Branch Calibrator ใช้ค่าเดียวกับช็อต A ด้านบน</div>
       </div>
     </div>
     <button class="btn btn-primary" onclick="createNewShot()" style="margin-top:16px">เปิดช็อต</button>
@@ -2144,6 +2164,15 @@ async function openShotModal() {
   document.getElementById('sm-time').value = 27;
   document.getElementById('sm-yield').value = 36;
   document.getElementById('sm-tds').value = '';
+  document.getElementById('sm-dual-mode').checked = false;
+  document.getElementById('shot-a-label').style.display = 'none';
+  document.getElementById('shot-b-fields').style.display = 'none';
+  document.getElementById('sm2-coffee').value = '';
+  document.getElementById('sm2-lot').value = '';
+  document.getElementById('sm2-dose').value = 18;
+  document.getElementById('sm2-time').value = 27;
+  document.getElementById('sm2-yield').value = 36;
+  document.getElementById('sm2-tds').value = '';
 
   // Defaults while we look up the last shot (below) — House Blend is the
   // fallback so the opener can just tap-edit or type more instead of
@@ -2184,6 +2213,12 @@ async function openShotModal() {
 }
 function closeShotModal() {
   document.getElementById('shot-modal').style.display = 'none';
+}
+
+function toggleDualShot() {
+  const on = document.getElementById('sm-dual-mode').checked;
+  document.getElementById('shot-a-label').style.display = on ? 'block' : 'none';
+  document.getElementById('shot-b-fields').style.display = on ? 'flex' : 'none';
 }
 
 function toggleTdsEdit() {
@@ -2263,19 +2298,16 @@ async function createNewShot() {
   const taster = document.getElementById('f-taster').value;
   if (!branch || !taster) { showToast('เลือกสาขาและชื่อก่อน'); return; }
 
+  const dualMode = document.getElementById('sm-dual-mode').checked;
+
   const now = new Date();
   const dateStr = (now.getMonth()+1).toString().padStart(2,'0') + now.getDate().toString().padStart(2,'0');
   const branchCode = branch.slice(0,3).toUpperCase();
   const timeStr = now.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'});
 
-  const coffee   = document.getElementById('sm-coffee').value.trim();
-  const lot      = document.getElementById('sm-lot').value.trim();
-  const dose     = +document.getElementById('sm-dose').value || 18;
-  const extractT = +document.getElementById('sm-time').value || 27;
-  const yieldW   = +document.getElementById('sm-yield').value || 36;
+  // Shared across both shots when opening 2 at once
   const temp     = +document.getElementById('sm-temp').value || 93;
   const pressure = +document.getElementById('sm-pressure').value || 9;
-  const tds      = +document.getElementById('sm-tds').value || 0;
   const branchCal = document.getElementById('sm-branch-cal').value;
   const companyCal = document.getElementById('sm-company-cal').value;
 
@@ -2297,7 +2329,8 @@ async function createNewShot() {
     }
   } catch(e) {}
 
-  if (existingShots.length > 0) {
+  // Skip the duplicate-shot warning in dual mode — opening 2 at once is intentional
+  if (existingShots.length > 0 && !dualMode) {
     const latest = existingShots.sort((a,b) => b.created - a.created)[0];
     const creatorInfo = latest.createdBy ? `เปิดโดย ${latest.createdBy} เมื่อ ${latest.time}` : `เมื่อ ${latest.time}`;
     const confirmed = confirm(
@@ -2318,17 +2351,22 @@ async function createNewShot() {
         return parseInt(parts[parts.length-1]) || 0;
       })) + 1
     : 1;
-  const id = branchCode + '-' + dateStr + '-' + seq.toString().padStart(2,'0');
-  const storageKey = 'shot:' + id + ':' + Date.now();
-  const shotData = {
-    id, branch,
-    label: `${id}${coffee?' · '+coffee:''} · ${timeStr} (${taster})`,
-    createdBy: taster, time: timeStr, created: Date.now(),
-    coffee, lot, dose, extractTime: extractT,
-    yield: yieldW, waterTemp: temp, pressure, tds,
-    companyCal: companyCal || null,
-    branchCal: branchCal || null
-  };
+
+  async function buildAndSaveShot(coffee, lot, dose, extractT, yieldW, tds, seqNum) {
+    const id = branchCode + '-' + dateStr + '-' + seqNum.toString().padStart(2,'0');
+    const storageKey = 'shot:' + id + ':' + Date.now();
+    const shotData = {
+      id, branch,
+      label: `${id}${coffee?' · '+coffee:''} · ${timeStr} (${taster})`,
+      createdBy: taster, time: timeStr, created: Date.now(),
+      coffee, lot, dose, extractTime: extractT,
+      yield: yieldW, waterTemp: temp, pressure, tds,
+      companyCal: companyCal || null,
+      branchCal: branchCal || null
+    };
+    await window.storage.set(storageKey, JSON.stringify(shotData), true, branch);
+    return shotData;
+  }
 
 function resetTastingFields() {
   // Clears only the sensory-input fields (dots/chips/notes/scores) — NOT
@@ -2359,12 +2397,32 @@ function resetTastingFields() {
 }
 
   try {
-    await window.storage.set(storageKey, JSON.stringify(shotData), true, branch);
+    const coffeeA = document.getElementById('sm-coffee').value.trim();
+    const lotA    = document.getElementById('sm-lot').value.trim();
+    const doseA   = +document.getElementById('sm-dose').value || 18;
+    const timeA   = +document.getElementById('sm-time').value || 27;
+    const yieldA  = +document.getElementById('sm-yield').value || 36;
+    const tdsA    = +document.getElementById('sm-tds').value || 0;
+
+    const shotA = await buildAndSaveShot(coffeeA, lotA, doseA, timeA, yieldA, tdsA, seq);
+    let toastMsg = '✓ เปิดช็อต ' + shotA.id + ' · ' + (coffeeA||'ไม่มีชื่อกาแฟ');
+
+    if (dualMode) {
+      const coffeeB = document.getElementById('sm2-coffee').value.trim();
+      const lotB    = document.getElementById('sm2-lot').value.trim();
+      const doseB   = +document.getElementById('sm2-dose').value || 18;
+      const timeB   = +document.getElementById('sm2-time').value || 27;
+      const yieldB  = +document.getElementById('sm2-yield').value || 36;
+      const tdsB    = +document.getElementById('sm2-tds').value || 0;
+      const shotB = await buildAndSaveShot(coffeeB, lotB, doseB, timeB, yieldB, tdsB, seq+1);
+      toastMsg = `✓ เปิด 2 ช็อต — ${shotA.id} (${coffeeA||'ไม่มีชื่อ'}) และ ${shotB.id} (${coffeeB||'ไม่มีชื่อ'})`;
+    }
+
     closeShotModal();
-    await loadShotDropdown(id);
-    autoFillFromShot(shotData);
+    await loadShotDropdown(shotA.id);
+    autoFillFromShot(shotA);
     resetTastingFields();
-    showToast('✓ เปิดช็อต ' + id + ' · ' + (coffee||'ไม่มีชื่อกาแฟ'));
+    showToast(toastMsg);
   } catch(e) { showToast('Error: ' + e.message); }
 }
 
@@ -2465,6 +2523,12 @@ async function submitForm() {
   const shotId = document.getElementById('f-shotid').value;
   if (!branch || !taster) { showToast('กรุณาเลือกสาขาและชื่อผู้ชิม'); return; }
   if (!shotId) { showToast('กรุณาเลือกหรือสร้างรหัสช็อต'); return; }
+
+  const coffeeCheck = document.getElementById('f-coffee').value.trim();
+  const confirmed = confirm(
+    `ยืนยันบันทึกผลชิมสำหรับ:\n\n📌 ช็อต: ${shotId}\n☕ กาแฟ: ${coffeeCheck || 'ไม่ระบุชื่อ'}\n👤 ผู้ชิม: ${taster}\n\nถ้าเพิ่งสลับช็อตมา กรุณาเช็คให้แน่ใจว่าคะแนนที่กรอกไว้เป็นของช็อตนี้จริง`
+  );
+  if (!confirmed) return;
 
   btn.disabled = true;
   btn.textContent = '✓ บันทึกแล้ว';
