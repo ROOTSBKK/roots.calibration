@@ -1356,14 +1356,25 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     <div style="display:flex;flex-direction:column;gap:12px">
       <div style="display:flex;gap:12px;align-items:flex-start">
         <div style="background:#18181A;color:#F8F7F4;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">1</div>
-        <div><div style="font-weight:600;margin-bottom:2px">เปิดลิงก์บนมือถือ</div><div style="font-size:13px;color:var(--text2)">ทุกคนในสาขาเปิดลิงก์เดียวกัน ไม่ต้องติดตั้งแอป ไม่ต้องมีบัญชี Claude</div></div>
+        <div>
+          <div style="font-weight:600;margin-bottom:4px">เพิ่มไอคอนแอปไว้ที่หน้าจอโฮม (แนะนำ)</div>
+          <div style="font-size:13px;color:var(--text2);line-height:1.7">
+            ทำครั้งเดียว ไม่ต้องเปิดเบราว์เซอร์พิมพ์ลิงก์ทุกวัน — กดไอคอนจากหน้าจอโฮมได้เลยเหมือนแอปทั่วไป<br>
+            <b>iPhone (Safari):</b> กดปุ่ม Share (สี่เหลี่ยมมีลูกศรขึ้น) → เลื่อนหา "Add to Home Screen"<br>
+            <b>Android (Chrome):</b> กดเมนู ⋮ มุมขวาบน → "Add to Home screen" (หรือรอ banner เด้งเอง)
+          </div>
+        </div>
       </div>
       <div style="display:flex;gap:12px;align-items:flex-start">
         <div style="background:#18181A;color:#F8F7F4;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">2</div>
-        <div><div style="font-weight:600;margin-bottom:2px">เลือกสาขาและชื่อของตัวเอง</div><div style="font-size:13px;color:var(--text2)">ทีม Area สามารถเลือกสาขาที่ไปเยือนแล้วเลือกชื่อตัวเองได้ในทุกสาขา</div></div>
+        <div><div style="font-weight:600;margin-bottom:2px">เปิดลิงก์บนมือถือ</div><div style="font-size:13px;color:var(--text2)">ทุกคนในสาขาเปิดลิงก์เดียวกัน ไม่ต้องติดตั้งแอป ไม่ต้องมีบัญชี Claude</div></div>
       </div>
       <div style="display:flex;gap:12px;align-items:flex-start">
         <div style="background:#18181A;color:#F8F7F4;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">3</div>
+        <div><div style="font-weight:600;margin-bottom:2px">เลือกสาขาและชื่อของตัวเอง</div><div style="font-size:13px;color:var(--text2)">ทีม Area สามารถเลือกสาขาที่ไปเยือนแล้วเลือกชื่อตัวเองได้ในทุกสาขา</div></div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="background:#18181A;color:#F8F7F4;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">4</div>
         <div>
           <div style="font-weight:600;margin-bottom:4px">มี 1 คนกด "สร้างช็อตใหม่" — คนอื่นแค่ "เข้าร่วม"</div>
           <div style="background:var(--bbg);border:1px solid var(--bborder);border-radius:var(--r2);padding:10px;margin-bottom:6px">
@@ -1375,7 +1386,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
         </div>
       </div>
       <div style="display:flex;gap:12px;align-items:flex-start">
-        <div style="background:#18181A;color:#F8F7F4;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">4</div>
+        <div style="background:#18181A;color:#F8F7F4;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">5</div>
         <div><div style="font-weight:600;margin-bottom:2px">กรอกฟอร์มและกด "สรุปและบันทึก"</div><div style="font-size:13px;color:var(--text2)">ข้อมูลจะถูกบันทึกทันที และมองเห็นร่วมกันกับทุกสาขาในแบบ real-time</div></div>
       </div>
     </div>
@@ -1390,8 +1401,13 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
       <div><b>Lot</b> — ใส่หมายเลข Lot ถ้ามี เพื่อ track ย้อนหลังได้</div>
       <div><b>Dose / Time / Yield</b> — ใส่น้ำหนักและเวลาจริงที่ใช้ ระบบคำนวณ Ratio ให้อัตโนมัติ</div>
       <div><b>Water Temp / Water Flow Rate</b> — อุณหภูมิน้ำ (°C) และอัตราการไหลของน้ำ (g/s) ที่ใช้สกัด</div>
-      <div><b>รหัสช็อต</b> — มีคนแค่ <b>1 คน</b>กด "สร้างช็อตใหม่" ต่อช็อต (เหมือนสร้างห้องให้คนอื่น join) ระบบสร้างรหัสอัตโนมัติในรูปแบบ <b>สาขา-วันที่-ลำดับ</b> เช่น THO-0723-01 และแสดงใน dropdown ของทุกคนในสาขาทันที — <b>สมาชิกที่เหลือแค่เลือกรหัสเดิมจาก dropdown ไม่ต้องกรอกพารามิเตอร์ซ้ำ กรอกแค่ผลชิมของตัวเองพอ</b> ⚠️ ถ้ามีใครกด "สร้างช็อตใหม่" ซ้ำจะกลายเป็นคนละช็อตทันที รหัสหมดอายุอัตโนมัติหลัง 24 ชั่วโมง</div>
+      <div><b>รหัสช็อต</b> — มีคนแค่ <b>1 คน</b>กด "สร้างช็อตใหม่" ต่อช็อต (เหมือนสร้างห้องให้คนอื่น join) ระบบสร้างรหัสอัตโนมัติในรูปแบบ <b>สาขา-วันที่-ชื่อกาแฟ</b> เช่น THO-0723-HouseBlend และแสดงใน dropdown ของทุกคนในสาขาทันที (ถ้าเปิดกาแฟชื่อซ้ำกันในวันเดียวกัน จะเติมเลขต่อท้ายให้เองเช่น HouseBlend2) — <b>สมาชิกที่เหลือแค่เลือกรหัสเดิมจาก dropdown ไม่ต้องกรอกพารามิเตอร์ซ้ำ กรอกแค่ผลชิมของตัวเองพอ</b> ⚠️ ถ้ามีใครกด "สร้างช็อตใหม่" ซ้ำจะกลายเป็นคนละช็อตทันที รหัสหมดอายุอัตโนมัติหลัง 1 ชั่วโมง</div>
     </div>
+  </div>
+
+  <div class="card">
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--blue)">เปิด 2 ช็อตพร้อมกัน</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.6">ถ้าวันนั้นชง 2 ตัว (คนละ Blend หรือคนละสูตร) ไม่ต้องเปิด modal ทีละรอบ — ตอนกด "สร้างช็อตใหม่" ให้ติ๊กช่อง <b>"เปิด 2 ช็อตพร้อมกัน"</b> ด้านบน modal จะขยายเป็นช็อต A และช็อต B ให้กรอกพารามิเตอร์แยกกัน (ส่วน Water Temp / Flow Rate / Ref. Calibration / Branch Calibrator ใช้ค่าเดียวกันทั้งคู่) กดเปิดครั้งเดียวได้ 2 รหัสช็อตแยกกันทันที ไม่ต้องรอให้ช็อตแรกจบก่อน</div>
   </div>
 
   <div class="card">
@@ -1491,7 +1507,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
   <div class="card">
     <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--text2);line-height:1.6">
       <div>☕ <b>ทำทุกเช้า</b> — ยิ่งมีข้อมูลสะสมมาก ระดับพนักงานและจุดอ่อนยิ่งแม่นยำขึ้น</div>
-      <div>📌 <b>รหัสช็อต</b> — หัวหน้าสาขาสร้างรหัส ทีมเลือกจาก dropdown ไม่มีพิมพ์ผิด ไม่มีตัวเล็กใหญ่สับสน รหัสหมดอายุใน 24 ชั่วโมง</div>
+      <div>📌 <b>รหัสช็อต</b> — หัวหน้าสาขาสร้างรหัส (อ้างอิงชื่อกาแฟในตัวรหัสเลย) ทีมเลือกจาก dropdown ไม่มีพิมพ์ผิด ไม่มีตัวเล็กใหญ่สับสน รหัสหมดอายุใน 1 ชั่วโมง</div>
       <div>⭐ <b>ทีม Area</b> — เลือกสาขาที่ไปเยือน ชื่อจะมี badge "Area" กำกับ ข้อมูลจะบันทึกตามสาขานั้น</div>
       <div>🔄 <b>ข้อมูล real-time</b> — ทุกคนที่เปิดลิงก์เดียวกันเห็นข้อมูลร่วมกัน ไม่ต้อง refresh</div>
       <div>📱 <b>Add to Home Screen</b> — กดบนเบราว์เซอร์มือถือแล้ว "Add to Home Screen" เพื่อเปิดแบบแอปได้เลย</div>
