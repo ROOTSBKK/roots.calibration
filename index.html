@@ -9,6 +9,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#18181A">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Calibration">
 <style>
@@ -1569,7 +1570,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, Timestamp, query, where } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
 const cfg = {
@@ -1717,6 +1718,13 @@ function initApp(user){
   },300);
 }
 
+// iOS/Android home-screen ("Add to Home Screen") launches run in standalone
+// mode, where signInWithPopup's session storage isn't reliably shared with
+// the popup window — causes intermittent "missing initial state" errors.
+// Use signInWithRedirect instead when running standalone; popup is fine
+// (and smoother) in a normal browser tab.
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
 window.doLogin = async function(){
   const btn=document.getElementById('google-btn');
   const status=document.getElementById('login-status');
@@ -1724,6 +1732,10 @@ window.doLogin = async function(){
   status.textContent='กำลัง login...';
   try{
     const provider=new GoogleAuthProvider();
+    if(isStandalone){
+      await signInWithRedirect(auth,provider);
+      return; // page navigates away — onAuthStateChanged picks up the result after redirect back
+    }
     const result=await signInWithPopup(auth,provider);
     const staff=await lookupStaff(result.user.email);
     if(!staff){
