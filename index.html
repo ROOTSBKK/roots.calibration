@@ -3185,17 +3185,18 @@ async function renderPersonDetail(name, branch) {
   });
   attrPct['aftertaste'] = aftT>0?Math.round(aftC/aftT*100):null;
 
-  // Directional bias vs team peers (not just reference) — shows whether
-  // this person tends to score an attribute higher or lower than the team,
-  // not just how "correct" they are.
+  // Directional bias vs the Reference Calibrator — uses the SAME baseline
+  // as the accuracy % above, so the two numbers never contradict each other
+  // (comparing bias against raw peer-average instead could disagree with
+  // the reference-based accuracy score if peers also drift off-reference).
   const attrBias = {};
   ATTRS_ALL.forEach(attr => {
     const diffs = [];
     sessions.forEach(s => {
-      const peers = (byShot[s.entry.shotId]||[]).filter(e => e.taster !== name);
-      if (!peers.length) return;
-      const peerAvg = peers.reduce((sum,e)=>sum+(e.intensity?.[attr]||3),0)/peers.length;
-      diffs.push((s.entry.intensity?.[attr]||3) - peerAvg);
+      const refs = (byShot[s.entry.shotId]||[]).filter(e => (e.isRefCal || e.taster==='Boss') && e.taster !== name);
+      if (!refs.length) return;
+      const refAvg = refs.reduce((sum,e)=>sum+(e.intensity?.[attr]||3),0)/refs.length;
+      diffs.push((s.entry.intensity?.[attr]||3) - refAvg);
     });
     attrBias[attr] = diffs.length ? diffs.reduce((a,b)=>a+b,0)/diffs.length : null;
   });
