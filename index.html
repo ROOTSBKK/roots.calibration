@@ -3156,18 +3156,43 @@ async function renderPersonDetail(name, branch) {
   });
   attrPct['aftertaste'] = aftT>0?Math.round(aftC/aftT*100):null;
 
+  // Directional bias vs team peers (not just reference) — shows whether
+  // this person tends to score an attribute higher or lower than the team,
+  // not just how "correct" they are.
+  const attrBias = {};
+  ATTRS_ALL.forEach(attr => {
+    const diffs = [];
+    sessions.forEach(s => {
+      const peers = (byShot[s.entry.shotId]||[]).filter(e => e.taster !== name);
+      if (!peers.length) return;
+      const peerAvg = peers.reduce((sum,e)=>sum+(e.intensity?.[attr]||3),0)/peers.length;
+      diffs.push((s.entry.intensity?.[attr]||3) - peerAvg);
+    });
+    attrBias[attr] = diffs.length ? diffs.reduce((a,b)=>a+b,0)/diffs.length : null;
+  });
+
   const attrBars = [...ATTRS_ALL,'aftertaste'].map(attr => {
     const pct = attrPct[attr];
     if (pct===null) return '';
     const col = pct>=80?'var(--green)':pct>=60?'var(--amber)':'var(--red)';
     const lbl = pct>=80?'ดีมาก':pct>=60?'พัฒนาได้':'อ่อน';
-    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--bg3)">
-      <span style="min-width:80px;font-size:12px;color:var(--text3)">${ATTR_LABELS[attr]}</span>
-      <div style="flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
-        <div style="width:${pct}%;height:100%;background:${col};border-radius:3px;transition:width .3s"></div>
+    const bias = attrBias[attr];
+    let biasHtml = '';
+    if (attr !== 'aftertaste' && bias !== null) {
+      if (bias >= 0.4) biasHtml = `<span style="font-size:11px;color:var(--red)">▲ สูงกว่าทีมเฉลี่ย ${bias.toFixed(1)}</span>`;
+      else if (bias <= -0.4) biasHtml = `<span style="font-size:11px;color:var(--blue)">▼ ต่ำกว่าทีมเฉลี่ย ${Math.abs(bias).toFixed(1)}</span>`;
+      else biasHtml = `<span style="font-size:11px;color:var(--text3)">≈ ใกล้เคียงทีม</span>`;
+    }
+    return `<div style="display:flex;flex-direction:column;gap:2px;padding:6px 0;border-bottom:0.5px solid var(--bg3)">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="min-width:80px;font-size:12px;color:var(--text3)">${ATTR_LABELS[attr]}</span>
+        <div style="flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:${col};border-radius:3px;transition:width .3s"></div>
+        </div>
+        <span style="min-width:36px;text-align:right;font-size:13px;font-weight:600;color:${col}">${pct}%</span>
+        <span style="font-size:11px;color:${col};min-width:54px">${lbl}</span>
       </div>
-      <span style="min-width:36px;text-align:right;font-size:13px;font-weight:600;color:${col}">${pct}%</span>
-      <span style="font-size:11px;color:${col};min-width:54px">${lbl}</span>
+      ${biasHtml ? `<div style="padding-left:88px">${biasHtml}</div>` : ''}
     </div>`;
   }).join('');
 
@@ -3738,18 +3763,40 @@ async function renderPersonModal(name, branch) {
     attrPct[attr] = total>0?Math.round(correct/total*100):null;
   });
 
+  const attrBias = {};
+  ATTRS_ALL.filter(a=>a!=='aftertaste').forEach(attr => {
+    const diffs = [];
+    sessions.forEach(s => {
+      const peers = (byShot[s.entry.shotId]||[]).filter(e => e.taster !== name);
+      if (!peers.length) return;
+      const peerAvg = peers.reduce((sum,e)=>sum+(e.intensity?.[attr]||3),0)/peers.length;
+      diffs.push((s.entry.intensity?.[attr]||3) - peerAvg);
+    });
+    attrBias[attr] = diffs.length ? diffs.reduce((a,b)=>a+b,0)/diffs.length : null;
+  });
+
   const attrBars = ATTRS_ALL.map(attr => {
     const pct = attrPct[attr];
     if (pct===null) return '';
     const col = pct>=80?'var(--green)':pct>=60?'var(--amber)':'var(--red)';
     const lbl = pct>=80?'ดีมาก':pct>=60?'พัฒนาได้':'อ่อน';
-    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--bg3)">
-      <span style="min-width:80px;font-size:12px;color:var(--text3)">${ATTR_LABELS[attr]}</span>
-      <div style="flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
-        <div style="width:${pct}%;height:100%;background:${col};border-radius:3px"></div>
+    const bias = attrBias[attr];
+    let biasHtml = '';
+    if (attr !== 'aftertaste' && bias !== undefined && bias !== null) {
+      if (bias >= 0.4) biasHtml = `<span style="font-size:11px;color:var(--red)">▲ สูงกว่าทีมเฉลี่ย ${bias.toFixed(1)}</span>`;
+      else if (bias <= -0.4) biasHtml = `<span style="font-size:11px;color:var(--blue)">▼ ต่ำกว่าทีมเฉลี่ย ${Math.abs(bias).toFixed(1)}</span>`;
+      else biasHtml = `<span style="font-size:11px;color:var(--text3)">≈ ใกล้เคียงทีม</span>`;
+    }
+    return `<div style="display:flex;flex-direction:column;gap:2px;padding:6px 0;border-bottom:0.5px solid var(--bg3)">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="min-width:80px;font-size:12px;color:var(--text3)">${ATTR_LABELS[attr]}</span>
+        <div style="flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:${col};border-radius:3px"></div>
+        </div>
+        <span style="min-width:36px;text-align:right;font-size:13px;font-weight:600;color:${col}">${pct}%</span>
+        <span style="font-size:11px;color:${col};min-width:54px">${lbl}</span>
       </div>
-      <span style="min-width:36px;text-align:right;font-size:13px;font-weight:600;color:${col}">${pct}%</span>
-      <span style="font-size:11px;color:${col};min-width:54px">${lbl}</span>
+      ${biasHtml ? `<div style="padding-left:88px">${biasHtml}</div>` : ''}
     </div>`;
   }).join('');
 
