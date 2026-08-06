@@ -3200,19 +3200,44 @@ async function renderPersonDetail(name, branch) {
     attrBias[attr] = diffs.length ? diffs.reduce((a,b)=>a+b,0)/diffs.length : null;
   });
 
+  // Plain-language phrasing per attribute so the direction of the bias is
+  // immediately understandable — not just "higher/lower than team average".
+  const BIAS_PHRASE = {
+    acidity:    { high: 'รับรสเปรี้ยวไวกว่าทีม (ให้คะแนนเปรี้ยวสูงกว่าคนอื่น)', low: 'รับรสเปรี้ยวได้น้อยกว่าทีม (ให้คะแนนเปรี้ยวต่ำกว่าคนอื่น)' },
+    sweetness:  { high: 'รับรสหวานไวกว่าทีม (ให้คะแนนหวานสูงกว่าคนอื่น)',   low: 'รับรสหวานได้น้อยกว่าทีม (ให้คะแนนหวานต่ำกว่าคนอื่น)' },
+    bitterness: { high: 'รับรสขมไวกว่าทีม (ให้คะแนนขมสูงกว่าคนอื่น)',       low: 'รับรสขมได้น้อยกว่าทีม (ให้คะแนนขมต่ำกว่าคนอื่น)' },
+    mouthfeel:  { high: 'รู้สึกเนื้อสัมผัสเข้มกว่าทีม',                        low: 'รู้สึกเนื้อสัมผัสเบากว่าทีม' }
+  };
+
   const attrBars = [...ATTRS_ALL,'aftertaste'].map(attr => {
     const pct = attrPct[attr];
     if (pct===null) return '';
     const col = pct>=80?'var(--green)':pct>=60?'var(--amber)':'var(--red)';
     const lbl = pct>=80?'ดีมาก':pct>=60?'พัฒนาได้':'อ่อน';
+    const isWeak = pct < 60;
     const bias = attrBias[attr];
     let biasHtml = '';
     if (attr !== 'aftertaste' && bias !== null) {
-      if (bias >= 0.4) biasHtml = `<span style="font-size:11px;color:var(--red)">▲ สูงกว่าทีมเฉลี่ย ${bias.toFixed(1)}</span>`;
-      else if (bias <= -0.4) biasHtml = `<span style="font-size:11px;color:var(--blue)">▼ ต่ำกว่าทีมเฉลี่ย ${Math.abs(bias).toFixed(1)}</span>`;
-      else biasHtml = `<span style="font-size:11px;color:var(--text3)">≈ ใกล้เคียงทีม</span>`;
+      if (Math.abs(bias) >= 0.4) {
+        const dir = bias > 0 ? 'high' : 'low';
+        const phrase = BIAS_PHRASE[attr][dir];
+        const biasColor = dir === 'high' ? 'var(--red)' : 'var(--blue)';
+        const arrow = dir === 'high' ? '▲' : '▼';
+        if (isWeak) {
+          // Weak + biased in one direction — call it out prominently so it
+          // doesn't get missed among the other rows.
+          biasHtml = `<div style="background:var(--rbg);border:1px solid var(--rborder);border-radius:var(--r2);padding:8px 10px;margin-top:4px">
+            <span style="font-size:12.5px;font-weight:700;color:var(--red)">⚠️ ${arrow} ${phrase}</span>
+            <span style="font-size:11px;color:var(--text2)"> — ต่าง ${Math.abs(bias).toFixed(1)} จุดจากทีมเฉลี่ย, ควรฝึก calibrate เพิ่มเติมเรื่องนี้</span>
+          </div>`;
+        } else {
+          biasHtml = `<div style="font-size:12px;color:${biasColor};margin-top:2px">${arrow} ${phrase} <span style="color:var(--text3)">(ต่าง ${Math.abs(bias).toFixed(1)} จุด)</span></div>`;
+        }
+      } else {
+        biasHtml = `<div style="font-size:11px;color:var(--text3);margin-top:2px">≈ รับรส${ATTR_LABELS[attr]}ใกล้เคียงทีม</div>`;
+      }
     }
-    return `<div style="display:flex;flex-direction:column;gap:2px;padding:6px 0;border-bottom:0.5px solid var(--bg3)">
+    return `<div style="display:flex;flex-direction:column;gap:2px;padding:8px 0;border-bottom:0.5px solid var(--bg3)">
       <div style="display:flex;align-items:center;gap:8px">
         <span style="min-width:80px;font-size:12px;color:var(--text3)">${ATTR_LABELS[attr]}</span>
         <div style="flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
@@ -3221,7 +3246,7 @@ async function renderPersonDetail(name, branch) {
         <span style="min-width:36px;text-align:right;font-size:13px;font-weight:600;color:${col}">${pct}%</span>
         <span style="font-size:11px;color:${col};min-width:54px">${lbl}</span>
       </div>
-      ${biasHtml ? `<div style="padding-left:88px">${biasHtml}</div>` : ''}
+      ${biasHtml}
     </div>`;
   }).join('');
 
