@@ -1907,6 +1907,7 @@ const INTLABELS = ['Low','Low-Medium','Medium','Medium-High','High'];
 const LEVEL = ['Unacceptable','Acceptable','Average','Good','Very Good','Excellent','Extraordinary'];
 
 let intensity = {acidity:3,sweetness:3,bitterness:3,mouthfeel:3};
+let touchedAttrs = new Set();
 let aftertasteLength = 3; // 1-5 slider value
 let flavorTags = {'flavor-fruity':[],'flavor-floral':[],'flavor-nutty':[],'flavor-sugary':[],'flavor-spice':[],'flavor-roasted':[]};
 
@@ -2425,6 +2426,7 @@ async function createNewShot() {
 function resetTastingFields() {
   // Clears only the sensory-input fields (dots/chips/notes/scores) — NOT
   // branch, taster, or shot metadata, which stay as auto-filled from the shot.
+  touchedAttrs.clear();
   document.getElementById('f-is-ref-cal').checked = false;
   document.getElementById('ref-cal-banner').style.display = 'none';
   document.getElementById('f-tb').value = 3;
@@ -2599,6 +2601,22 @@ async function submitForm() {
   const shotId = document.getElementById('f-shotid').value;
   if (!branch || !taster) { showToast('กรุณาเลือกสาขาและชื่อผู้ชิม'); return; }
   if (!shotId) { showToast('กรุณาเลือกหรือสร้างรหัสช็อต'); return; }
+
+  const requiredAttrs = ['acidity','sweetness','bitterness','mouthfeel'];
+  const missingAttrs = requiredAttrs.filter(a => !touchedAttrs.has(a));
+  if (missingAttrs.length) {
+    missingAttrs.forEach(a => {
+      const group = document.querySelector('.dots[data-attr="'+a+'"]');
+      if (group) {
+        group.style.outline = '2px solid var(--red)';
+        group.style.borderRadius = 'var(--r2)';
+        setTimeout(() => { group.style.outline = ''; }, 2500);
+      }
+    });
+    const attrThaiLabels = {acidity:'Acidity',sweetness:'Sweetness',bitterness:'Bitterness',mouthfeel:'Mouthfeel'};
+    showToast('⚠️ กรุณากรอกให้ครบ: ' + missingAttrs.map(a => attrThaiLabels[a]||a).join(', '));
+    return;
+  }
 
   const coffeeCheck = document.getElementById('f-coffee').value.trim();
   const confirmed = confirm(
@@ -2811,6 +2829,7 @@ function resetForm() {
   document.getElementById('f-tc').value = 3;
   document.getElementById('f-flavor').value = '';
   aftertasteLength = 5;
+  touchedAttrs.clear();
   const aftSlider = document.getElementById('f-aft-length');
   if (aftSlider) { aftSlider.value = 3; updateLengthLabel(3); }
   ATTRS.forEach(a => {
@@ -3877,7 +3896,7 @@ function handleDot(btn) {
   const group = btn.closest('.dots');
   if (!group) return;
   const attr = group.dataset.attr;
-  if (attr) { intensity[attr] = +btn.dataset.v; paintDots(attr); }
+  if (attr) { intensity[attr] = +btn.dataset.v; touchedAttrs.add(attr); paintDots(attr); }
 }
 
 // ── Tooltip System ──
