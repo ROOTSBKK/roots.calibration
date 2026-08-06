@@ -2200,20 +2200,25 @@ async function openShotModal() {
   if (!branch) { showToast('เลือกสาขาก่อน'); return; }
   if (!taster) { showToast('เลือกชื่อผู้ชิมก่อน'); return; }
 
+  // Both dropdowns can now select ANY staff member (not just this branch's
+  // roster, or just the Area team) — sorted alphabetically, with ★ marking
+  // Area staff for quick recognition since they're the most common picks.
+  const allStaffNames = [...new Set(STAFF_DIRECTORY.map(s => s.name))].sort((a,b)=>a.localeCompare(b));
+
   // Populate Branch Calibrator dropdown
   const branchCalSel = document.getElementById('sm-branch-cal');
   branchCalSel.innerHTML = '<option value="">— เลือก Branch Calibrator —</option>';
-  const staffList = STAFF_DATA[branch] || [];
-  staffList.filter(s => s !== 'Boss').forEach(name => {
+  allStaffNames.forEach(name => {
     const isArea = AREA_STAFF.includes(name);
     branchCalSel.innerHTML += `<option value="${name}">${isArea ? '★ ' : ''}${name}</option>`;
   });
 
-  // Populate Ref. Calibration dropdown — any Area staff, not fixed to Boss
+  // Populate Ref. Calibration dropdown — any staff member, not fixed to Area
   const companyCalSel = document.getElementById('sm-company-cal');
   companyCalSel.innerHTML = '<option value="">— เลือก Ref. Calibration —</option>';
-  AREA_STAFF.forEach(name => {
-    companyCalSel.innerHTML += `<option value="${name}">★ ${name}</option>`;
+  allStaffNames.forEach(name => {
+    const isArea = AREA_STAFF.includes(name);
+    companyCalSel.innerHTML += `<option value="${name}">${isArea ? '★ ' : ''}${name}</option>`;
   });
 
   // Fields that always start fresh — these change every pull
