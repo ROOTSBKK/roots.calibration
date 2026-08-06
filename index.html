@@ -1718,7 +1718,13 @@ function initApp(user){
     if(br){br.value=user.branch;if(window.updateStaffList)window.updateStaffList();}
     const bsel=document.getElementById('b-select');
     if(!window._isAdmin()){
-      if(br)br.disabled=true;
+      if(br){
+        // Non-admins can only pick their own branch or the TESTING sandbox —
+        // remove every other branch option instead of a hard disable.
+        Array.from(br.options).forEach(opt => {
+          if(opt.value && opt.value!==user.branch && opt.value!=='TESTING') opt.remove();
+        });
+      }
       if(bsel){bsel.value=user.branch;bsel.disabled=true;}
     }
     setTimeout(()=>{
@@ -1892,6 +1898,9 @@ window._seedStaffDirectory = async function(){
 };
 
 const ALL_BRANCHES = Object.keys(STAFF_DATA);
+// TESTING branch — everyone can switch into it regardless of their real
+// branch, useful for trying the app out without touching real branch data.
+STAFF_DATA['TESTING'] = [...new Set(STAFF_DIRECTORY.map(s => s.name))].sort();
 const ATTRS = ['acidity','sweetness','bitterness','aftertaste','mouthfeel'];
 const SCORE_ATTRS = ['acidity','sweetness','bitterness','mouthfeel']; // aftertaste uses length not intensity
 const INTLABELS = ['Low','Low-Medium','Medium','Medium-High','High'];
@@ -2120,6 +2129,7 @@ function populateBranchDropdowns() {
     const ph = el.options[0].text;
     el.innerHTML = `<option value="">${ph}</option>`;
     ALL_BRANCHES.forEach(b => { el.innerHTML += `<option value="${b}">${b}</option>`; });
+    if (s === '#f-branch') el.innerHTML += `<option value="TESTING">TESTING (sandbox)</option>`;
   });
 }
 populateBranchDropdowns();
