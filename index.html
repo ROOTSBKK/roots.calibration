@@ -1902,6 +1902,17 @@ const ALL_BRANCHES = Object.keys(STAFF_DATA);
 // branch, useful for trying the app out without touching real branch data.
 STAFF_DATA['TESTING'] = [...new Set(STAFF_DIRECTORY.map(s => s.name))].sort();
 const ATTRS = ['acidity','sweetness','bitterness','aftertaste','mouthfeel'];
+
+// Single shared source for "this person scores X higher/lower than others"
+// phrasing — used on the รายคน page, the ทีม-page person popup, AND the
+// per-shot breakdown on the ทีม page, so a wording fix only has to happen
+// once instead of drifting out of sync across the three places it appears.
+const GLOBAL_BIAS_PHRASE = {
+  acidity:    { high: 'รับรสเปรี้ยวได้มากกว่าคนอื่น', low: 'รับรสเปรี้ยวได้น้อยกว่าคนอื่น' },
+  sweetness:  { high: 'รับรสหวานได้มากกว่าคนอื่น',   low: 'รับรสหวานได้น้อยกว่าคนอื่น' },
+  bitterness: { high: 'รับรสขมได้มากกว่าคนอื่น',       low: 'รับรสขมได้น้อยกว่าคนอื่น' },
+  mouthfeel:  { high: 'รู้สึกเนื้อสัมผัสเข้มกว่าคนอื่น', low: 'รู้สึกเนื้อสัมผัสเบากว่าคนอื่น' }
+};
 const SCORE_ATTRS = ['acidity','sweetness','bitterness','mouthfeel']; // aftertaste uses length not intensity
 const INTLABELS = ['Low','Low-Medium','Medium','Medium-High','High'];
 const LEVEL = ['Unacceptable','Acceptable','Average','Good','Very Good','Excellent','Extraordinary'];
@@ -3208,12 +3219,7 @@ async function renderPersonDetail(name, branch) {
 
   // Plain-language phrasing per attribute so the direction of the bias is
   // immediately understandable — not just "higher/lower than team average".
-  const BIAS_PHRASE = {
-    acidity:    { high: 'รับรสเปรี้ยวได้มากกว่าคนอื่น', low: 'รับรสเปรี้ยวได้น้อยกว่าคนอื่น' },
-    sweetness:  { high: 'รับรสหวานได้มากกว่าคนอื่น',   low: 'รับรสหวานได้น้อยกว่าคนอื่น' },
-    bitterness: { high: 'รับรสขมได้มากกว่าคนอื่น',       low: 'รับรสขมได้น้อยกว่าคนอื่น' },
-    mouthfeel:  { high: 'รู้สึกเนื้อสัมผัสเข้มกว่าคนอื่น', low: 'รู้สึกเนื้อสัมผัสเบากว่าคนอื่น' }
-  };
+  const BIAS_PHRASE = GLOBAL_BIAS_PHRASE;
 
   const attrBars = [...ATTRS_ALL,'aftertaste'].map(attr => {
     const pct = attrPct[attr];
@@ -3442,12 +3448,7 @@ async function renderTeam() {
   // and flags specifically who is off for each one.
   {
     const TEAM_ATTR_LABELS = {acidity:'Acidity',sweetness:'Sweetness',bitterness:'Bitterness',mouthfeel:'Mouthfeel'};
-    const TEAM_BIAS_PHRASE = {
-      acidity:    { high: 'รับเปรี้ยวได้มากกว่าคนอื่น', low: 'รับเปรี้ยวได้น้อยกว่าคนอื่น' },
-      sweetness:  { high: 'รับหวานได้มากกว่าคนอื่น',   low: 'รับหวานได้น้อยกว่าคนอื่น' },
-      bitterness: { high: 'รับขมได้มากกว่าคนอื่น',       low: 'รับขมได้น้อยกว่าคนอื่น' },
-      mouthfeel:  { high: 'รู้สึกเนื้อสัมผัสเข้มกว่าคนอื่น', low: 'รู้สึกเนื้อสัมผัสเบากว่าคนอื่น' }
-    };
+    const TEAM_BIAS_PHRASE = GLOBAL_BIAS_PHRASE;
     const teamAttrRows = Object.keys(TEAM_ATTR_LABELS).map(attr => {
       let correct=0, total=0;
       const perPerson = {};
@@ -3580,10 +3581,20 @@ async function renderTeam() {
         const d = aDiff(myVal, refVal);
         const myTags = (e.tags?.[attr]||[]).join(', ')||'—';
         const refTags = refMajorTags(attr).join(', ')||'—';
-        return `<div style="display:flex;gap:6px;padding:3px 0;border-bottom:0.5px solid var(--bg3);font-size:11px">
-          <span style="min-width:72px;color:var(--text3)">${ATTR_LABELS[attr]}</span>
-          <span>${statusIcon(d)}</span>
-          <span style="flex:1;color:var(--text2)"><b>${INTLABELS[myVal-1]}</b> vs <b>${refVal.toFixed(1)}</b> · <span style="color:var(--text3)">${myTags}</span></span>
+        const rawDiff = myVal - refVal;
+        let phraseHtml = '';
+        if (GLOBAL_BIAS_PHRASE[attr] && Math.abs(rawDiff) >= 1) {
+          const dir = rawDiff > 0 ? 'high' : 'low';
+          const pCol = dir === 'high' ? 'var(--red)' : 'var(--blue)';
+          phraseHtml = `<div style="padding-left:78px;font-size:10.5px;color:${pCol}">${dir==='high'?'▲':'▼'} ${GLOBAL_BIAS_PHRASE[attr][dir]}</div>`;
+        }
+        return `<div style="display:flex;flex-direction:column">
+          <div style="display:flex;gap:6px;padding:3px 0;border-bottom:0.5px solid var(--bg3);font-size:11px">
+            <span style="min-width:72px;color:var(--text3)">${ATTR_LABELS[attr]}</span>
+            <span>${statusIcon(d)}</span>
+            <span style="flex:1;color:var(--text2)"><b>${INTLABELS[myVal-1]}</b> vs <b>${refVal.toFixed(1)}</b> · <span style="color:var(--text3)">${myTags}</span></span>
+          </div>
+          ${phraseHtml}
         </div>`;
       }).join('');
 
@@ -3922,12 +3933,7 @@ async function renderPersonModal(name, branch) {
     attrBiasDetail[attr] = detail;
   });
 
-  const BIAS_PHRASE = {
-    acidity:    { high: 'รับรสเปรี้ยวได้มากกว่าคนอื่น', low: 'รับรสเปรี้ยวได้น้อยกว่าคนอื่น' },
-    sweetness:  { high: 'รับรสหวานได้มากกว่าคนอื่น',   low: 'รับรสหวานได้น้อยกว่าคนอื่น' },
-    bitterness: { high: 'รับรสขมได้มากกว่าคนอื่น',       low: 'รับรสขมได้น้อยกว่าคนอื่น' },
-    mouthfeel:  { high: 'รู้สึกเนื้อสัมผัสเข้มกว่าคนอื่น', low: 'รู้สึกเนื้อสัมผัสเบากว่าคนอื่น' }
-  };
+  const BIAS_PHRASE = GLOBAL_BIAS_PHRASE;
 
   const attrBars = ATTRS_ALL.map(attr => {
     const pct = attrPct[attr];
