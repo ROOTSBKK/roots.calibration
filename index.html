@@ -3458,6 +3458,24 @@ async function loadDataPage() {
     const dateStr = s.id ? s.id.split('-').slice(0,2).join('-') : '';
     const ratio = s.dose ? (s.yield/s.dose).toFixed(1) : '—';
 
+    // Consensus on SPECIFIC flavors (e.g. Berry, Dark Chocolate — not just
+    // the broad category like Fruity) that 2 or more tasters agreed on.
+    const specificFlavorFreq = {};
+    shotEntries.forEach(e => {
+      Object.values(e.flavorTags||{}).forEach(arr => {
+        (arr||[]).forEach(v => { specificFlavorFreq[v] = (specificFlavorFreq[v]||0) + 1; });
+      });
+    });
+    const consensusFlavors = Object.entries(specificFlavorFreq)
+      .filter(([,count]) => count >= 2)
+      .sort((a,b) => b[1]-a[1]);
+    const consensusHtml = consensusFlavors.length
+      ? `<div style="padding:10px 12px;background:var(--gbg);border:1px solid var(--gborder);border-radius:var(--r2);margin-bottom:10px">
+          <div style="font-size:11px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">✓ ทีมเห็นตรงกัน (2 คนขึ้นไป)</div>
+          <div style="font-size:15px;font-weight:700;color:var(--text)">${consensusFlavors.map(([v,c])=>`${v} (${c})`).join(' · ')}</div>
+        </div>`
+      : '';
+
     const notesHtml = shotEntries.length
       ? shotEntries.map(e => {
           const flavor = (e.flavorCategories||[]).join(', ') || e.flavor || '—';
@@ -3492,13 +3510,8 @@ async function loadDataPage() {
         </div>
       </div>
       <div style="padding:16px 18px;border-bottom:1px solid var(--bg3)">
-        <div style="display:flex;justify-content:space-between;font-size:16px">
-          <span style="color:var(--text3);font-weight:600">Coffee</span>
-          <b style="text-align:right">${s.coffee||'—'}</b>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:16px;margin-top:6px">
-          <span style="color:var(--text3);font-weight:600">Lot</span>
-          <b>${s.lot||'—'}</b>
+        <div style="font-size:16px">
+          <span style="color:var(--text3);font-weight:600">Coffee </span><b>${s.coffee||'—'}</b>${s.lot?`<span style="color:var(--text3);font-weight:600"> · Lot </span><b>${s.lot}</b>`:''}
         </div>
         <div style="display:flex;justify-content:space-between;font-size:14px;margin-top:8px;color:var(--text2);font-weight:600">
           <span>Branch Cal: <b style="color:var(--text)">${s.branchCal||'—'}</b></span>
@@ -3520,6 +3533,7 @@ async function loadDataPage() {
       </div>
       <div style="padding:16px 18px;border-bottom:1px solid var(--bg3);background:var(--bg2)">
         <div style="font-size:13px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:8px;letter-spacing:.04em">📝 Notes</div>
+        ${consensusHtml}
         <div>${notesHtml}</div>
       </div>
       <div style="padding:12px 18px;font-size:13px;color:var(--text2);font-weight:600">
