@@ -161,8 +161,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
   <button class="tab" onclick="showPage('branch',this)">🏪 สาขาฉัน</button>
   <button class="tab" onclick="showPage('master',this)">📊 Master</button>
   <button class="tab" id="tab-team" onclick="showPage('team',this)">📈 ทีม</button>
-  <button class="tab" onclick="showPage('data',this)">🗂️ Data</button>
-  <button class="tab" onclick="showPage('params',this)">📊 Parameter</button>
+  <button class="tab" id="tab-data" onclick="showPage('data',this)">📊 Parameter</button>
   <button class="tab" onclick="showPage('person',this)">👤 รายคน</button>
   <div class="tab-dropdown" id="sensory-dropdown">
     <button class="tab" id="sensory-tab-btn" onclick="toggleSensoryMenu(event)">📖 Sensory ▾</button>
@@ -462,29 +461,19 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     </div>
   </div>
   <div class="branch-tabs" id="team-branch-tabs"></div>
+  <button class="btn btn-secondary" onclick="openParamsWindow()" style="margin:8px 0">📊 เปิดหน้า Parameter ในหน้าต่างใหม่</button>
   <div id="team-content"></div>
 </div>
 
 <!-- ═══ DATA ═══ -->
 <div id="page-data" class="page">
   <div class="card">
-    <div class="card-title">Data — บันทึกช็อตแบบฟอร์มกระดาษ</div>
+    <div class="card-title">Parameter — บันทึกช็อตแบบฟอร์มกระดาษ</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6">
       ทุกช็อตที่เปิดไว้ แสดงเป็นการ์ดพารามิเตอร์ครบ (เหมือนใบบันทึกกระดาษ) เรียงจากล่าสุด
     </div>
   </div>
   <div id="data-content"></div>
-</div>
-
-<!-- ═══ PARAMETER SUMMARY ═══ -->
-<div id="page-params" class="page">
-  <div class="card">
-    <div class="card-title">สรุป Parameter — เรียงตามความนิยม</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6">
-      รวมทุกครั้งที่มีการเลือก แยกตามหัวข้อ เรียงจากที่ถูกเลือกมากที่สุดไปน้อยที่สุด
-    </div>
-  </div>
-  <div id="params-content"></div>
 </div>
 
 <!-- ═══ PERSON ═══ -->
@@ -1761,6 +1750,12 @@ function initApp(user){
       if(tr)tr.value=user.name;
     },200);
   },300);
+
+  // Opened via the "เปิดหน้า Parameter ในหน้าต่างใหม่" button — jump
+  // straight there instead of landing on the default form page.
+  if (location.hash === '#params') {
+    setTimeout(() => showPage('data', document.getElementById('tab-data')), 350);
+  }
 }
 
 // iOS/Android home-screen ("Add to Home Screen") launches run in standalone
@@ -2192,8 +2187,15 @@ function showPage(id, btn) {
   if (id === 'master') loadMaster();
   if (id === 'team') loadTeamPage();
   if (id === 'data') loadDataPage();
-  if (id === 'params') loadParamsPage();
   if (id === 'person') loadPersonPage();
+}
+
+function openParamsWindow() {
+  // Opens the Parameter (paper-form) page in a separate browser tab/window
+  // via a URL hash the app checks for on load — Firebase Auth's session
+  // persists automatically, so the new tab logs in without re-prompting.
+  const url = location.href.split('#')[0] + '#params';
+  window.open(url, '_blank');
 }
 
 // Ratio / Shot ID
@@ -3379,56 +3381,6 @@ function renderEntry(e) {
 
 // ── Team page ──
 let selectedTeamBranch = ALL_BRANCHES[0];
-
-async function loadParamsPage() {
-  const el = document.getElementById('params-content');
-  el.innerHTML = '<div class="empty">กำลังโหลด...</div>';
-
-  const entries = await loadEntries();
-  if (!entries.length) { el.innerHTML = '<div class="empty">ยังไม่มีข้อมูล</div>'; return; }
-
-  const CATEGORIES = [
-    { key: 'flavor',      label: 'Flavor',            get: e => e.flavorCategories||[] },
-    { key: 'acidity',     label: 'Acidity',            get: e => e.tags?.acidity||[] },
-    { key: 'sweetness',   label: 'Sweetness',          get: e => e.tags?.sweetness||[] },
-    { key: 'bitterness',  label: 'Bitterness',         get: e => e.tags?.bitterness||[] },
-    { key: 'mouthfeel',   label: 'Weight / Texture',   get: e => e.tags?.mouthfeel||[] },
-    { key: 'aftertaste',  label: 'Aftertaste',         get: e => e.tags?.aftertaste||[] },
-    { key: 'aftflavor',   label: 'Aftertaste Flavor',  get: e => e.aftertasteFlavor||[] },
-  ];
-
-  const total = entries.length;
-
-  const html = CATEGORIES.map(cat => {
-    const freq = {};
-    entries.forEach(e => { cat.get(e).forEach(v => { freq[v] = (freq[v]||0) + 1; }); });
-    const ranked = Object.entries(freq).sort((a,b) => b[1]-a[1]);
-    if (!ranked.length) return `<div class="card" style="margin-bottom:12px">
-      <div class="card-title">${cat.label}</div>
-      <div class="empty" style="padding:10px 0">ยังไม่มีใครเลือกหมวดนี้</div>
-    </div>`;
-    const maxCount = ranked[0][1];
-    const rows = ranked.map(([name, count], i) => {
-      const pct = Math.round(count/total*100);
-      const barPct = Math.round(count/maxCount*100);
-      const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}.`;
-      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0">
-        <span style="min-width:24px;font-size:12px;color:var(--text3)">${medal}</span>
-        <span style="min-width:110px;font-size:12.5px;color:var(--text)">${name}</span>
-        <div style="flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden">
-          <div style="width:${barPct}%;height:100%;background:var(--blue);border-radius:4px"></div>
-        </div>
-        <span style="min-width:70px;text-align:right;font-size:11.5px;color:var(--text2)">${count} ครั้ง (${pct}%)</span>
-      </div>`;
-    }).join('');
-    return `<div class="card" style="margin-bottom:12px">
-      <div class="card-title">${cat.label}</div>
-      ${rows}
-    </div>`;
-  }).join('');
-
-  el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:10px">คำนวณจากผลชิมทั้งหมด ${total} รายการ</div>` + html;
-}
 
 async function loadDataPage() {
   const el = document.getElementById('data-content');
