@@ -461,8 +461,18 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     </div>
   </div>
   <div class="branch-tabs" id="team-branch-tabs"></div>
-  <button class="btn btn-secondary" onclick="openParamsWindow()" style="margin:8px 0">📊 เปิดหน้า Parameter ในหน้าต่างใหม่</button>
   <div id="team-content"></div>
+</div>
+
+<!-- Parameter popup — shows ONE session's paper-card view without leaving the page -->
+<div id="param-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 12px">
+  <div style="background:var(--bg);border-radius:12px;max-width:460px;width:100%;margin-top:20px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--bg3);position:sticky;top:0;background:var(--bg);z-index:1">
+      <div style="font-size:14px;font-weight:700">📊 Parameter — Session นี้</div>
+      <button onclick="closeParamModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">✕</button>
+    </div>
+    <div id="param-modal-body" style="padding:12px 16px"></div>
+  </div>
 </div>
 
 <!-- ═══ DATA ═══ -->
@@ -1750,12 +1760,6 @@ function initApp(user){
       if(tr)tr.value=user.name;
     },200);
   },300);
-
-  // Opened via the "เปิดหน้า Parameter ในหน้าต่างใหม่" button — jump
-  // straight there instead of landing on the default form page.
-  if (location.hash === '#params') {
-    setTimeout(() => showPage('data', document.getElementById('tab-data')), 350);
-  }
 }
 
 // iOS/Android home-screen ("Add to Home Screen") launches run in standalone
@@ -2190,12 +2194,29 @@ function showPage(id, btn) {
   if (id === 'person') loadPersonPage();
 }
 
-function openParamsWindow() {
-  // Opens the Parameter (paper-form) page in a separate browser tab/window
-  // via a URL hash the app checks for on load — Firebase Auth's session
-  // persists automatically, so the new tab logs in without re-prompting.
-  const url = location.href.split('#')[0] + '#params';
-  window.open(url, '_blank');
+async function showParamModal(shotId, branch) {
+  const modal = document.getElementById('param-modal');
+  const body = document.getElementById('param-modal-body');
+  body.innerHTML = '<div class="empty">กำลังโหลด...</div>';
+  modal.style.display = 'flex';
+  try {
+    const keys = await window.storage.list('shot:', true, branch);
+    let shotData = null;
+    if (keys && keys.keys) {
+      for (const k of keys.keys) {
+        const r = await window.storage.get(k, true);
+        if (r) { const s = JSON.parse(r.value); if (s.id === shotId) { shotData = s; break; } }
+      }
+    }
+    if (!shotData) { body.innerHTML = '<div class="empty">ไม่พบข้อมูลช็อตนี้</div>'; return; }
+    const entries = await loadEntries();
+    body.innerHTML = renderParamCard(shotData, entries.filter(e => e.shotId === shotId));
+  } catch(e) {
+    body.innerHTML = '<div class="empty">โหลดข้อมูลไม่สำเร็จ</div>';
+  }
+}
+function closeParamModal() {
+  document.getElementById('param-modal').style.display = 'none';
 }
 
 // Ratio / Shot ID
@@ -3382,6 +3403,94 @@ function renderEntry(e) {
 // ── Team page ──
 let selectedTeamBranch = ALL_BRANCHES[0];
 
+function renderParamCard(s, shotEntries) {
+  const dateStr = s.id ? s.id.split('-').slice(0,2).join('-') : '';
+  const ratio = s.dose ? (s.yield/s.dose).toFixed(1) : '—';
+
+  // Consensus on SPECIFIC flavors (e.g. Berry, Dark Chocolate — not just
+  // the broad category like Fruity) that 2 or more tasters agreed on.
+  const specificFlavorFreq = {};
+  shotEntries.forEach(e => {
+    Object.values(e.flavorTags||{}).forEach(arr => {
+      (arr||[]).forEach(v => { specificFlavorFreq[v] = (specificFlavorFreq[v]||0) + 1; });
+    });
+  });
+  const consensusFlavors = Object.entries(specificFlavorFreq)
+    .filter(([,count]) => count >= 2)
+    .sort((a,b) => b[1]-a[1]);
+  const consensusHtml = consensusFlavors.length
+    ? `<div style="padding:10px 12px;background:var(--gbg);border:1px solid var(--gborder);border-radius:var(--r2);margin-bottom:10px">
+        <div style="font-size:11px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">✓ ทีมเห็นตรงกัน (2 คนขึ้นไป)</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text)">${consensusFlavors.map(([v,c])=>`${v} (${c})`).join(' · ')}</div>
+      </div>`
+    : '';
+
+  const notesHtml = shotEntries.length
+    ? shotEntries.map(e => {
+        const flavor = (e.flavorCategories||[]).join(', ') || e.flavor || '—';
+        const texture = (e.tags?.mouthfeel||[]).join(', ') || '—';
+        const aftTags = (e.tags?.aftertaste||[]).join(', ');
+        const aftLen = e.aftertasteLength ? (AFT_LENGTH_LABELS[e.aftertasteLength-1]||'') : '';
+        const aftFlavor = (e.aftertasteFlavor||[]).join(', ');
+        const aftertaste = [aftLen, aftTags, aftFlavor?'Flavor: '+aftFlavor:''].filter(Boolean).join(' · ') || '—';
+        return `<div style="padding:10px 0;border-bottom:1px dashed var(--bg3)">
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px">${e.taster}${e.isRefCal?' ★':''}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:14px">
+            <div><div style="color:var(--text3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px">Flavor</div><div style="color:var(--text);font-weight:600">${flavor}</div></div>
+            <div><div style="color:var(--text3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px">Weight/Texture</div><div style="color:var(--text);font-weight:600">${texture}</div></div>
+            <div><div style="color:var(--text3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px">Aftertaste</div><div style="color:var(--text);font-weight:600">${aftertaste}</div></div>
+          </div>
+        </div>`;
+      }).join('')
+    : '<div style="color:var(--text3);font-size:14px">ยังไม่มีใครกรอกผลชิม</div>';
+
+  const checkedBy = shotEntries.map(e=>e.taster).join(', ') || '—';
+
+  return `<div class="card" style="margin-bottom:16px;padding:0;overflow:hidden">
+    <div style="background:var(--bg2);padding:14px 18px;display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div style="font-size:11px;letter-spacing:2px;color:var(--text3);font-weight:700">ROOTS</div>
+        <div style="font-size:15px;color:var(--text2);font-weight:700;margin-top:3px">${s.branch}</div>
+      </div>
+      <div style="text-align:right;font-size:13px;color:var(--text2);line-height:1.9;font-weight:600">
+        <div>Date <b style="color:var(--text);font-size:14px">${dateStr}</b></div>
+        <div>Time <b style="color:var(--text);font-size:14px">${s.time||'—'}</b></div>
+        <div>Temp. <b style="color:var(--text);font-size:14px">${s.waterTemp?s.waterTemp+'°C':'—'}</b></div>
+      </div>
+    </div>
+    <div style="padding:16px 18px;border-bottom:1px solid var(--bg3)">
+      <div style="font-size:16px">
+        <span style="color:var(--text3);font-weight:600">Coffee </span><b>${s.coffee||'—'}</b>${s.lot?`<span style="color:var(--text3);font-weight:600"> · Lot </span><b>${s.lot}</b>`:''}
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:14px;margin-top:8px;color:var(--text2);font-weight:600">
+        <span>Branch Cal: <b style="color:var(--text)">${s.branchCal||'—'}</b></span>
+        <span>Ref. Cal: <b style="color:var(--text)">${s.companyCal||'—'}</b></span>
+      </div>
+    </div>
+    <div style="padding:14px 18px;border-bottom:1px solid var(--bg3)">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;text-align:center;gap:4px">
+        <div><div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase">Dose</div><div style="font-size:24px;font-weight:700">${s.dose||'—'}</div></div>
+        <div><div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase">Time</div><div style="font-size:24px;font-weight:700">${s.extractTime||'—'}</div></div>
+        <div><div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase">Yield</div><div style="font-size:24px;font-weight:700">${s.yield||'—'}</div></div>
+      </div>
+      <div style="text-align:center;font-size:13px;color:var(--text3);font-weight:600;margin-top:6px">Ratio 1:${ratio}</div>
+    </div>
+    <div style="padding:12px 18px;border-bottom:1px solid var(--bg3);display:flex;justify-content:space-around;text-align:center">
+      <div><div style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase">TDS%</div><div style="font-size:20px;font-weight:700;color:var(--amber)">${s.tds||'—'}</div></div>
+      <div><div style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase">EXT%</div><div style="font-size:20px;font-weight:700;color:var(--amber)">${s.ext||'—'}</div></div>
+      <div><div style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase">Flow Rate</div><div style="font-size:20px;font-weight:700">${s.pressure?s.pressure+'g/s':'—'}</div></div>
+    </div>
+    <div style="padding:16px 18px;border-bottom:1px solid var(--bg3);background:var(--bg2)">
+      <div style="font-size:13px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:8px;letter-spacing:.04em">📝 Notes</div>
+      ${consensusHtml}
+      <div>${notesHtml}</div>
+    </div>
+    <div style="padding:12px 18px;font-size:13px;color:var(--text2);font-weight:600">
+      📌 ${s.id}<br>Check by <b style="color:var(--text);font-size:14px">${checkedBy}</b>
+    </div>
+  </div>`;
+}
+
 async function loadDataPage() {
   const el = document.getElementById('data-content');
   el.innerHTML = '<div class="empty">กำลังโหลด...</div>';
@@ -3405,96 +3514,7 @@ async function loadDataPage() {
   const entries = await loadEntries();
   shots.sort((a,b) => (b.created||0) - (a.created||0));
 
-  const html = shots.map(s => {
-    const shotEntries = entries.filter(e => e.shotId === s.id);
-    const dateStr = s.id ? s.id.split('-').slice(0,2).join('-') : '';
-    const ratio = s.dose ? (s.yield/s.dose).toFixed(1) : '—';
-
-    // Consensus on SPECIFIC flavors (e.g. Berry, Dark Chocolate — not just
-    // the broad category like Fruity) that 2 or more tasters agreed on.
-    const specificFlavorFreq = {};
-    shotEntries.forEach(e => {
-      Object.values(e.flavorTags||{}).forEach(arr => {
-        (arr||[]).forEach(v => { specificFlavorFreq[v] = (specificFlavorFreq[v]||0) + 1; });
-      });
-    });
-    const consensusFlavors = Object.entries(specificFlavorFreq)
-      .filter(([,count]) => count >= 2)
-      .sort((a,b) => b[1]-a[1]);
-    const consensusHtml = consensusFlavors.length
-      ? `<div style="padding:10px 12px;background:var(--gbg);border:1px solid var(--gborder);border-radius:var(--r2);margin-bottom:10px">
-          <div style="font-size:11px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">✓ ทีมเห็นตรงกัน (2 คนขึ้นไป)</div>
-          <div style="font-size:15px;font-weight:700;color:var(--text)">${consensusFlavors.map(([v,c])=>`${v} (${c})`).join(' · ')}</div>
-        </div>`
-      : '';
-
-    const notesHtml = shotEntries.length
-      ? shotEntries.map(e => {
-          const flavor = (e.flavorCategories||[]).join(', ') || e.flavor || '—';
-          const texture = (e.tags?.mouthfeel||[]).join(', ') || '—';
-          const aftTags = (e.tags?.aftertaste||[]).join(', ');
-          const aftLen = e.aftertasteLength ? (AFT_LENGTH_LABELS[e.aftertasteLength-1]||'') : '';
-          const aftFlavor = (e.aftertasteFlavor||[]).join(', ');
-          const aftertaste = [aftLen, aftTags, aftFlavor?'Flavor: '+aftFlavor:''].filter(Boolean).join(' · ') || '—';
-          return `<div style="padding:10px 0;border-bottom:1px dashed var(--bg3)">
-            <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px">${e.taster}${e.isRefCal?' ★':''}</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:14px">
-              <div><div style="color:var(--text3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px">Flavor</div><div style="color:var(--text);font-weight:600">${flavor}</div></div>
-              <div><div style="color:var(--text3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px">Weight/Texture</div><div style="color:var(--text);font-weight:600">${texture}</div></div>
-              <div><div style="color:var(--text3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px">Aftertaste</div><div style="color:var(--text);font-weight:600">${aftertaste}</div></div>
-            </div>
-          </div>`;
-        }).join('')
-      : '<div style="color:var(--text3);font-size:14px">ยังไม่มีใครกรอกผลชิม</div>';
-
-    const checkedBy = shotEntries.map(e=>e.taster).join(', ') || '—';
-
-    return `<div class="card" style="margin-bottom:16px;padding:0;overflow:hidden">
-      <div style="background:var(--bg2);padding:14px 18px;display:flex;justify-content:space-between;align-items:flex-start">
-        <div>
-          <div style="font-size:11px;letter-spacing:2px;color:var(--text3);font-weight:700">ROOTS</div>
-          <div style="font-size:15px;color:var(--text2);font-weight:700;margin-top:3px">${s.branch}</div>
-        </div>
-        <div style="text-align:right;font-size:13px;color:var(--text2);line-height:1.9;font-weight:600">
-          <div>Date <b style="color:var(--text);font-size:14px">${dateStr}</b></div>
-          <div>Time <b style="color:var(--text);font-size:14px">${s.time||'—'}</b></div>
-          <div>Temp. <b style="color:var(--text);font-size:14px">${s.waterTemp?s.waterTemp+'°C':'—'}</b></div>
-        </div>
-      </div>
-      <div style="padding:16px 18px;border-bottom:1px solid var(--bg3)">
-        <div style="font-size:16px">
-          <span style="color:var(--text3);font-weight:600">Coffee </span><b>${s.coffee||'—'}</b>${s.lot?`<span style="color:var(--text3);font-weight:600"> · Lot </span><b>${s.lot}</b>`:''}
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:14px;margin-top:8px;color:var(--text2);font-weight:600">
-          <span>Branch Cal: <b style="color:var(--text)">${s.branchCal||'—'}</b></span>
-          <span>Ref. Cal: <b style="color:var(--text)">${s.companyCal||'—'}</b></span>
-        </div>
-      </div>
-      <div style="padding:14px 18px;border-bottom:1px solid var(--bg3)">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;text-align:center;gap:4px">
-          <div><div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase">Dose</div><div style="font-size:24px;font-weight:700">${s.dose||'—'}</div></div>
-          <div><div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase">Time</div><div style="font-size:24px;font-weight:700">${s.extractTime||'—'}</div></div>
-          <div><div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase">Yield</div><div style="font-size:24px;font-weight:700">${s.yield||'—'}</div></div>
-        </div>
-        <div style="text-align:center;font-size:13px;color:var(--text3);font-weight:600;margin-top:6px">Ratio 1:${ratio}</div>
-      </div>
-      <div style="padding:12px 18px;border-bottom:1px solid var(--bg3);display:flex;justify-content:space-around;text-align:center">
-        <div><div style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase">TDS%</div><div style="font-size:20px;font-weight:700;color:var(--amber)">${s.tds||'—'}</div></div>
-        <div><div style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase">EXT%</div><div style="font-size:20px;font-weight:700;color:var(--amber)">${s.ext||'—'}</div></div>
-        <div><div style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase">Flow Rate</div><div style="font-size:20px;font-weight:700">${s.pressure?s.pressure+'g/s':'—'}</div></div>
-      </div>
-      <div style="padding:16px 18px;border-bottom:1px solid var(--bg3);background:var(--bg2)">
-        <div style="font-size:13px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:8px;letter-spacing:.04em">📝 Notes</div>
-        ${consensusHtml}
-        <div>${notesHtml}</div>
-      </div>
-      <div style="padding:12px 18px;font-size:13px;color:var(--text2);font-weight:600">
-        📌 ${s.id}<br>Check by <b style="color:var(--text);font-size:14px">${checkedBy}</b>
-      </div>
-    </div>`;
-  }).join('');
-
-  el.innerHTML = html;
+  el.innerHTML = shots.map(s => renderParamCard(s, entries.filter(e => e.shotId === s.id))).join('');
 }
 
 async function loadTeamPage() {
@@ -3770,7 +3790,10 @@ async function renderTeam() {
     html += `<div class="card" style="margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <div style="font-size:13px;font-weight:600">📌 ${shotId}</div>
-        <div style="font-size:11px;color:var(--text3)">${shotEntries.length} คน</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button onclick="showParamModal('${shotId}','${branch}')" style="font-size:11px;background:var(--bbg);color:var(--blue);border:1px solid var(--bborder);border-radius:20px;padding:3px 10px;cursor:pointer">📊 Parameter</button>
+          <div style="font-size:11px;color:var(--text3)">${shotEntries.length} คน</div>
+        </div>
       </div>
       <div style="background:var(--bg2);border-radius:var(--r2);padding:8px 10px;margin-bottom:10px;font-size:12px;color:var(--text2);line-height:1.7">
         <div style="font-weight:700;color:var(--text)">${firstEntry.coffee||'ไม่ระบุชื่อกาแฟ'}${firstEntry.lot?' · Lot '+firstEntry.lot:''}</div>
