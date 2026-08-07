@@ -3466,64 +3466,64 @@ async function loadDataPage() {
           const aftLen = e.aftertasteLength ? (AFT_LENGTH_LABELS[e.aftertasteLength-1]||'') : '';
           const aftFlavor = (e.aftertasteFlavor||[]).join(', ');
           const aftertaste = [aftLen, aftTags, aftFlavor?'Flavor: '+aftFlavor:''].filter(Boolean).join(' · ') || '—';
-          return `<div style="padding:6px 0;border-bottom:0.5px dashed var(--bg3)">
-            <div style="font-size:11.5px;font-weight:700;color:var(--text2);margin-bottom:3px">${e.taster}${e.isRefCal?' ★':''}</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:11px">
-              <div><div style="color:var(--text3);font-size:9px;text-transform:uppercase;letter-spacing:.03em">Flavor</div><div style="color:var(--text)">${flavor}</div></div>
-              <div><div style="color:var(--text3);font-size:9px;text-transform:uppercase;letter-spacing:.03em">Weight/Texture</div><div style="color:var(--text)">${texture}</div></div>
-              <div><div style="color:var(--text3);font-size:9px;text-transform:uppercase;letter-spacing:.03em">Aftertaste</div><div style="color:var(--text)">${aftertaste}</div></div>
+          return `<div style="padding:10px 0;border-bottom:1px dashed var(--bg3)">
+            <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px">${e.taster}${e.isRefCal?' ★':''}</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:14px">
+              <div><div style="color:var(--text3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px">Flavor</div><div style="color:var(--text);font-weight:600">${flavor}</div></div>
+              <div><div style="color:var(--text3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px">Weight/Texture</div><div style="color:var(--text);font-weight:600">${texture}</div></div>
+              <div><div style="color:var(--text3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px">Aftertaste</div><div style="color:var(--text);font-weight:600">${aftertaste}</div></div>
             </div>
           </div>`;
         }).join('')
-      : '<div style="color:var(--text3)">ยังไม่มีใครกรอกผลชิม</div>';
+      : '<div style="color:var(--text3);font-size:14px">ยังไม่มีใครกรอกผลชิม</div>';
 
     const checkedBy = shotEntries.map(e=>e.taster).join(', ') || '—';
 
-    return `<div class="card" style="margin-bottom:14px;padding:0;overflow:hidden">
-      <div style="background:var(--bg2);padding:12px 16px;display:flex;justify-content:space-between;align-items:flex-start">
+    return `<div class="card" style="margin-bottom:16px;padding:0;overflow:hidden">
+      <div style="background:var(--bg2);padding:14px 18px;display:flex;justify-content:space-between;align-items:flex-start">
         <div>
-          <div style="font-size:9px;letter-spacing:2px;color:var(--text3);font-weight:700">ROOTS</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px">${s.branch}</div>
+          <div style="font-size:11px;letter-spacing:2px;color:var(--text3);font-weight:700">ROOTS</div>
+          <div style="font-size:15px;color:var(--text2);font-weight:700;margin-top:3px">${s.branch}</div>
         </div>
-        <div style="text-align:right;font-size:11px;color:var(--text2);line-height:1.8">
-          <div>Date <b style="color:var(--text)">${dateStr}</b></div>
-          <div>Time <b style="color:var(--text)">${s.time||'—'}</b></div>
-          <div>Temp. <b style="color:var(--text)">${s.waterTemp?s.waterTemp+'°C':'—'}</b></div>
+        <div style="text-align:right;font-size:13px;color:var(--text2);line-height:1.9;font-weight:600">
+          <div>Date <b style="color:var(--text);font-size:14px">${dateStr}</b></div>
+          <div>Time <b style="color:var(--text);font-size:14px">${s.time||'—'}</b></div>
+          <div>Temp. <b style="color:var(--text);font-size:14px">${s.waterTemp?s.waterTemp+'°C':'—'}</b></div>
         </div>
       </div>
-      <div style="padding:14px 16px;border-bottom:1px solid var(--bg3)">
-        <div style="display:flex;justify-content:space-between;font-size:13px">
-          <span style="color:var(--text3)">Coffee</span>
+      <div style="padding:16px 18px;border-bottom:1px solid var(--bg3)">
+        <div style="display:flex;justify-content:space-between;font-size:16px">
+          <span style="color:var(--text3);font-weight:600">Coffee</span>
           <b style="text-align:right">${s.coffee||'—'}</b>
         </div>
-        <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px">
-          <span style="color:var(--text3)">Lot</span>
+        <div style="display:flex;justify-content:space-between;font-size:16px;margin-top:6px">
+          <span style="color:var(--text3);font-weight:600">Lot</span>
           <b>${s.lot||'—'}</b>
         </div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:6px;color:var(--text2)">
+        <div style="display:flex;justify-content:space-between;font-size:14px;margin-top:8px;color:var(--text2);font-weight:600">
           <span>Branch Cal: <b style="color:var(--text)">${s.branchCal||'—'}</b></span>
           <span>Ref. Cal: <b style="color:var(--text)">${s.companyCal||'—'}</b></span>
         </div>
       </div>
-      <div style="padding:12px 16px;border-bottom:1px solid var(--bg3)">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--bg3)">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;text-align:center;gap:4px">
-          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase">Dose</div><div style="font-size:18px;font-weight:700">${s.dose||'—'}</div></div>
-          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase">Time</div><div style="font-size:18px;font-weight:700">${s.extractTime||'—'}</div></div>
-          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase">Yield</div><div style="font-size:18px;font-weight:700">${s.yield||'—'}</div></div>
+          <div><div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase">Dose</div><div style="font-size:24px;font-weight:700">${s.dose||'—'}</div></div>
+          <div><div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase">Time</div><div style="font-size:24px;font-weight:700">${s.extractTime||'—'}</div></div>
+          <div><div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase">Yield</div><div style="font-size:24px;font-weight:700">${s.yield||'—'}</div></div>
         </div>
-        <div style="text-align:center;font-size:11px;color:var(--text3);margin-top:4px">Ratio 1:${ratio}</div>
+        <div style="text-align:center;font-size:13px;color:var(--text3);font-weight:600;margin-top:6px">Ratio 1:${ratio}</div>
       </div>
-      <div style="padding:10px 16px;border-bottom:1px solid var(--bg3);display:flex;justify-content:space-around;text-align:center">
-        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase">TDS%</div><div style="font-size:15px;font-weight:700;color:var(--amber)">${s.tds||'—'}</div></div>
-        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase">EXT%</div><div style="font-size:15px;font-weight:700;color:var(--amber)">${s.ext||'—'}</div></div>
-        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase">Flow Rate</div><div style="font-size:15px;font-weight:700">${s.pressure?s.pressure+'g/s':'—'}</div></div>
+      <div style="padding:12px 18px;border-bottom:1px solid var(--bg3);display:flex;justify-content:space-around;text-align:center">
+        <div><div style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase">TDS%</div><div style="font-size:20px;font-weight:700;color:var(--amber)">${s.tds||'—'}</div></div>
+        <div><div style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase">EXT%</div><div style="font-size:20px;font-weight:700;color:var(--amber)">${s.ext||'—'}</div></div>
+        <div><div style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase">Flow Rate</div><div style="font-size:20px;font-weight:700">${s.pressure?s.pressure+'g/s':'—'}</div></div>
       </div>
-      <div style="padding:12px 16px;border-bottom:1px solid var(--bg3)">
-        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:6px">Notes</div>
-        <div style="font-size:12px;line-height:1.6">${notesHtml}</div>
+      <div style="padding:16px 18px;border-bottom:1px solid var(--bg3);background:var(--bg2)">
+        <div style="font-size:13px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:8px;letter-spacing:.04em">📝 Notes</div>
+        <div>${notesHtml}</div>
       </div>
-      <div style="padding:10px 16px;font-size:11px;color:var(--text3)">
-        📌 ${s.id} · Check by <b style="color:var(--text2)">${checkedBy}</b>
+      <div style="padding:12px 18px;font-size:13px;color:var(--text2);font-weight:600">
+        📌 ${s.id}<br>Check by <b style="color:var(--text);font-size:14px">${checkedBy}</b>
       </div>
     </div>`;
   }).join('');
