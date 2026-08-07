@@ -189,7 +189,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     </div>
     <div class="col" style="margin-bottom:10px">
       <div class="lbl">ชื่อผู้ชิม</div>
-      <select id="f-taster"><option value="">— เลือกชื่อ —</option></select>
+      <select id="f-taster" onchange="onTasterSelected()"><option value="">— เลือกชื่อ —</option></select>
     </div>
     <div class="col" style="margin-bottom:10px">
       <div class="lbl">Other — ต่างสาขา</div>
@@ -200,8 +200,8 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     <div class="col" style="margin-bottom:10px">
       <div class="lbl">รหัสช็อต</div>
       <div id="active-shot-warning" style="display:none;background:var(--abg);border:1px solid var(--aborder);border-radius:var(--r2);padding:10px 12px;margin-bottom:8px">
-        <div style="font-size:12.5px;font-weight:700;color:var(--amber)">⚠️ มีช็อตเปิดอยู่แล้วสำหรับสาขานี้</div>
-        <div style="font-size:12px;color:var(--amber);margin-top:2px">ถ้าจะชิมช็อตเดียวกัน <b>ให้เลือกจาก dropdown ด้านล่าง</b> ห้ามกด "เปิดช็อตใหม่" ซ้ำ ไม่งั้นหน้าทีมจะไม่เห็นว่าชิมร่วมกัน</div>
+        <div id="active-shot-warning-title" style="font-size:12.5px;font-weight:700;color:var(--amber)">⚠️ มีช็อตเปิดอยู่แล้วสำหรับสาขานี้</div>
+        <div id="active-shot-warning-body" style="font-size:12px;color:var(--amber);margin-top:2px">ถ้าจะชิมช็อตเดียวกัน <b>ให้เลือกจาก dropdown ด้านล่าง</b> ห้ามกด "เปิดช็อตใหม่" ซ้ำ ไม่งั้นหน้าทีมจะไม่เห็นว่าชิมร่วมกัน</div>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:6px">
         <button class="btn-sm" onclick="openShotModal()" style="background:var(--bbg);color:var(--blue);border-color:var(--bborder);flex:1">＋ เปิดช็อตใหม่</button>
@@ -222,6 +222,15 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
         <div id="tds-edit-note" style="font-size:11px;color:var(--amber);margin-top:6px"></div>
       </div>
       <div id="shot-badge" class="shot-badge" style="display:none;margin-top:6px"></div>
+    </div>
+
+    <div id="shot-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:210;align-items:center;justify-content:center;padding:16px">
+      <div style="background:var(--bg);border-radius:12px;max-width:400px;width:100%;max-height:85vh;overflow-y:auto;padding:18px">
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px">📌 มีช็อตเปิดอยู่ — เลือกช็อตที่จะชิม</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:14px">แตะเลือกช็อตที่ตรงกับกาแฟที่คุณจะชิม เพื่อให้หน้าทีมเห็นว่าชิมร่วมกัน</div>
+        <div id="shot-picker-list"></div>
+        <button class="btn-sm" onclick="closeShotPicker()" style="width:100%;margin-top:8px;background:var(--bg2)">ปิด / เลือกเองทีหลัง</button>
+      </div>
     </div>
     <div class="row" style="margin-bottom:10px">
       <div class="col"><div class="lbl">ชื่อกาแฟ</div><input type="text" id="f-coffee" placeholder="เช่น Ethiopia Yirgacheffe"></div>
@@ -472,7 +481,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
 <div id="param-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 12px">
   <div style="background:var(--bg);border-radius:12px;max-width:460px;width:100%;margin-top:20px;max-height:90vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--bg3);position:sticky;top:0;background:var(--bg);z-index:1">
-      <div style="font-size:14px;font-weight:700">📊 Parameter — Session นี้</div>
+      <div id="param-modal-title" style="font-size:14px;font-weight:700">📊 Parameter — Session นี้</div>
       <button onclick="closeParamModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">✕</button>
     </div>
     <div id="param-modal-body" style="padding:12px 16px"></div>
@@ -1762,6 +1771,7 @@ function initApp(user){
     setTimeout(()=>{
       const tr=document.getElementById('f-taster');
       if(tr)tr.value=user.name;
+      onTasterSelected();
     },200);
   },300);
 }
@@ -2161,6 +2171,40 @@ function populateBranchDropdowns() {
 }
 populateBranchDropdowns();
 
+async function onTasterSelected() {
+  const branch = document.getElementById('f-branch').value;
+  const taster = document.getElementById('f-taster').value;
+  if (!branch || !taster) return;
+  const result = await loadShotDropdown();
+  const shots = (result && result.shots) || [];
+  // Anyone picking their name (i.e. about to taste, not the person who
+  // just clicked "เปิดช็อตใหม่") sees this if there's already something
+  // open — makes joining an explicit tap instead of a passive default.
+  if (shots.length >= 1) {
+    showShotPicker(shots, (result && result.countByShot) || {});
+  }
+}
+
+function showShotPicker(shots, countByShot) {
+  const list = document.getElementById('shot-picker-list');
+  list.innerHTML = shots.map(s => {
+    const n = countByShot[s.id] || 0;
+    const countLabel = n > 0 ? `${n} คนชิมแล้ว` : 'ยังไม่มีคนชิม';
+    return `<button onclick="pickShotFromModal('${s.id}')" style="display:block;width:100%;text-align:left;background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r2);padding:10px 12px;margin-bottom:8px;cursor:pointer">
+      <div style="font-size:14px;font-weight:700;color:var(--text)">${s.coffee||'ไม่ระบุชื่อกาแฟ'}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px">📌 ${s.id} · ${s.time||''} · ${countLabel}</div>
+    </button>`;
+  }).join('');
+  document.getElementById('shot-picker-modal').style.display = 'flex';
+}
+async function pickShotFromModal(shotId) {
+  closeShotPicker();
+  await loadShotDropdown(shotId);
+}
+function closeShotPicker() {
+  document.getElementById('shot-picker-modal').style.display = 'none';
+}
+
 function updateStaffList() {
   const branch = document.getElementById('f-branch').value;
   const sel = document.getElementById('f-taster');
@@ -2198,9 +2242,66 @@ function showPage(id, btn) {
   if (id === 'person') loadPersonPage();
 }
 
+function showPersonEntryModal(entryId) {
+  const e = teamEntryCache[entryId];
+  const modal = document.getElementById('param-modal');
+  const body = document.getElementById('param-modal-body');
+  const titleEl = document.getElementById('param-modal-title');
+  if (!e) { body.innerHTML = '<div class="empty">ไม่พบข้อมูล</div>'; modal.style.display = 'flex'; return; }
+
+  const intLabel = v => INTLABELS[v-1]||v;
+  const attrRow = (label, attr) => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--bg3);font-size:13px">
+    <span style="color:var(--text3)">${label}</span>
+    <span><b>${intLabel(e.intensity?.[attr]||3)}</b>${(e.tags?.[attr]||[]).length?' · '+(e.tags[attr]||[]).join(', '):''}</span>
+  </div>`;
+
+  const flavor = (e.flavorCategories||[]).join(', ') || e.flavor || '—';
+  const aftLen = e.aftertasteLength ? (AFT_LENGTH_LABELS[e.aftertasteLength-1]||'') : '';
+  const aftTags = (e.tags?.aftertaste||[]).join(', ');
+  const aftFlavor = (e.aftertasteFlavor||[]).join(', ');
+
+  body.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <div style="width:40px;height:40px;border-radius:50%;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">${e.taster.slice(0,2).toUpperCase()}</div>
+      <div>
+        <div style="font-size:16px;font-weight:700">${e.taster}${e.isRefCal?' ★ Reference':''}</div>
+        <div style="font-size:11px;color:var(--text3)">${e.date||''} ${e.time||''} · 📌 ${e.shotId||'—'}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:14px">
+      <div style="flex:1;text-align:center;background:var(--bg2);border-radius:var(--r2);padding:10px">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase">Taste Balance</div>
+        <div style="font-size:22px;font-weight:700">${e.tbScore?.toFixed(1)}</div>
+      </div>
+      <div style="flex:1;text-align:center;background:var(--bg2);border-radius:var(--r2);padding:10px">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase">Tactile</div>
+        <div style="font-size:22px;font-weight:700">${e.tcScore?.toFixed(1)}</div>
+      </div>
+    </div>
+    ${attrRow('Acidity','acidity')}
+    ${attrRow('Sweetness','sweetness')}
+    ${attrRow('Bitterness','bitterness')}
+    ${attrRow('Mouthfeel','mouthfeel')}
+    <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px">
+      <span style="color:var(--text3)">Aftertaste</span>
+      <span><b>${aftLen}</b>${aftTags?' · '+aftTags:''}${aftFlavor?' · Flavor: '+aftFlavor:''}</span>
+    </div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bg3)">
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:6px">🍓 Flavor ที่เลือก</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px">${flavor}</div>
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:6px">✍️ สิ่งที่พิมพ์เพิ่มเติม</div>
+      <div style="font-size:14px;background:var(--bg2);border-radius:var(--r2);padding:10px 12px;white-space:pre-wrap">${e.flavor || e.narrative || '— ไม่มีบันทึกเพิ่มเติม —'}</div>
+    </div>
+  `;
+  if (titleEl) titleEl.textContent = `👤 ${e.taster}`;
+  modal.style.display = 'flex';
+}
+
 async function showParamModal(shotId, branch) {
   const modal = document.getElementById('param-modal');
   const body = document.getElementById('param-modal-body');
+  const titleEl = document.getElementById('param-modal-title');
+  if (titleEl) titleEl.textContent = '📊 Parameter — Session นี้';
   body.innerHTML = '<div class="empty">กำลังโหลด...</div>';
   modal.style.display = 'flex';
   try {
@@ -2551,10 +2652,10 @@ async function loadShotDropdown(selectId) {
   const cur = selectId || sel.value;
   sel.innerHTML = '<option value="">— เลือกช็อต หรือเปิดช็อตใหม่ —</option>';
   const warnEl = document.getElementById('active-shot-warning');
-  if (!branch) { warnEl.style.display = 'none'; return; }
+  if (!branch) { warnEl.style.display = 'none'; return {shots:[], countByShot:{}}; }
   try {
     const keys = await window.storage.list('shot:', true, document.getElementById('f-branch').value || null);
-    if (!keys || !keys.keys || !keys.keys.length) { warnEl.style.display = 'none'; return; }
+    if (!keys || !keys.keys || !keys.keys.length) { warnEl.style.display = 'none'; return {shots:[], countByShot:{}}; }
     const now = Date.now();
     const shots = [];
     await Promise.all(keys.keys.map(async k => {
@@ -2562,11 +2663,11 @@ async function loadShotDropdown(selectId) {
         const r = await window.storage.get(k, true);
         if (r) {
           const s = JSON.parse(r.value);
-          // กรองเฉพาะสาขาที่เลือก และไม่เกิน 1 ชั่วโมง
+          // กรองเฉพาะสาขาที่เลือก และไม่เกิน 1 ชั่วโมง — ช็อตที่เกินเวลาแค่
+          // ไม่โชว์ในตัวเลือกให้เข้าร่วมเท่านั้น ไม่ลบทิ้ง เพราะหน้า
+          // Parameter ยังต้องใช้ข้อมูลนี้แสดงประวัติย้อนหลัง
           if (s.branch === branch && now - s.created < SHOT_TTL) {
             shots.push(s);
-          } else if (now - s.created >= SHOT_TTL) {
-            await window.storage.delete(k, true).catch(()=>{});
           }
         }
       } catch(e) {}
@@ -2576,6 +2677,13 @@ async function loadShotDropdown(selectId) {
     // shot — a confirm() dialog alone is too easy to click through without
     // reading, this stays visible the whole time they're on the form.
     warnEl.style.display = shots.length ? 'block' : 'none';
+    if (shots.length >= 2) {
+      document.getElementById('active-shot-warning-title').textContent = `⚠️ มี ${shots.length} ช็อตเปิดอยู่พร้อมกันสำหรับสาขานี้`;
+      document.getElementById('active-shot-warning-body').innerHTML = 'ระบบ<b>ไม่ได้เลือกช็อตให้อัตโนมัติ</b>เพราะมีมากกว่า 1 ช็อต — กรุณา<b>เลือกช็อตที่ตรงกับกาแฟที่คุณชิมจริง</b>จาก dropdown ด้านล่างด้วยตัวเองก่อนกรอกผล';
+    } else if (shots.length === 1) {
+      document.getElementById('active-shot-warning-title').textContent = '⚠️ มีช็อตเปิดอยู่แล้วสำหรับสาขานี้';
+      document.getElementById('active-shot-warning-body').innerHTML = 'ระบบเลือกช็อตนี้ให้อัตโนมัติแล้ว — ถ้าจะชิมช็อตเดียวกัน<b>ไม่ต้องทำอะไรเพิ่ม</b> ห้ามกด "เปิดช็อตใหม่" ซ้ำ ไม่งั้นหน้าทีมจะไม่เห็นว่าชิมร่วมกัน';
+    }
 
     // Count how many people have already tasted each shot, so joiners can
     // tell at a glance whether to pick an existing shot instead of opening
@@ -2601,11 +2709,17 @@ async function loadShotDropdown(selectId) {
       const countLabel = n > 0 ? ` (${n} คนชิมแล้ว)` : ' (ยังไม่มีคนชิม)';
       sel.innerHTML += `<option value="${s.id}"${s.id===cur?' selected':''}>${s.label}${countLabel}</option>`;
     });
-    if (cur) {
-      sel.value = cur;
-      if (sel.value === cur) await onShotSelect();
+    // Default to the active shot ONLY when there's exactly one — safe and
+    // unambiguous. With 2+ shots open (e.g. the "เปิด 2 ช็อตพร้อมกัน" dual
+    // mode), auto-picking one could silently submit under the wrong shot,
+    // which is worse than leaving it blank — so force an explicit choice.
+    const target = cur || (shots.length === 1 ? shots[0].id : '');
+    if (target) {
+      sel.value = target;
+      if (sel.value === target) await onShotSelect();
     }
-  } catch(e) { console.error('loadShotDropdown error:', e); }
+    return {shots, countByShot};
+  } catch(e) { console.error('loadShotDropdown error:', e); return {shots:[], countByShot:{}}; }
 }
 
 async function onShotSelect() {
@@ -3411,6 +3525,7 @@ function renderEntry(e) {
 
 // ── Team page ──
 let selectedTeamBranch = ALL_BRANCHES[0];
+let teamEntryCache = {};
 
 function renderParamCard(s, shotEntries) {
   const dateStr = s.id ? s.id.split('-').slice(0,2).join('-') : '';
@@ -3552,6 +3667,7 @@ function switchTeamBranch(branch, btn) {
 async function renderTeam() {
   const el = document.getElementById('team-content');
   el.innerHTML = '<div class="empty">กำลังโหลด...</div>';
+  teamEntryCache = {}; // reset each render — keyed by entry.id, used by showPersonEntryModal
 
   const entries = (await loadEntries()).filter(e => e.branch === selectedTeamBranch);
   const branch = selectedTeamBranch;
@@ -3703,6 +3819,7 @@ async function renderTeam() {
 
     // Ref cards (side by side)
     const refCards = refEntries.map(e => {
+      teamEntryCache[e.id] = e;
       const ini = e.taster.slice(0,2).toUpperCase();
       const myTags = attr => (e.tags?.[attr]||[]).join(', ')||'—';
       const intLabel = v => INTLABELS[v-1]||v;
@@ -3710,7 +3827,7 @@ async function renderTeam() {
       const refCol = refScore?.total>=85?'var(--green)':refScore?.total>=65?'var(--amber)':'var(--red)';
       const refLvl = refScore?.total>=85?'Advanced':refScore?.total>=65?'Intermediate':'Beginner';
       const refLvlCls = refScore?.total>=85?'pill-green':refScore?.total>=65?'pill-amber':'pill-red';
-      return `<div style="flex:1;background:var(--bbg);border:1px solid var(--bborder);border-radius:var(--r2);padding:10px">
+      return `<div onclick="showPersonEntryModal('${e.id}')" style="flex:1;background:var(--bbg);border:1px solid var(--bborder);border-radius:var(--r2);padding:10px;cursor:pointer">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
           <div style="width:32px;height:32px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0">${ini}</div>
           <div style="flex:1">
@@ -3746,6 +3863,7 @@ async function renderTeam() {
     const tasters = shotEntries.filter(e => !refEntries.includes(e));
 
     const tasterCards = tasters.map(e => {
+      teamEntryCache[e.id] = e;
       const score = calcCalibrationScore(e, refEntries, shotEntries);
       const col = score?.total>=85?'var(--green)':score?.total>=65?'var(--amber)':'var(--red)';
       const lvlCls = score?.total>=85?'pill-green':score?.total>=65?'pill-amber':'pill-red';
@@ -3777,7 +3895,7 @@ async function renderTeam() {
       const tbD = aDiff(e.tbScore, refAvgTB);
       const tcD = aDiff(e.tcScore, refAvgTC);
 
-      return `<div style="min-width:148px;max-width:148px;flex-shrink:0;border:0.5px solid var(--bg3);border-radius:var(--r2);overflow:hidden;background:#fff">
+      return `<div onclick="showPersonEntryModal('${e.id}')" style="min-width:148px;max-width:148px;flex-shrink:0;border:0.5px solid var(--bg3);border-radius:var(--r2);overflow:hidden;background:#fff;cursor:pointer">
         <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 8px 8px;background:var(--bg2);text-align:center">
           <div style="width:32px;height:32px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--text2)">${initials}</div>
           <div style="font-size:12px;font-weight:600">${e.taster}</div>
