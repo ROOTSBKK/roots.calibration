@@ -2290,7 +2290,7 @@ function showPersonEntryModal(entryId) {
       <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:6px">🍓 Flavor ที่เลือก</div>
       <div style="font-size:14px;font-weight:600;margin-bottom:12px">${flavor}</div>
       <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:6px">✍️ สิ่งที่พิมพ์เพิ่มเติม</div>
-      <div style="font-size:14px;background:var(--bg2);border-radius:var(--r2);padding:10px 12px;white-space:pre-wrap">${e.flavor || e.narrative || '— ไม่มีบันทึกเพิ่มเติม —'}</div>
+      <div style="font-size:14px;background:var(--bg2);border-radius:var(--r2);padding:10px 12px;white-space:pre-wrap">${e.flavor || '— ไม่มีบันทึกเพิ่มเติม —'}</div>
     </div>
   `;
   if (titleEl) titleEl.textContent = `👤 ${e.taster}`;
@@ -2842,10 +2842,10 @@ async function submitForm() {
 
   const iL = INTLABELS;
   const parts = [
-    'Beginnerด้วยความเปรี้ยวระดับ '+iL[intensity.acidity-1]+(posMap.acidity.length?' ที่ให้สัมผัส '+posMap.acidity.join(', '):'')+(negMap.acidity.length?' มี'+negMap.acidity.join(', ')+'แทรก':'')+(notes.acidity?' '+notes.acidity:'')+' .',
+    'ด้วยความเปรี้ยวระดับ '+iL[intensity.acidity-1]+(posMap.acidity.length?' ที่ให้สัมผัส '+posMap.acidity.join(', '):'')+(negMap.acidity.length?' มี'+negMap.acidity.join(', ')+'แทรก':'')+(notes.acidity?' '+notes.acidity:'')+' .',
     'ตามมาด้วยความหวานระดับ '+iL[intensity.sweetness-1]+' ในโทน '+(posMap.sweetness.join(', ')||'ที่รับรู้ได้')+(notes.sweetness?' '+notes.sweetness:'')+' .',
     'สลับกับความขมระดับ '+iL[intensity.bitterness-1]+(posMap.bitterness.length?' แบบ '+posMap.bitterness.join(', '):'')+(negMap.bitterness.length?' มี'+negMap.bitterness.join(', '):'')+' .',
-    'ปิดท้ายด้วย aftertaste ระดับ '+iL[intensity.aftertaste-1]+(posMap.aftertaste.length?' '+posMap.aftertaste.join(', '):'')+(negMap.aftertaste.length?' แต่'+negMap.aftertaste.join(', '):'')+' .',
+    'ปิดท้ายด้วย aftertaste ระดับ '+(AFT_LENGTH_LABELS[aftertasteLength-1]||'')+(posMap.aftertaste.length?' '+posMap.aftertaste.join(', '):'')+(negMap.aftertaste.length?' แต่'+negMap.aftertaste.join(', '):'')+' .',
     'Mouthfeel น้ำหนักระดับ '+iL[intensity.mouthfeel-1]+(posMap.mouthfeel.length?' เนื้อ '+posMap.mouthfeel.join(', '):'')+(negMap.mouthfeel.length?' มี'+negMap.mouthfeel.join(', '):'')+' .',
     flavor?'Flavor เด่นคือ '+flavor+'.':'',
     'TB '+tbScore.toFixed(1)+'/6 ('+LEVEL[clamp(Math.round(tbScore),0,6)]+') / Tactile '+tcScore.toFixed(1)+'/6 ('+LEVEL[clamp(Math.round(tcScore),0,6)]+').'
