@@ -161,6 +161,8 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
   <button class="tab" onclick="showPage('branch',this)">🏪 สาขาฉัน</button>
   <button class="tab" onclick="showPage('master',this)">📊 Master</button>
   <button class="tab" id="tab-team" onclick="showPage('team',this)">📈 ทีม</button>
+  <button class="tab" onclick="showPage('data',this)">🗂️ Data</button>
+  <button class="tab" onclick="showPage('params',this)">📊 Parameter</button>
   <button class="tab" onclick="showPage('person',this)">👤 รายคน</button>
   <div class="tab-dropdown" id="sensory-dropdown">
     <button class="tab" id="sensory-tab-btn" onclick="toggleSensoryMenu(event)">📖 Sensory ▾</button>
@@ -287,6 +289,15 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     <div class="chips" data-attr="aftertaste"><button class="chip pos" data-v="Clean" onclick="handleChip(this)">Clean</button><button class="chip pos" data-v="Pleasant" onclick="handleChip(this)">Pleasant</button><button class="chip pos" data-v="Sweetness" onclick="handleChip(this)">Sweetness</button><button class="chip pos" data-v="Bitter Sweet" onclick="handleChip(this)">Bitter Sweet</button><button class="chip pos" data-v="Lingering" onclick="handleChip(this)">Lingering</button></div>
     <div class="lbl" style="margin-top:8px">Negative</div>
     <div class="chips" data-attr="aftertaste"><button class="chip neg" data-v="Unpleasant" onclick="handleChip(this)">Unpleasant</button><button class="chip neg" data-v="Astringent" onclick="handleChip(this)">Astringent</button><button class="chip neg" data-v="Bitterness" onclick="handleChip(this)">Bitterness</button><button class="chip neg" data-v="Dryness" onclick="handleChip(this)">Dryness</button><button class="chip neg" data-v="Fades fast" onclick="handleChip(this)">Fades fast</button></div>
+    <div class="lbl" style="margin-top:10px">Aftertaste Flavor <span style="color:var(--text3);font-weight:400">— รสที่ค้างอยู่หลังกลืนคือรสอะไร</span></div>
+    <div class="chips" id="chips-aft-flavor">
+      <button class="chip pos" data-v="Fruity" onclick="handleAftFlavorChip(this)">Fruity</button>
+      <button class="chip pos" data-v="Floral" onclick="handleAftFlavorChip(this)">Floral</button>
+      <button class="chip pos" data-v="Nutty" onclick="handleAftFlavorChip(this)">Nutty</button>
+      <button class="chip pos" data-v="Sugary" onclick="handleAftFlavorChip(this)">Sugary</button>
+      <button class="chip pos" data-v="Spice" onclick="handleAftFlavorChip(this)">Spice</button>
+      <button class="chip pos" data-v="Roasted" onclick="handleAftFlavorChip(this)">Roasted</button>
+    </div>
     <input type="text" id="note-aftertaste" placeholder="โน้ตสั้นๆ (ถ้ามี)" style="margin-top:8px">
   </div>
 
@@ -452,6 +463,28 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
   </div>
   <div class="branch-tabs" id="team-branch-tabs"></div>
   <div id="team-content"></div>
+</div>
+
+<!-- ═══ DATA ═══ -->
+<div id="page-data" class="page">
+  <div class="card">
+    <div class="card-title">Data — บันทึกช็อตแบบฟอร์มกระดาษ</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6">
+      ทุกช็อตที่เปิดไว้ แสดงเป็นการ์ดพารามิเตอร์ครบ (เหมือนใบบันทึกกระดาษ) เรียงจากล่าสุด
+    </div>
+  </div>
+  <div id="data-content"></div>
+</div>
+
+<!-- ═══ PARAMETER SUMMARY ═══ -->
+<div id="page-params" class="page">
+  <div class="card">
+    <div class="card-title">สรุป Parameter — เรียงตามความนิยม</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6">
+      รวมทุกครั้งที่มีการเลือก แยกตามหัวข้อ เรียงจากที่ถูกเลือกมากที่สุดไปน้อยที่สุด
+    </div>
+  </div>
+  <div id="params-content"></div>
 </div>
 
 <!-- ═══ PERSON ═══ -->
@@ -1911,6 +1944,7 @@ let intensity = {acidity:3,sweetness:3,bitterness:3,mouthfeel:3};
 let touchedAttrs = new Set();
 let aftertasteLength = 3; // 1-5 slider value
 let flavorTags = {'flavor-fruity':[],'flavor-floral':[],'flavor-nutty':[],'flavor-sugary':[],'flavor-spice':[],'flavor-roasted':[]};
+let aftertasteFlavorTags = [];
 
 // Flavor → Category mapping for scoring
 const FLAVOR_CATEGORY_MAP = {
@@ -2157,6 +2191,8 @@ function showPage(id, btn) {
   if (id === 'branch') loadBranch();
   if (id === 'master') loadMaster();
   if (id === 'team') loadTeamPage();
+  if (id === 'data') loadDataPage();
+  if (id === 'params') loadParamsPage();
   if (id === 'person') loadPersonPage();
 }
 
@@ -2443,6 +2479,8 @@ function resetTastingFields() {
     flavorTags[k] = [];
     document.querySelectorAll(`.chips[data-attr="${k}"] .chip`).forEach(c => c.classList.remove('on'));
   });
+  aftertasteFlavorTags = [];
+  document.querySelectorAll('#chips-aft-flavor .chip').forEach(c => c.classList.remove('on'));
   document.getElementById('form-summary').style.display = 'none';
   const btn = document.getElementById('btn-submit');
   btn.disabled = false;
@@ -2682,6 +2720,7 @@ async function submitForm() {
     isRefCal,
     aftertasteLength: +document.getElementById('f-aft-length').value || 3,
     flavorTags: JSON.parse(JSON.stringify(flavorTags)),
+    aftertasteFlavor: [...aftertasteFlavorTags],
     flavorCategories: getFlavorCategories(flavorTags),
     dose, yield: yieldW, ratio, tds, ext,
     extractTime, waterTemp, pressure,
@@ -2844,6 +2883,8 @@ function resetForm() {
     flavorTags[k] = [];
     document.querySelectorAll(`.chips[data-attr="${k}"] .chip`).forEach(c => c.classList.remove('on'));
   });
+  aftertasteFlavorTags = [];
+  document.querySelectorAll('#chips-aft-flavor .chip').forEach(c => c.classList.remove('on'));
   document.getElementById('form-summary').style.display = 'none';
   // Re-enable submit button
   const btn = document.getElementById('btn-submit');
@@ -3338,6 +3379,157 @@ function renderEntry(e) {
 
 // ── Team page ──
 let selectedTeamBranch = ALL_BRANCHES[0];
+
+async function loadParamsPage() {
+  const el = document.getElementById('params-content');
+  el.innerHTML = '<div class="empty">กำลังโหลด...</div>';
+
+  const entries = await loadEntries();
+  if (!entries.length) { el.innerHTML = '<div class="empty">ยังไม่มีข้อมูล</div>'; return; }
+
+  const CATEGORIES = [
+    { key: 'flavor',      label: 'Flavor',            get: e => e.flavorCategories||[] },
+    { key: 'acidity',     label: 'Acidity',            get: e => e.tags?.acidity||[] },
+    { key: 'sweetness',   label: 'Sweetness',          get: e => e.tags?.sweetness||[] },
+    { key: 'bitterness',  label: 'Bitterness',         get: e => e.tags?.bitterness||[] },
+    { key: 'mouthfeel',   label: 'Weight / Texture',   get: e => e.tags?.mouthfeel||[] },
+    { key: 'aftertaste',  label: 'Aftertaste',         get: e => e.tags?.aftertaste||[] },
+    { key: 'aftflavor',   label: 'Aftertaste Flavor',  get: e => e.aftertasteFlavor||[] },
+  ];
+
+  const total = entries.length;
+
+  const html = CATEGORIES.map(cat => {
+    const freq = {};
+    entries.forEach(e => { cat.get(e).forEach(v => { freq[v] = (freq[v]||0) + 1; }); });
+    const ranked = Object.entries(freq).sort((a,b) => b[1]-a[1]);
+    if (!ranked.length) return `<div class="card" style="margin-bottom:12px">
+      <div class="card-title">${cat.label}</div>
+      <div class="empty" style="padding:10px 0">ยังไม่มีใครเลือกหมวดนี้</div>
+    </div>`;
+    const maxCount = ranked[0][1];
+    const rows = ranked.map(([name, count], i) => {
+      const pct = Math.round(count/total*100);
+      const barPct = Math.round(count/maxCount*100);
+      const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}.`;
+      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0">
+        <span style="min-width:24px;font-size:12px;color:var(--text3)">${medal}</span>
+        <span style="min-width:110px;font-size:12.5px;color:var(--text)">${name}</span>
+        <div style="flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden">
+          <div style="width:${barPct}%;height:100%;background:var(--blue);border-radius:4px"></div>
+        </div>
+        <span style="min-width:70px;text-align:right;font-size:11.5px;color:var(--text2)">${count} ครั้ง (${pct}%)</span>
+      </div>`;
+    }).join('');
+    return `<div class="card" style="margin-bottom:12px">
+      <div class="card-title">${cat.label}</div>
+      ${rows}
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:10px">คำนวณจากผลชิมทั้งหมด ${total} รายการ</div>` + html;
+}
+
+async function loadDataPage() {
+  const el = document.getElementById('data-content');
+  el.innerHTML = '<div class="empty">กำลังโหลด...</div>';
+
+  const branchFilter = window._isAdmin() ? null : (window._currentUser && window._currentUser.branch);
+  let shots = [];
+  try {
+    const keys = await window.storage.list('shot:', true, branchFilter);
+    if (keys && keys.keys) {
+      await Promise.all(keys.keys.map(async k => {
+        try {
+          const r = await window.storage.get(k, true);
+          if (r) shots.push(JSON.parse(r.value));
+        } catch(err) {}
+      }));
+    }
+  } catch(err) {}
+
+  if (!shots.length) { el.innerHTML = '<div class="empty">ยังไม่มีช็อตที่เปิดไว้</div>'; return; }
+
+  const entries = await loadEntries();
+  shots.sort((a,b) => (b.created||0) - (a.created||0));
+
+  const html = shots.map(s => {
+    const shotEntries = entries.filter(e => e.shotId === s.id);
+    const dateStr = s.id ? s.id.split('-').slice(0,2).join('-') : '';
+    const ratio = s.dose ? (s.yield/s.dose).toFixed(1) : '—';
+
+    const notesHtml = shotEntries.length
+      ? shotEntries.map(e => {
+          const flavor = (e.flavorCategories||[]).join(', ') || e.flavor || '—';
+          const texture = (e.tags?.mouthfeel||[]).join(', ') || '—';
+          const aftTags = (e.tags?.aftertaste||[]).join(', ');
+          const aftLen = e.aftertasteLength ? (AFT_LENGTH_LABELS[e.aftertasteLength-1]||'') : '';
+          const aftFlavor = (e.aftertasteFlavor||[]).join(', ');
+          const aftertaste = [aftLen, aftTags, aftFlavor?'Flavor: '+aftFlavor:''].filter(Boolean).join(' · ') || '—';
+          return `<div style="padding:6px 0;border-bottom:0.5px dashed var(--bg3)">
+            <div style="font-size:11.5px;font-weight:700;color:var(--text2);margin-bottom:3px">${e.taster}${e.isRefCal?' ★':''}</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:11px">
+              <div><div style="color:var(--text3);font-size:9px;text-transform:uppercase;letter-spacing:.03em">Flavor</div><div style="color:var(--text)">${flavor}</div></div>
+              <div><div style="color:var(--text3);font-size:9px;text-transform:uppercase;letter-spacing:.03em">Weight/Texture</div><div style="color:var(--text)">${texture}</div></div>
+              <div><div style="color:var(--text3);font-size:9px;text-transform:uppercase;letter-spacing:.03em">Aftertaste</div><div style="color:var(--text)">${aftertaste}</div></div>
+            </div>
+          </div>`;
+        }).join('')
+      : '<div style="color:var(--text3)">ยังไม่มีใครกรอกผลชิม</div>';
+
+    const checkedBy = shotEntries.map(e=>e.taster).join(', ') || '—';
+
+    return `<div class="card" style="margin-bottom:14px;padding:0;overflow:hidden">
+      <div style="background:var(--bg2);padding:12px 16px;display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-size:9px;letter-spacing:2px;color:var(--text3);font-weight:700">ROOTS</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${s.branch}</div>
+        </div>
+        <div style="text-align:right;font-size:11px;color:var(--text2);line-height:1.8">
+          <div>Date <b style="color:var(--text)">${dateStr}</b></div>
+          <div>Time <b style="color:var(--text)">${s.time||'—'}</b></div>
+          <div>Temp. <b style="color:var(--text)">${s.waterTemp?s.waterTemp+'°C':'—'}</b></div>
+        </div>
+      </div>
+      <div style="padding:14px 16px;border-bottom:1px solid var(--bg3)">
+        <div style="display:flex;justify-content:space-between;font-size:13px">
+          <span style="color:var(--text3)">Coffee</span>
+          <b style="text-align:right">${s.coffee||'—'}</b>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px">
+          <span style="color:var(--text3)">Lot</span>
+          <b>${s.lot||'—'}</b>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:6px;color:var(--text2)">
+          <span>Branch Cal: <b style="color:var(--text)">${s.branchCal||'—'}</b></span>
+          <span>Ref. Cal: <b style="color:var(--text)">${s.companyCal||'—'}</b></span>
+        </div>
+      </div>
+      <div style="padding:12px 16px;border-bottom:1px solid var(--bg3)">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;text-align:center;gap:4px">
+          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase">Dose</div><div style="font-size:18px;font-weight:700">${s.dose||'—'}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase">Time</div><div style="font-size:18px;font-weight:700">${s.extractTime||'—'}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase">Yield</div><div style="font-size:18px;font-weight:700">${s.yield||'—'}</div></div>
+        </div>
+        <div style="text-align:center;font-size:11px;color:var(--text3);margin-top:4px">Ratio 1:${ratio}</div>
+      </div>
+      <div style="padding:10px 16px;border-bottom:1px solid var(--bg3);display:flex;justify-content:space-around;text-align:center">
+        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase">TDS%</div><div style="font-size:15px;font-weight:700;color:var(--amber)">${s.tds||'—'}</div></div>
+        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase">EXT%</div><div style="font-size:15px;font-weight:700;color:var(--amber)">${s.ext||'—'}</div></div>
+        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase">Flow Rate</div><div style="font-size:15px;font-weight:700">${s.pressure?s.pressure+'g/s':'—'}</div></div>
+      </div>
+      <div style="padding:12px 16px;border-bottom:1px solid var(--bg3)">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:6px">Notes</div>
+        <div style="font-size:12px;line-height:1.6">${notesHtml}</div>
+      </div>
+      <div style="padding:10px 16px;font-size:11px;color:var(--text3)">
+        📌 ${s.id} · Check by <b style="color:var(--text2)">${checkedBy}</b>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = html;
+}
 
 async function loadTeamPage() {
   const tabsEl = document.getElementById('team-branch-tabs');
@@ -4026,6 +4218,17 @@ function handleChip(chip) {
     if (!tags[attr]) tags[attr] = [];
     if (tags[attr].includes(v)) { tags[attr] = tags[attr].filter(x=>x!==v); chip.classList.remove('on'); }
     else { tags[attr].push(v); chip.classList.add('on'); }
+  }
+}
+
+function handleAftFlavorChip(chip) {
+  const v = chip.dataset.v;
+  if (aftertasteFlavorTags.includes(v)) {
+    aftertasteFlavorTags = aftertasteFlavorTags.filter(x=>x!==v);
+    chip.classList.remove('on');
+  } else {
+    aftertasteFlavorTags.push(v);
+    chip.classList.add('on');
   }
 }
 
