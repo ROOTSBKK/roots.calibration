@@ -160,7 +160,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
   <button class="tab active" onclick="showPage('form',this)">📋 กรอกผล</button>
   <button class="tab" onclick="showPage('branch',this)">🏪 สาขาฉัน</button>
   <button class="tab" onclick="showPage('master',this)">📊 Master</button>
-  <button class="tab" onclick="showPage('team',this)">📈 ทีม</button>
+  <button class="tab" id="tab-team" onclick="showPage('team',this)">📈 ทีม</button>
   <button class="tab" onclick="showPage('person',this)">👤 รายคน</button>
   <div class="tab-dropdown" id="sensory-dropdown">
     <button class="tab" id="sensory-tab-btn" onclick="toggleSensoryMenu(event)">📖 Sensory ▾</button>
@@ -188,17 +188,13 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     </div>
     <div class="col" style="margin-bottom:10px">
       <div class="lbl">ชื่อผู้ชิม</div>
-      <select id="f-taster" onchange="updateRefCalStatus()"><option value="">— เลือกชื่อ —</option></select>
+      <select id="f-taster"><option value="">— เลือกชื่อ —</option></select>
     </div>
     <div class="col" style="margin-bottom:10px">
       <div class="lbl">Other — ต่างสาขา</div>
       <select id="f-other-taster" onchange="onOtherTasterSelect()">
         <option value="">— ถ้ามีผู้ชิมต่างสาขาร่วมด้วย —</option>
       </select>
-    </div>
-    <div id="ref-cal-banner" style="display:none;background:var(--bbg);border:1px solid var(--bborder);border-radius:var(--r2);padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px">
-      <input type="checkbox" id="f-is-ref-cal" style="width:16px;height:16px;accent-color:var(--blue)">
-      <label for="f-is-ref-cal" style="font-size:13px;color:var(--blue);font-weight:600;cursor:pointer">ฉันเป็น Reference Calibrator ใน session นี้</label>
     </div>
     <div class="col" style="margin-bottom:10px">
       <div class="lbl">รหัสช็อต</div>
@@ -1730,12 +1726,6 @@ function initApp(user){
     setTimeout(()=>{
       const tr=document.getElementById('f-taster');
       if(tr)tr.value=user.name;
-      if(user.role==='company_ref'){
-        const cb=document.getElementById('f-is-ref-cal');
-        const bn=document.getElementById('ref-cal-banner');
-        if(cb)cb.checked=true;
-        if(bn)bn.style.display='flex';
-      }
     },200);
   },300);
 }
@@ -2092,18 +2082,6 @@ function calcCalibrationScore(entry, refEntries, teamEntries) {
 }
 let tags = {acidity:[],sweetness:[],bitterness:[],aftertaste:[],mouthfeel:[]};
 
-function updateRefCalStatus() {
-  const taster = document.getElementById('f-taster').value;
-  const banner = document.getElementById('ref-cal-banner');
-  // Show ref cal option for Boss and Area staff
-  if (taster && (taster === 'Boss' || AREA_STAFF.includes(taster))) {
-    banner.style.display = 'flex';
-  } else {
-    banner.style.display = 'none';
-    document.getElementById('f-is-ref-cal').checked = false;
-  }
-}
-
 function populateOtherTasters() {
   const branch = document.getElementById('f-branch').value;
   const sel = document.getElementById('f-other-taster');
@@ -2342,8 +2320,14 @@ async function saveTdsEdit() {
   }
 }
 
+// Tracks the full record of whichever shot is currently selected/active on
+// the form — set by autoFillFromShot(), read by submitForm() to determine
+// Reference Calibrator status automatically instead of a manual checkbox.
+let currentShotData = null;
+
 function autoFillFromShot(shotData) {
   if (!shotData) return;
+  currentShotData = shotData;
   if (shotData.coffee)      document.getElementById('f-coffee').value    = shotData.coffee;
   if (shotData.lot)         document.getElementById('f-lot').value       = shotData.lot;
   if (shotData.dose)        document.getElementById('f-dose').value      = shotData.dose;
@@ -2443,8 +2427,6 @@ function resetTastingFields() {
   // Clears only the sensory-input fields (dots/chips/notes/scores) — NOT
   // branch, taster, or shot metadata, which stay as auto-filled from the shot.
   touchedAttrs.clear();
-  document.getElementById('f-is-ref-cal').checked = false;
-  document.getElementById('ref-cal-banner').style.display = 'none';
   document.getElementById('f-tb').value = 3;
   document.getElementById('f-tc').value = 3;
   document.getElementById('f-flavor').value = '';
@@ -2644,7 +2626,10 @@ async function submitForm() {
   btn.textContent = '✓ บันทึกแล้ว';
   btn.style.opacity = '0.6';
 
-  const isRefCal = document.getElementById('f-is-ref-cal').checked;
+  // Reference Calibrator status is decided once, when the shot was opened
+  // (Branch Calibrator / Ref. Calibration fields) — not re-confirmed here.
+  const isRefCal = !!(currentShotData && currentShotData.id === shotId &&
+    (taster === currentShotData.branchCal || taster === currentShotData.companyCal));
   const coffee = document.getElementById('f-coffee').value.trim();
   const lot = document.getElementById('f-lot').value.trim();
   const dose = +document.getElementById('f-dose').value || 1;
@@ -2705,8 +2690,11 @@ async function submitForm() {
 
   try {
     await window.storage.set(entry.id, JSON.stringify(entry), true, branch);
-    await showFormSummary(entry);
     showToast('บันทึกแล้ว ✓');
+    // Jump straight to the ทีม page so everyone lands on the shared summary
+    // right after submitting, instead of the old inline per-person card.
+    selectedTeamBranch = branch;
+    showPage('team', document.getElementById('tab-team'));
   } catch(e) { showToast('Error: '+e.message); }
 }
 
@@ -2832,8 +2820,6 @@ function resetForm() {
   document.getElementById('f-branch').value = '';
   document.getElementById('f-taster').innerHTML = '<option value="">— เลือกชื่อ —</option>';
   document.getElementById('f-other-taster').value = '';
-  document.getElementById('f-is-ref-cal').checked = false;
-  document.getElementById('ref-cal-banner').style.display = 'none';
   document.getElementById('f-shotid').value = '';
   document.getElementById('shot-badge').style.display = 'none';
   document.getElementById('f-coffee').value = '';
@@ -3573,67 +3559,51 @@ async function renderTeam() {
     const tasters = shotEntries.filter(e => !refEntries.includes(e));
 
     const tasterCards = tasters.map(e => {
-      const isRef = false;
       const score = calcCalibrationScore(e, refEntries, shotEntries);
       const col = score?.total>=85?'var(--green)':score?.total>=65?'var(--amber)':'var(--red)';
-      const lvl = score?.total>=85?'Advanced':score?.total>=65?'Intermediate':'Beginner';
       const lvlCls = score?.total>=85?'pill-green':score?.total>=65?'pill-amber':'pill-red';
+      const lvlShort = score?.total>=85?'Adv':score?.total>=65?'Int':'Beg';
       const initials = e.taster.slice(0,2).toUpperCase();
 
+      const ATTR_SHORT = {acidity:'Ac',sweetness:'Sw',bitterness:'Bt',mouthfeel:'Mf'};
       const attrRows = SCORE_ATTRS.map(attr => {
         const myVal = e.intensity?.[attr]||3;
         const refVal = refAvgInt(attr);
         const d = aDiff(myVal, refVal);
-        const myTags = (e.tags?.[attr]||[]).join(', ')||'—';
-        const refTags = refMajorTags(attr).join(', ')||'—';
         const rawDiff = myVal - refVal;
-        let phraseHtml = '';
+        let flagHtml = '';
         if (GLOBAL_BIAS_PHRASE[attr] && Math.abs(rawDiff) >= 1) {
           const dir = rawDiff > 0 ? 'high' : 'low';
           const pCol = dir === 'high' ? 'var(--red)' : 'var(--blue)';
-          phraseHtml = `<div style="padding-left:78px;font-size:10.5px;color:${pCol}">${dir==='high'?'▲':'▼'} ${GLOBAL_BIAS_PHRASE[attr][dir]}</div>`;
+          flagHtml = `<div style="font-size:9.5px;color:${pCol};line-height:1.3;padding:0 0 3px 0">${dir==='high'?'▲':'▼'} ${GLOBAL_BIAS_PHRASE[attr][dir]}</div>`;
         }
-        return `<div style="display:flex;flex-direction:column">
-          <div style="display:flex;gap:6px;padding:3px 0;border-bottom:0.5px solid var(--bg3);font-size:11px">
-            <span style="min-width:72px;color:var(--text3)">${ATTR_LABELS[attr]}</span>
+        return `<div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:2.5px 0">
+            <span style="color:var(--text3)">${ATTR_SHORT[attr]}</span>
+            <span style="color:var(--text2)"><b>${myVal.toFixed(0)}</b><span style="color:var(--text3)"> /${refVal.toFixed(1)}</span></span>
             <span>${statusIcon(d)}</span>
-            <span style="flex:1;color:var(--text2)"><b>${INTLABELS[myVal-1]}</b> vs <b>${refVal.toFixed(1)}</b> · <span style="color:var(--text3)">${myTags}</span></span>
           </div>
-          ${phraseHtml}
+          ${flagHtml}
         </div>`;
       }).join('');
 
-      const lenD = aDiff(e.aftertasteLength||3, refAvgLen());
-      const flavorMatch = (e.flavorCategories||[]).some(f=>refMajorFlavor().includes(f));
       const tbD = aDiff(e.tbScore, refAvgTB);
       const tcD = aDiff(e.tcScore, refAvgTC);
 
-      return `<div style="border:0.5px solid var(--bg3);border-radius:var(--r2);margin-bottom:6px;overflow:hidden">
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg2)">
-          <div style="width:36px;height:36px;border-radius:50%;background:${isRef?'var(--bbg)':'var(--bg3)'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:${isRef?'var(--blue)':'var(--text2)'};flex-shrink:0">${initials}</div>
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:600">${isRef?'★ ':''} ${e.taster}</div>
-            ${isRef?'<div style="font-size:10px;color:var(--blue)">Reference Calibrator</div>':''}
+      return `<div style="min-width:148px;max-width:148px;flex-shrink:0;border:0.5px solid var(--bg3);border-radius:var(--r2);overflow:hidden;background:#fff">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 8px 8px;background:var(--bg2);text-align:center">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--text2)">${initials}</div>
+          <div style="font-size:12px;font-weight:600">${e.taster}</div>
+          <div style="display:flex;align-items:center;gap:5px">
+            <span style="font-size:20px;font-weight:700;color:${score?.total!==null?col:'var(--text3)'}">${score?.total!==null?score.total:'—'}</span>
+            <span class="pill ${lvlCls}" style="font-size:9px">${lvlShort}</span>
           </div>
-          <span class="pill ${lvlCls}" style="font-size:10px">${lvl}</span>
-          <div style="font-size:22px;font-weight:700;color:${score?.total!==null?col:'var(--text3)'};min-width:36px;text-align:right">${score?.total!==null?score.total:'—'}</div>
         </div>
-        <div style="padding:6px 10px">
+        <div style="padding:6px 8px;border-top:0.5px solid var(--bg3)">
           ${attrRows}
-          <div style="display:flex;gap:6px;padding:3px 0;border-bottom:0.5px solid var(--bg3);font-size:11px">
-            <span style="min-width:72px;color:var(--text3)">Aft. Length</span>
-            <span>${statusIcon(lenD)}</span>
-            <span style="color:var(--text2)"><b>${AFT_LEN[e.aftertasteLength||3]}</b> vs <b>${refAvgLen().toFixed(1)}</b></span>
-          </div>
-          <div style="display:flex;gap:6px;padding:3px 0;border-bottom:0.5px solid var(--bg3);font-size:11px">
-            <span style="min-width:72px;color:var(--text3)">Flavor</span>
-            <span>${flavorMatch?'<span style="color:var(--green)">✓</span>':'<span style="color:var(--text3)">—</span>'}</span>
-            <span style="color:var(--text2)">${(e.flavorCategories||[]).join(', ')||'—'} <span style="color:var(--text3)">vs ${refMajorFlavor().join(', ')||'—'}</span></span>
-          </div>
-          <div style="display:flex;gap:12px;padding:3px 0;font-size:11px">
-            <span style="color:var(--text3)">TB <b>${e.tbScore.toFixed(1)}</b> vs ${refAvgTB.toFixed(1)} ${statusIcon(tbD)}</span>
-            <span style="color:var(--text3)">TC <b>${e.tcScore.toFixed(1)}</b> vs ${refAvgTC.toFixed(1)} ${statusIcon(tcD)}</span>
-            ${score?`<span style="margin-left:auto;color:var(--text3)">${score.labelRef} · ${score.labelTeam}</span>`:''}
+          <div style="display:flex;justify-content:space-between;font-size:10.5px;padding:4px 0 0;margin-top:2px;border-top:0.5px dashed var(--bg3);color:var(--text3)">
+            <span>TB <b style="color:var(--text2)">${e.tbScore.toFixed(1)}</b> ${statusIcon(tbD)}</span>
+            <span>TC <b style="color:var(--text2)">${e.tcScore.toFixed(1)}</b> ${statusIcon(tcD)}</span>
           </div>
         </div>
       </div>`;
@@ -3650,10 +3620,10 @@ async function renderTeam() {
         <div>${firstEntry.waterTemp?'Water Temp <b>'+firstEntry.waterTemp+'°C</b> · ':''}${firstEntry.pressure?'Flow Rate <b>'+firstEntry.pressure+'g/s</b> · ':''}${firstEntry.tds?'TDS <b>'+firstEntry.tds+'%</b> · ':''}${firstEntry.ext?'EXT <b>'+firstEntry.ext+'%</b>':''}</div>
       </div>
       <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">★ Reference Calibrators</div>
-      <div style="display:flex;gap:8px;margin-bottom:4px">${refCards}</div>
+      <div style="display:flex;gap:8px;margin-bottom:4px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch">${refCards}</div>
       ${consensusHtml}
-      <div style="font-size:11px;font-weight:600;color:var(--text3);margin:10px 0 6px;text-transform:uppercase;letter-spacing:.04em">👥 ทีม</div>
-      ${tasterCards}
+      <div style="font-size:11px;font-weight:600;color:var(--text3);margin:10px 0 6px;text-transform:uppercase;letter-spacing:.04em">👥 ทีม (เลื่อนดูได้ →)</div>
+      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch">${tasterCards}</div>
     </div>`;
   });
 
