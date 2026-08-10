@@ -1748,6 +1748,30 @@ window._migrateBranchField = async function(){
   console.log(`Migration done. Fixed: ${fixed}, skipped: ${skipped}`);
 };
 
+// ONE-TIME FIX — run once from the browser console while logged in as
+// Boss: window._migrateShotExt()
+// Old shot: records had TDS saved but never got EXT% computed and stored
+// alongside it (a bug — fixed for new shots going forward). This backfills
+// EXT% for every existing shot that has a TDS value but no EXT% yet.
+window._migrateShotExt = async function(){
+  if(!window._isAdmin()){ console.warn('Admin only.'); return; }
+  const snap = await getDocs(collection(db,'shared'));
+  let fixed=0, skipped=0;
+  for(const d of snap.docs){
+    const data=d.data();
+    if(!data.key || !data.key.startsWith('shot:')){ continue; }
+    try{
+      const s=JSON.parse(data.value);
+      if(s.tds && !s.ext && s.dose){
+        s.ext = +(s.tds * s.yield / s.dose).toFixed(1);
+        await setDoc(doc(db,'shared',d.id),{...data,value:JSON.stringify(s)});
+        fixed++;
+      } else skipped++;
+    }catch(e){ skipped++; }
+  }
+  console.log(`Fixed EXT% on ${fixed} shots, skipped ${skipped}.`);
+};
+
 // ONE-TIME CLEANUP — run once from the browser console while logged in as
 // Boss: window._wipeTastingData()
 // Deletes every cal: (calibration entry) and shot: (shot session) document
@@ -2492,6 +2516,7 @@ async function saveTdsEdit() {
     }
     if (shotData) {
       shotData.tds = newTds;
+      shotData.ext = shotData.dose ? +(newTds * shotData.yield / shotData.dose).toFixed(1) : 0;
       await window.storage.set(shotStorageKey, JSON.stringify(shotData), true, branch);
     }
     if (document.getElementById('f-shotid').value === shotId) {
@@ -2608,12 +2633,13 @@ async function createNewShot() {
   async function buildAndSaveShot(coffee, lot, dose, extractT, yieldW, tds, idPart) {
     const id = branchCode + '-' + dateStr + '-' + idPart;
     const storageKey = 'shot:' + id + ':' + Date.now();
+    const ext = (tds && dose) ? +(tds * yieldW / dose).toFixed(1) : 0;
     const shotData = {
       id, branch,
       label: `${id}${coffee?' · '+coffee:''} · ${timeStr} (${taster})`,
       createdBy: taster, time: timeStr, created: Date.now(),
       coffee, lot, dose, extractTime: extractT,
-      yield: yieldW, waterTemp: temp, pressure, tds,
+      yield: yieldW, waterTemp: temp, pressure, tds, ext,
       companyCal: companyCal || null,
       branchCal: branchCal || null
     };
