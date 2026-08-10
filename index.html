@@ -317,7 +317,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     <div class="chips" data-attr="aftertaste"><button class="chip pos" data-v="Clean" onclick="handleChip(this)">Clean</button><button class="chip pos" data-v="Pleasant" onclick="handleChip(this)">Pleasant</button><button class="chip pos" data-v="Sweetness" onclick="handleChip(this)">Sweetness</button><button class="chip pos" data-v="Bitter Sweet" onclick="handleChip(this)">Bitter Sweet</button><button class="chip pos" data-v="Lingering" onclick="handleChip(this)">Lingering</button></div>
     <div class="lbl" style="margin-top:8px">Negative</div>
     <div class="chips" data-attr="aftertaste"><button class="chip neg" data-v="Unpleasant" onclick="handleChip(this)">Unpleasant</button><button class="chip neg" data-v="Astringent" onclick="handleChip(this)">Astringent</button><button class="chip neg" data-v="Bitterness" onclick="handleChip(this)">Bitterness</button><button class="chip neg" data-v="Dryness" onclick="handleChip(this)">Dryness</button><button class="chip neg" data-v="Fades fast" onclick="handleChip(this)">Fades fast</button></div>
-    <div class="lbl" style="margin-top:10px">Aftertaste Flavor <span style="color:var(--text3);font-weight:400">— รสที่ค้างอยู่หลังกลืนคือรสอะไร</span></div>
+    <div class="lbl" style="margin-top:10px">Aftertaste Flavor <span style="color:var(--text3);font-weight:400">— รสที่ค้างอยู่หลังกลืนคือรสอะไร (ไม่มีผลต่อคะแนน)</span></div>
     <div class="chips" id="chips-aft-flavor">
       <button class="chip pos" data-v="Fruity" onclick="handleAftFlavorChip(this)">Fruity</button>
       <button class="chip pos" data-v="Floral" onclick="handleAftFlavorChip(this)">Floral</button>
@@ -387,9 +387,11 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
 
   <div class="card">
     <div class="card-title">Flavor Note</div>
-    <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.6">เลือก flavor category ที่รับรู้ได้ — ใช้สำหรับ calibration scoring</div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.6">เลือก flavor category ที่รับรู้ได้ — <b style="color:var(--red)">หมวดนี้ไม่มีผลต่อคะแนน Calibration</b> ใช้เป็นข้อมูลบรรยายกาแฟเก็บไว้ดู/เทียบกันเท่านั้น (โชว์ในหน้า Parameter และกล่อง "ทีมเห็นตรงกัน")</div>
 
     <div class="lbl">🍍 Fruity</div>
+
+    <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">Tropical</div>
     <div class="chips" data-attr="flavor-fruity" style="margin-bottom:8px">
       <button class="chip pos" data-v="Tropical" onclick="handleChip(this)">Tropical</button>
       <button class="chip pos" data-v="Pineapple" onclick="handleChip(this)">Pineapple</button>
@@ -397,19 +399,48 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
       <button class="chip pos" data-v="Passion Fruit" onclick="handleChip(this)">Passion Fruit</button>
       <button class="chip pos" data-v="Papaya" onclick="handleChip(this)">Papaya</button>
       <button class="chip pos" data-v="Lychee" onclick="handleChip(this)">Lychee</button>
+    </div>
+
+    <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">Stone Fruit</div>
+    <div class="chips" data-attr="flavor-fruity" style="margin-bottom:8px">
       <button class="chip pos" data-v="Stone Fruit" onclick="handleChip(this)">Stone Fruit</button>
       <button class="chip pos" data-v="Peach" onclick="handleChip(this)">Peach</button>
       <button class="chip pos" data-v="Plum" onclick="handleChip(this)">Plum</button>
       <button class="chip pos" data-v="Apricot" onclick="handleChip(this)">Apricot</button>
       <button class="chip pos" data-v="Cherry" onclick="handleChip(this)">Cherry</button>
       <button class="chip pos" data-v="Nectarine" onclick="handleChip(this)">Nectarine</button>
+    </div>
+
+    <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">Berry</div>
+    <div class="chips" data-attr="flavor-fruity" style="margin-bottom:8px">
       <button class="chip pos" data-v="Berry" onclick="handleChip(this)">Berry</button>
       <button class="chip pos" data-v="Blackberry" onclick="handleChip(this)">Blackberry</button>
       <button class="chip pos" data-v="Raspberry" onclick="handleChip(this)">Raspberry</button>
       <button class="chip pos" data-v="Blueberry" onclick="handleChip(this)">Blueberry</button>
       <button class="chip pos" data-v="Strawberry" onclick="handleChip(this)">Strawberry</button>
       <button class="chip pos" data-v="Cranberry" onclick="handleChip(this)">Cranberry</button>
+    </div>
+
+    <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">Citrus</div>
+    <div class="chips" data-attr="flavor-fruity" style="margin-bottom:8px">
       <button class="chip pos" data-v="Citrus" onclick="handleChip(this)">Citrus</button>
+      <button class="chip pos" data-v="Lemon" onclick="handleChip(this)">Lemon</button>
+      <button class="chip pos" data-v="Lime" onclick="handleChip(this)">Lime</button>
+      <button class="chip pos" data-v="Orange" onclick="handleChip(this)">Orange</button>
+      <button class="chip pos" data-v="Grapefruit" onclick="handleChip(this)">Grapefruit</button>
+      <button class="chip pos" data-v="Mandarin" onclick="handleChip(this)">Mandarin</button>
+    </div>
+
+    <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">Other Fruit (Apple / Grape)</div>
+    <div class="chips" data-attr="flavor-fruity" style="margin-bottom:8px">
+      <button class="chip pos" data-v="Red Apple" onclick="handleChip(this)">Red Apple</button>
+      <button class="chip pos" data-v="Green Apple" onclick="handleChip(this)">Green Apple</button>
+      <button class="chip pos" data-v="Red Grape" onclick="handleChip(this)">Red Grape</button>
+      <button class="chip pos" data-v="White Grape" onclick="handleChip(this)">White Grape</button>
+    </div>
+
+    <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">Dried Fruit</div>
+    <div class="chips" data-attr="flavor-fruity" style="margin-bottom:8px">
       <button class="chip pos" data-v="Dried Fruit" onclick="handleChip(this)">Dried Fruit</button>
       <button class="chip pos" data-v="Raisin" onclick="handleChip(this)">Raisin</button>
       <button class="chip pos" data-v="Dried Plum" onclick="handleChip(this)">Dried Plum</button>
@@ -1215,6 +1246,13 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
       ข้อมูลที่เกี่ยวกับตัวกาแฟจริงๆ (Flavor Notes, Dose/TDS/EXT, ทีมเห็นตรงกัน) แยกไปอยู่ที่หน้า <b>Parameter</b> ไม่ปนกับคะแนนตรงนี้<br><br>
       <b>ข้อยกเว้น:</b> กล่อง "✓ ทีมเห็นตรงกัน" (เสียงส่วนใหญ่ที่ชิมตรงกันโดยไม่ได้นัดกัน) พอใช้เป็น<b>เหตุผลรอง</b>ประเมินกาแฟทางอ้อมได้อยู่ — เพราะถ้าหลายคนอิสระต่อกันรู้สึกตรงกัน ก็มีนัยว่าเป็นลักษณะจริงของกาแฟตัวนั้น แต่ก็ยังไม่ใช่คะแนนคุณภาพแบบ SCA Cupping อยู่ดี
     </div>
+    <div style="background:#fff;border-radius:var(--r2);padding:10px;margin-top:10px">
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px">✅ มีผลต่อคะแนน / ❌ ไม่มีผลต่อคะแนน</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.9">
+        ✅ Intensity (จุด 1-5) · ✅ Aftertaste Length · ✅ Positive/Negative tags · ✅ TB score · ✅ TC score<br>
+        ❌ Flavor Wheel (Fruity/Floral/Nutty/Sugary/Spice/Roasted) · ❌ Aftertaste Flavor · ❌ ช่องพิมพ์อธิบายเอง
+      </div>
+    </div>
   </div>
 
   <div class="section-title">✦ โครงสร้างคะแนน</div>
@@ -1268,6 +1306,31 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
         <tr><td>Tactile score</td><td>ต่าง&lt;0.5=5, 0.5-0.99=2.5, ≥1=0</td><td>max 5</td></tr>
       </tbody>
     </table>
+  </div>
+
+  <div class="section-title">✦ Descriptor Tag — คำใกล้เคียงกัน (Synonym)</div>
+  <div class="card">
+    <div style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:12px">
+      ตอนเทียบ Descriptor Tag ไม่ต้องกดคำ<b>ตรงเป๊ะ</b>กับ Reference เสมอไป — ถ้ากดคำที่อยู่ <b>"กลุ่มคำใกล้เคียงกัน"</b> เดียวกัน ระบบจะนับว่า<b>ตรงกัน</b>ให้อัตโนมัติ (คิดคะแนนแบบ Precision+Recall เฉลี่ยกัน ตามที่อธิบายไว้ด้านบน) รายการทั้งหมดที่มีในระบบตอนนี้:
+    </div>
+    <table>
+      <thead><tr><th>หัวข้อ</th><th>กลุ่มคำที่นับเป็นคำเดียวกัน</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="3">Acidity</td><td>Bright ↔ Vibrant ↔ Crisp</td></tr>
+        <tr><td>Dull ↔ Flat ↔ Muted</td></tr>
+        <tr><td>Sour/Unripe ↔ Sharp ↔ Semi-ripe fruit</td></tr>
+        <tr><td>Sweetness</td><td>Brown Sugar ↔ Caramel<br>Honey ↔ Maple Syrup</td></tr>
+        <tr><td rowspan="2">Bitterness</td><td>Chocolatey ↔ Dark Chocolate</td></tr>
+        <tr><td>Harsh ↔ Medicine ↔ Ashy</td></tr>
+        <tr><td rowspan="2">Aftertaste</td><td>Clean ↔ Pleasant</td></tr>
+        <tr><td>Unpleasant ↔ Fades fast<br>Astringent ↔ Dryness</td></tr>
+        <tr><td rowspan="4">Mouthfeel</td><td>Silky ↔ Velvety</td></tr>
+        <tr><td>Smooth ↔ Round</td></tr>
+        <tr><td>Creamy ↔ Rich</td></tr>
+        <tr><td>Watery ↔ Thin<br>Rough ↔ Gritty</td></tr>
+      </tbody>
+    </table>
+    <div style="font-size:12px;color:var(--text3);margin-top:10px;line-height:1.6">ตัวอย่าง: Reference กด <b>Caramel, Vanilla</b> (Sweetness) — ถ้าคุณกด <b>Brown Sugar, Honey</b> จะนับว่าตรง 1 จาก 2 (เพราะ Brown Sugar = Caramel แต่ Honey ≠ Vanilla) ได้คะแนนครึ่งเดียวของหัวข้อนั้น ไม่ใช่ 0 และไม่ใช่เต็ม</div>
   </div>
 
   <div class="section-title">✦ วิธีคิดคะแนน Team (40pt)</div>
@@ -2090,9 +2153,15 @@ let aftertasteFlavorTags = [];
 
 // Flavor → Category mapping for scoring
 const FLAVOR_CATEGORY_MAP = {
-  'Tropical':'Fruity','Stone Fruit':'Fruity','Berry':'Fruity','Citrus':'Fruity','Dried Fruit':'Fruity',
+  'Tropical':'Fruity','Pineapple':'Fruity','Mango':'Fruity','Passion Fruit':'Fruity','Papaya':'Fruity','Lychee':'Fruity',
+  'Stone Fruit':'Fruity','Peach':'Fruity','Plum':'Fruity','Apricot':'Fruity','Cherry':'Fruity','Nectarine':'Fruity',
+  'Berry':'Fruity','Blackberry':'Fruity','Raspberry':'Fruity','Blueberry':'Fruity','Strawberry':'Fruity','Cranberry':'Fruity',
+  'Citrus':'Fruity','Lemon':'Fruity','Lime':'Fruity','Orange':'Fruity','Grapefruit':'Fruity','Mandarin':'Fruity',
+  'Red Apple':'Fruity','Green Apple':'Fruity','Red Grape':'Fruity','White Grape':'Fruity',
+  'Dried Fruit':'Fruity','Raisin':'Fruity','Dried Plum':'Fruity','Dried Apricot':'Fruity','Fig':'Fruity','Date':'Fruity',
   'Jasmine':'Floral','Rose':'Floral','Chamomile':'Floral','Bergamot':'Floral',
-  'Almond':'Nutty/Chocolate','Hazelnut':'Nutty/Chocolate','Dark Chocolate':'Nutty/Chocolate','Cocoa':'Nutty/Chocolate','Peanut':'Nutty/Chocolate',
+  'Almond':'Nutty/Chocolate','Hazelnut':'Nutty/Chocolate','Walnut':'Nutty/Chocolate','Macadamia':'Nutty/Chocolate','Pistachio':'Nutty/Chocolate','Peanut':'Nutty/Chocolate','Roasted Nut':'Nutty/Chocolate',
+  'Dark Chocolate':'Nutty/Chocolate','Milk Chocolate':'Nutty/Chocolate','White Chocolate':'Nutty/Chocolate','Cocoa':'Nutty/Chocolate','Cocoa Nib':'Nutty/Chocolate','Mocha':'Nutty/Chocolate',
   'Caramel':'Sugary','Honey':'Sugary','Brown Sugar':'Sugary','Vanilla':'Sugary','Molasses':'Sugary',
   'Cinnamon':'Spice/Herbal','Clove':'Spice/Herbal','Ginger':'Spice/Herbal','Lemongrass':'Spice/Herbal',
   'Tobacco':'Roasted/Earthy','Cedar':'Roasted/Earthy','Dark Roast':'Roasted/Earthy','Earthy':'Roasted/Earthy',
