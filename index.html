@@ -261,7 +261,10 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
 
   <div class="card">
     <div class="card-title">Acidity</div>
-    <div class="lbl">Intensity</div>
+    <div class="lbl" style="display:flex;align-items:center;gap:6px">Intensity <span onclick="toggleCriteria('acidity')" style="cursor:pointer;font-size:10px;color:var(--blue);font-weight:600">ℹ️ เกณฑ์</span></div>
+    <div id="criteria-acidity" style="display:none;background:var(--bg2);border-radius:var(--r2);padding:8px 10px;margin-bottom:6px;font-size:10.5px;color:var(--text2);line-height:1.7">
+      <b>1</b> แทบไม่มีรสเปรี้ยว · <b>2</b> เปรี้ยวอ่อนๆ · <b>3</b> เปรี้ยวกลาง สมดุล · <b>4</b> เปรี้ยวเด่นชัด สดใส · <b>5</b> เปรี้ยวจัดจ้าน โดดเด่นมาก
+    </div>
     <div class="dots" data-attr="acidity"><button class="iDot" data-v="1" onclick="handleDot(this)"></button><button class="iDot" data-v="2" onclick="handleDot(this)"></button><button class="iDot" data-v="3" onclick="handleDot(this)"></button><button class="iDot" data-v="4" onclick="handleDot(this)"></button><button class="iDot" data-v="5" onclick="handleDot(this)"></button><span class="iLabel" id="lbl-acidity">Medium</span></div>
     <div class="lbl" style="margin-top:10px">Positive</div>
     <div class="chips" data-attr="acidity"><button class="chip pos" data-v="Bright" onclick="handleChip(this)">Bright</button><button class="chip pos" data-v="Balanced" onclick="handleChip(this)">Balanced</button><button class="chip pos" data-v="Crisp" onclick="handleChip(this)">Crisp</button><button class="chip pos" data-v="Vibrant" onclick="handleChip(this)">Vibrant</button></div>
@@ -272,7 +275,10 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
 
   <div class="card">
     <div class="card-title">Sweetness</div>
-    <div class="lbl">Intensity</div>
+    <div class="lbl" style="display:flex;align-items:center;gap:6px">Intensity <span onclick="toggleCriteria('sweetness')" style="cursor:pointer;font-size:10px;color:var(--blue);font-weight:600">ℹ️ เกณฑ์</span></div>
+    <div id="criteria-sweetness" style="display:none;background:var(--bg2);border-radius:var(--r2);padding:8px 10px;margin-bottom:6px;font-size:10.5px;color:var(--text2);line-height:1.7">
+      <b>1</b> แทบไม่หวาน · <b>2</b> หวานอ่อน · <b>3</b> หวานกลาง · <b>4</b> หวานเด่นชัด · <b>5</b> หวานจัด โดดเด่นมาก
+    </div>
     <div class="dots" data-attr="sweetness"><button class="iDot" data-v="1" onclick="handleDot(this)"></button><button class="iDot" data-v="2" onclick="handleDot(this)"></button><button class="iDot" data-v="3" onclick="handleDot(this)"></button><button class="iDot" data-v="4" onclick="handleDot(this)"></button><button class="iDot" data-v="5" onclick="handleDot(this)"></button><span class="iLabel" id="lbl-sweetness">Medium</span></div>
     <div class="lbl" style="margin-top:10px">Positive</div>
     <div class="chips" data-attr="sweetness"><button class="chip pos" data-v="Brown Sugar" onclick="handleChip(this)">Brown Sugar</button><button class="chip pos" data-v="Caramel" onclick="handleChip(this)">Caramel</button><button class="chip pos" data-v="Honey" onclick="handleChip(this)">Honey</button><button class="chip pos" data-v="Vanilla" onclick="handleChip(this)">Vanilla</button><button class="chip pos" data-v="Molasses" onclick="handleChip(this)">Molasses</button><button class="chip pos" data-v="Maple Syrup" onclick="handleChip(this)">Maple Syrup</button><button class="chip pos" data-v="Overall Sweet" onclick="handleChip(this)">Overall Sweet</button></div>
@@ -281,7 +287,10 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
 
   <div class="card">
     <div class="card-title">Bitterness</div>
-    <div class="lbl">Intensity</div>
+    <div class="lbl" style="display:flex;align-items:center;gap:6px">Intensity <span onclick="toggleCriteria('bitterness')" style="cursor:pointer;font-size:10px;color:var(--blue);font-weight:600">ℹ️ เกณฑ์</span></div>
+    <div id="criteria-bitterness" style="display:none;background:var(--bg2);border-radius:var(--r2);padding:8px 10px;margin-bottom:6px;font-size:10.5px;color:var(--text2);line-height:1.7">
+      <b>1</b> แทบไม่ขม · <b>2</b> ขมอ่อน · <b>3</b> ขมกลาง พอดี · <b>4</b> ขมเด่นชัด · <b>5</b> ขมจัด ค้างคอ
+    </div>
     <div class="dots" data-attr="bitterness"><button class="iDot" data-v="1" onclick="handleDot(this)"></button><button class="iDot" data-v="2" onclick="handleDot(this)"></button><button class="iDot" data-v="3" onclick="handleDot(this)"></button><button class="iDot" data-v="4" onclick="handleDot(this)"></button><button class="iDot" data-v="5" onclick="handleDot(this)"></button><span class="iLabel" id="lbl-bitterness">Medium</span></div>
     <div class="lbl" style="margin-top:10px">Positive</div>
     <div class="chips" data-attr="bitterness"><button class="chip pos" data-v="Chocolatey" onclick="handleChip(this)">Chocolatey</button><button class="chip pos" data-v="Dark Chocolate" onclick="handleChip(this)">Dark Chocolate</button><button class="chip pos" data-v="Balanced" onclick="handleChip(this)">Balanced</button></div>
@@ -344,7 +353,10 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
 
   <div class="card">
     <div class="card-title">Mouthfeel</div>
-    <div class="lbl">Weight (Intensity)</div>
+    <div class="lbl" style="display:flex;align-items:center;gap:6px">Weight (Intensity) <span onclick="toggleCriteria('mouthfeel')" style="cursor:pointer;font-size:10px;color:var(--blue);font-weight:600">ℹ️ เกณฑ์</span></div>
+    <div id="criteria-mouthfeel" style="display:none;background:var(--bg2);border-radius:var(--r2);padding:8px 10px;margin-bottom:6px;font-size:10.5px;color:var(--text2);line-height:1.7">
+      <b>1</b> บางเบามาก (watery) · <b>2</b> บาง · <b>3</b> กลาง (medium body) · <b>4</b> หนักแน่น (full) · <b>5</b> หนักมาก ข้นเหมือนน้ำเชื่อม
+    </div>
     <div class="dots" data-attr="mouthfeel"><button class="iDot" data-v="1" onclick="handleDot(this)"></button><button class="iDot" data-v="2" onclick="handleDot(this)"></button><button class="iDot" data-v="3" onclick="handleDot(this)"></button><button class="iDot" data-v="4" onclick="handleDot(this)"></button><button class="iDot" data-v="5" onclick="handleDot(this)"></button><span class="iLabel" id="lbl-mouthfeel">Medium</span></div>
     <div class="lbl" style="margin-top:10px">Texture — Positive</div>
     <div class="chips" data-attr="mouthfeel"><button class="chip pos" data-v="Silky" onclick="handleChip(this)">Silky</button><button class="chip pos" data-v="Velvety" onclick="handleChip(this)">Velvety</button><button class="chip pos" data-v="Smooth" onclick="handleChip(this)">Smooth</button><button class="chip pos" data-v="Round" onclick="handleChip(this)">Round</button><button class="chip pos" data-v="Syrupy" onclick="handleChip(this)">Syrupy</button><button class="chip pos" data-v="Creamy" onclick="handleChip(this)">Creamy</button><button class="chip pos" data-v="Rich" onclick="handleChip(this)">Rich</button></div>
@@ -2876,6 +2888,11 @@ document.querySelectorAll('.dots').forEach(c => {
   });
   paintDots(attr);
 });
+function toggleCriteria(attr) {
+  const el = document.getElementById('criteria-'+attr);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
 function paintDots(attr) {
   const c = document.querySelector('.dots[data-attr="'+attr+'"]');
   if (!c) return; // aftertaste uses slider now, not dots
