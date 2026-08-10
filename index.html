@@ -520,8 +520,20 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
 <div id="page-data" class="page">
   <div class="card">
     <div class="card-title">Parameter — บันทึกช็อตแบบฟอร์มกระดาษ</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6">
-      ทุกช็อตที่เปิดไว้ แสดงเป็นการ์ดพารามิเตอร์ครบ (เหมือนใบบันทึกกระดาษ) เรียงจากล่าสุด
+    <div style="display:flex;gap:10px;margin-bottom:4px;flex-wrap:wrap">
+      <div>
+        <div class="lbl">📅 วันที่</div>
+        <input type="date" id="param-date-filter" onchange="loadDataPage()">
+      </div>
+      <div style="flex:1;min-width:140px">
+        <div class="lbl">🏪 สาขา</div>
+        <select id="param-branch-filter" onchange="loadDataPage()" style="width:100%">
+          <option value="">ทุกสาขา</option>
+        </select>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text2);margin-top:6px;line-height:1.6">
+      แยก 🏠 House Blend / ☕ Single Origin ให้อัตโนมัติจากชื่อกาแฟ — เลือก "ทุกสาขา" เพื่อดูภาพรวมแบบย่อทุกสาขา หรือเลือกสาขาเดียวเพื่อดูการ์ดเต็ม
     </div>
   </div>
   <div id="data-content"></div>
@@ -3555,13 +3567,11 @@ function renderEntry(e) {
 let selectedTeamBranch = ALL_BRANCHES[0];
 let teamEntryCache = {};
 
-function renderParamCard(s, shotEntries) {
-  const dateStr = s.id ? s.id.split('-').slice(0,2).join('-') : '';
-  const ratio = s.dose ? (s.yield/s.dose).toFixed(1) : '—';
+function isHouseBlend(name) {
+  return /house\s*blend|\bhb\b/i.test(name || '');
+}
 
-  // Consensus (2+ tasters agreeing) across 3 categories, shown together in
-  // one line: Flavor / Weight-Texture / Aftertaste Flavor — e.g.
-  // "Tropical Fruit / Smooth / Chocolate"
+function computeConsensus(shotEntries) {
   function topConsensus(freqMap) {
     const ranked = Object.entries(freqMap).filter(([,c]) => c >= 2).sort((a,b) => b[1]-a[1]);
     return ranked.length ? ranked[0] : null; // [name, count] or null
@@ -3572,16 +3582,29 @@ function renderParamCard(s, shotEntries) {
     (e.tags?.mouthfeel||[]).forEach(v => { textureFreq[v] = (textureFreq[v]||0)+1; });
     (e.aftertasteFlavor||[]).forEach(v => { aftFlavorFreq[v] = (aftFlavorFreq[v]||0)+1; });
   });
-  const topFlavor = topConsensus(flavorFreq);
-  const topTexture = topConsensus(textureFreq);
-  const topAftFlavor = topConsensus(aftFlavorFreq);
-  const consensusHtml = (topFlavor || topTexture || topAftFlavor)
-    ? `<div style="padding:10px 12px;background:var(--gbg);border:1px solid var(--gborder);border-radius:var(--r2);margin-bottom:10px">
-        <div style="font-size:11px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">✓ ทีมเห็นตรงกัน (2 คนขึ้นไป)</div>
-        <div style="font-size:15px;font-weight:700;color:var(--text)">${topFlavor?topFlavor[0]:'—'} / ${topTexture?topTexture[0]:'—'} / ${topAftFlavor?topAftFlavor[0]:'—'}</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:3px">Flavor / Weight-Texture / Aftertaste Flavor</div>
-      </div>`
-    : '';
+  return { topFlavor: topConsensus(flavorFreq), topTexture: topConsensus(textureFreq), topAftFlavor: topConsensus(aftFlavorFreq) };
+}
+
+function consensusBoxHtml(consensus) {
+  const { topFlavor, topTexture, topAftFlavor } = consensus;
+  if (!topFlavor && !topTexture && !topAftFlavor) return '';
+  return `<div style="padding:10px 12px;background:var(--gbg);border:1px solid var(--gborder);border-radius:var(--r2);margin-bottom:10px">
+      <div style="font-size:11px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">✓ ทีมเห็นตรงกัน (2 คนขึ้นไป)</div>
+      <div style="font-size:15px;font-weight:700;color:var(--text)">${topFlavor?topFlavor[0]:'—'} / ${topTexture?topTexture[0]:'—'} / ${topAftFlavor?topAftFlavor[0]:'—'}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px">Flavor / Weight-Texture / Aftertaste Flavor</div>
+    </div>`;
+}
+
+function shotDateLabel(s) {
+  if (!s.created) return '';
+  const d = new Date(s.created);
+  return d.toLocaleDateString('th-TH', {day:'numeric', month:'short', year:'numeric'});
+}
+
+function renderParamCard(s, shotEntries) {
+  const ratio = s.dose ? (s.yield/s.dose).toFixed(1) : '—';
+  const consensusHtml = consensusBoxHtml(computeConsensus(shotEntries));
+  const cardUid = (s.id||Math.random().toString(36)).replace(/[^a-zA-Z0-9]/g,'');
 
   const notesHtml = shotEntries.length
     ? shotEntries.map(e => {
@@ -3611,7 +3634,7 @@ function renderParamCard(s, shotEntries) {
         <div style="font-size:15px;color:var(--text2);font-weight:700;margin-top:3px">${s.branch}</div>
       </div>
       <div style="text-align:right;font-size:13px;color:var(--text2);line-height:1.9;font-weight:600">
-        <div>Date <b style="color:var(--text);font-size:14px">${dateStr}</b></div>
+        <div>Date <b style="color:var(--text);font-size:14px">${shotDateLabel(s)}</b></div>
         <div>Time <b style="color:var(--text);font-size:14px">${s.time||'—'}</b></div>
         <div>Temp. <b style="color:var(--text);font-size:14px">${s.waterTemp?s.waterTemp+'°C':'—'}</b></div>
       </div>
@@ -3641,7 +3664,8 @@ function renderParamCard(s, shotEntries) {
     <div style="padding:16px 18px;border-bottom:1px solid var(--bg3);background:var(--bg2)">
       <div style="font-size:13px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:8px;letter-spacing:.04em">📝 Notes</div>
       ${consensusHtml}
-      <div>${notesHtml}</div>
+      <button onclick="const d=document.getElementById('pd-${cardUid}');const open=d.style.display!=='none';d.style.display=open?'none':'block';this.textContent=open?'▾ ดูรายละเอียดรายคน ('+${shotEntries.length}+' คน)':'▴ ซ่อนรายละเอียดรายคน';" style="background:none;border:none;color:var(--blue);font-size:12px;font-weight:600;cursor:pointer;padding:0">▾ ดูรายละเอียดรายคน (${shotEntries.length} คน)</button>
+      <div id="pd-${cardUid}" style="display:none;margin-top:8px">${notesHtml}</div>
     </div>
     <div style="padding:12px 18px;font-size:13px;color:var(--text2);font-weight:600">
       📌 ${s.id}<br>Check by <b style="color:var(--text);font-size:14px">${checkedBy}</b>
@@ -3649,14 +3673,50 @@ function renderParamCard(s, shotEntries) {
   </div>`;
 }
 
+function renderParamCompact(shot, shotEntries) {
+  if (!shot) return `<div style="flex:1;min-width:0;padding:14px;color:var(--text3);font-size:12px;font-style:italic">ยังไม่มีข้อมูล</div>`;
+  const consensus = computeConsensus(shotEntries);
+  const { topFlavor, topTexture, topAftFlavor } = consensus;
+  return `<div onclick="showParamModal('${shot.id}','${shot.branch}')" style="flex:1;min-width:0;padding:12px 14px;cursor:pointer">
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${shot.coffee||'ไม่ระบุชื่อ'}</div>
+    <div style="font-size:11.5px;color:var(--text2);margin-bottom:4px">Dose/Time/Yield: <b style="color:var(--text)">${shot.dose||'—'}/${shot.extractTime||'—'}/${shot.yield||'—'}</b></div>
+    <div style="font-size:11.5px;color:var(--amber);font-weight:700;margin-bottom:8px">TDS ${shot.tds||'—'} · EXT ${shot.ext||'—'}</div>
+    <div style="font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.03em">Flavor</div>
+    <div style="font-size:11.5px;font-weight:600;color:var(--text);margin-bottom:4px">${topFlavor?topFlavor[0]:'—'}</div>
+    <div style="font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.03em">Texture / Aftertaste</div>
+    <div style="font-size:11.5px;font-weight:600;color:var(--text)">${topTexture?topTexture[0]:'—'} / ${topAftFlavor?topAftFlavor[0]:'—'}</div>
+    <div style="font-size:10px;color:var(--text3);margin-top:8px">${shotEntries.length} คนชิม</div>
+  </div>`;
+}
+
 async function loadDataPage() {
   const el = document.getElementById('data-content');
   el.innerHTML = '<div class="empty">กำลังโหลด...</div>';
 
-  const branchFilter = window._isAdmin() ? null : (window._currentUser && window._currentUser.branch);
+  // Set up date filter default (today) and branch filter options once
+  const dateInput = document.getElementById('param-date-filter');
+  if (!dateInput.value) {
+    const now = new Date();
+    dateInput.value = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  }
+  const branchSel = document.getElementById('param-branch-filter');
+  if (branchSel.options.length <= 1) {
+    if (window._isAdmin()) {
+      ALL_BRANCHES.forEach(b => { branchSel.innerHTML += `<option value="${b}">${b}</option>`; });
+    } else {
+      const myBranch = window._currentUser && window._currentUser.branch;
+      branchSel.innerHTML = `<option value="${myBranch}">${myBranch}</option>`;
+      branchSel.value = myBranch;
+      branchSel.disabled = true;
+    }
+  }
+  const selectedDate = dateInput.value; // YYYY-MM-DD
+  const selectedBranch = branchSel.value; // '' = ทุกสาขา (admin only)
+
+  const branchFetchFilter = window._isAdmin() ? (selectedBranch || null) : (window._currentUser && window._currentUser.branch);
   let shots = [];
   try {
-    const keys = await window.storage.list('shot:', true, branchFilter);
+    const keys = await window.storage.list('shot:', true, branchFetchFilter);
     if (keys && keys.keys) {
       await Promise.all(keys.keys.map(async k => {
         try {
@@ -3667,12 +3727,53 @@ async function loadDataPage() {
     }
   } catch(err) {}
 
-  if (!shots.length) { el.innerHTML = '<div class="empty">ยังไม่มีช็อตที่เปิดไว้</div>'; return; }
+  // Filter to the selected calendar date (local time)
+  const toYMD = ts => { const d = new Date(ts); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+  shots = shots.filter(s => s.created && toYMD(s.created) === selectedDate);
+
+  if (!shots.length) { el.innerHTML = '<div class="empty">ไม่มีช็อตในวันที่เลือก</div>'; return; }
 
   const entries = await loadEntries();
   shots.sort((a,b) => (b.created||0) - (a.created||0));
 
-  el.innerHTML = shots.map(s => renderParamCard(s, entries.filter(e => e.shotId === s.id))).join('');
+  if (selectedBranch) {
+    // Single branch: full paper-cards, split into HB / SO groups
+    const hb = shots.filter(s => isHouseBlend(s.coffee));
+    const so = shots.filter(s => !isHouseBlend(s.coffee));
+    let html = '';
+    if (hb.length) html += `<div style="font-size:12px;font-weight:700;color:#9A5F0A;margin:4px 0 8px">🏠 House Blend</div>` + hb.map(s => renderParamCard(s, entries.filter(e => e.shotId === s.id))).join('');
+    if (so.length) html += `<div style="font-size:12px;font-weight:700;color:#1A5FA8;margin:16px 0 8px">☕ Single Origin</div>` + so.map(s => renderParamCard(s, entries.filter(e => e.shotId === s.id))).join('');
+    el.innerHTML = html;
+  } else {
+    // All branches: compact box per branch, HB and SO side-by-side
+    const byBranch = {};
+    shots.forEach(s => {
+      if (!byBranch[s.branch]) byBranch[s.branch] = { hb: null, so: null };
+      const cat = isHouseBlend(s.coffee) ? 'hb' : 'so';
+      // Keep the most recent shot per category (shots already sorted desc)
+      if (!byBranch[s.branch][cat]) byBranch[s.branch][cat] = s;
+    });
+    const branchesToShow = window._isAdmin() ? ALL_BRANCHES.filter(b=>b!=='Area') : [window._currentUser.branch];
+    const html = branchesToShow.map(b => {
+      const data = byBranch[b];
+      const hbEntries = data && data.hb ? entries.filter(e => e.shotId === data.hb.id) : [];
+      const soEntries = data && data.so ? entries.filter(e => e.shotId === data.so.id) : [];
+      if (!data) {
+        return `<div class="card" style="margin-bottom:12px;padding:0;overflow:hidden">
+          <div style="background:var(--bg2);padding:10px 14px;font-size:13px;font-weight:700">${b}</div>
+          <div style="padding:16px;color:var(--text3);font-size:12px;font-style:italic">ยังไม่มีข้อมูลวันนี้</div>
+        </div>`;
+      }
+      return `<div class="card" style="margin-bottom:12px;padding:0;overflow:hidden">
+        <div style="background:var(--bg2);padding:10px 14px;font-size:13px;font-weight:700">${b}</div>
+        <div style="display:flex;gap:1px;background:var(--bg3)">
+          <div style="background:#FDF8F0">${renderParamCompact(data.hb, hbEntries)}</div>
+          <div style="background:#F0F7FD">${renderParamCompact(data.so, soEntries)}</div>
+        </div>
+      </div>`;
+    }).join('');
+    el.innerHTML = `<div style="display:flex;gap:12px;font-size:10px;color:var(--text3);margin-bottom:6px"><span>🏠 = House Blend</span><span>☕ = Single Origin</span><span>· กดกล่องเพื่อดูรายละเอียดเต็ม</span></div>` + html;
+  }
 }
 
 async function loadTeamPage() {
