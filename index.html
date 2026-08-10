@@ -263,7 +263,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     <div class="card-title">Acidity</div>
     <div class="lbl" style="display:flex;align-items:center;gap:6px">Intensity <span onclick="toggleCriteria('acidity')" style="cursor:pointer;font-size:10px;color:var(--blue);font-weight:600">ℹ️ เกณฑ์</span></div>
     <div id="criteria-acidity" style="display:none;background:var(--bg2);border-radius:var(--r2);padding:8px 10px;margin-bottom:6px;font-size:10.5px;color:var(--text2);line-height:1.7">
-      <b>1</b> แทบไม่มีรสเปรี้ยว · <b>2</b> เปรี้ยวอ่อนๆ · <b>3</b> เปรี้ยวกลาง สมดุล · <b>4</b> เปรี้ยวเด่นชัด สดใส · <b>5</b> เปรี้ยวจัดจ้าน โดดเด่นมาก
+      <b>คิดคะแนนจากส่วนต่างกับ Reference</b> (Ref 1/Ref 2) ตอนสรุปผล — <b>ตรงกัน = 6 คะแนนเต็ม</b> · <b>ห่าง 1 ระดับ = 3 คะแนน</b> · <b>ห่างมากกว่า 1 ระดับ = 0 คะแนน</b> (ไม่ตัดสินตอนกดทันที ต้องรอเทียบกับ Reference ก่อน)
     </div>
     <div class="dots" data-attr="acidity"><button class="iDot" data-v="1" onclick="handleDot(this)"></button><button class="iDot" data-v="2" onclick="handleDot(this)"></button><button class="iDot" data-v="3" onclick="handleDot(this)"></button><button class="iDot" data-v="4" onclick="handleDot(this)"></button><button class="iDot" data-v="5" onclick="handleDot(this)"></button><span class="iLabel" id="lbl-acidity">Medium</span></div>
     <div class="lbl" style="margin-top:10px">Positive</div>
@@ -277,7 +277,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     <div class="card-title">Sweetness</div>
     <div class="lbl" style="display:flex;align-items:center;gap:6px">Intensity <span onclick="toggleCriteria('sweetness')" style="cursor:pointer;font-size:10px;color:var(--blue);font-weight:600">ℹ️ เกณฑ์</span></div>
     <div id="criteria-sweetness" style="display:none;background:var(--bg2);border-radius:var(--r2);padding:8px 10px;margin-bottom:6px;font-size:10.5px;color:var(--text2);line-height:1.7">
-      <b>1</b> แทบไม่หวาน · <b>2</b> หวานอ่อน · <b>3</b> หวานกลาง · <b>4</b> หวานเด่นชัด · <b>5</b> หวานจัด โดดเด่นมาก
+      <b>คิดคะแนนจากส่วนต่างกับ Reference</b> (Ref 1/Ref 2) ตอนสรุปผล — <b>ตรงกัน = 6 คะแนนเต็ม</b> · <b>ห่าง 1 ระดับ = 3 คะแนน</b> · <b>ห่างมากกว่า 1 ระดับ = 0 คะแนน</b> (ไม่ตัดสินตอนกดทันที ต้องรอเทียบกับ Reference ก่อน)
     </div>
     <div class="dots" data-attr="sweetness"><button class="iDot" data-v="1" onclick="handleDot(this)"></button><button class="iDot" data-v="2" onclick="handleDot(this)"></button><button class="iDot" data-v="3" onclick="handleDot(this)"></button><button class="iDot" data-v="4" onclick="handleDot(this)"></button><button class="iDot" data-v="5" onclick="handleDot(this)"></button><span class="iLabel" id="lbl-sweetness">Medium</span></div>
     <div class="lbl" style="margin-top:10px">Positive</div>
@@ -289,7 +289,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     <div class="card-title">Bitterness</div>
     <div class="lbl" style="display:flex;align-items:center;gap:6px">Intensity <span onclick="toggleCriteria('bitterness')" style="cursor:pointer;font-size:10px;color:var(--blue);font-weight:600">ℹ️ เกณฑ์</span></div>
     <div id="criteria-bitterness" style="display:none;background:var(--bg2);border-radius:var(--r2);padding:8px 10px;margin-bottom:6px;font-size:10.5px;color:var(--text2);line-height:1.7">
-      <b>1</b> แทบไม่ขม · <b>2</b> ขมอ่อน · <b>3</b> ขมกลาง พอดี · <b>4</b> ขมเด่นชัด · <b>5</b> ขมจัด ค้างคอ
+      <b>คิดคะแนนจากส่วนต่างกับ Reference</b> (Ref 1/Ref 2) ตอนสรุปผล — <b>ตรงกัน = 6 คะแนนเต็ม</b> · <b>ห่าง 1 ระดับ = 3 คะแนน</b> · <b>ห่างมากกว่า 1 ระดับ = 0 คะแนน</b> (ไม่ตัดสินตอนกดทันที ต้องรอเทียบกับ Reference ก่อน)
     </div>
     <div class="dots" data-attr="bitterness"><button class="iDot" data-v="1" onclick="handleDot(this)"></button><button class="iDot" data-v="2" onclick="handleDot(this)"></button><button class="iDot" data-v="3" onclick="handleDot(this)"></button><button class="iDot" data-v="4" onclick="handleDot(this)"></button><button class="iDot" data-v="5" onclick="handleDot(this)"></button><span class="iLabel" id="lbl-bitterness">Medium</span></div>
     <div class="lbl" style="margin-top:10px">Positive</div>
@@ -355,7 +355,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     <div class="card-title">Mouthfeel</div>
     <div class="lbl" style="display:flex;align-items:center;gap:6px">Weight (Intensity) <span onclick="toggleCriteria('mouthfeel')" style="cursor:pointer;font-size:10px;color:var(--blue);font-weight:600">ℹ️ เกณฑ์</span></div>
     <div id="criteria-mouthfeel" style="display:none;background:var(--bg2);border-radius:var(--r2);padding:8px 10px;margin-bottom:6px;font-size:10.5px;color:var(--text2);line-height:1.7">
-      <b>1</b> บางเบามาก (watery) · <b>2</b> บาง · <b>3</b> กลาง (medium body) · <b>4</b> หนักแน่น (full) · <b>5</b> หนักมาก ข้นเหมือนน้ำเชื่อม
+      <b>คิดคะแนนจากส่วนต่างกับ Reference</b> (Ref 1/Ref 2) ตอนสรุปผล — <b>ตรงกัน = 6 คะแนนเต็ม</b> · <b>ห่าง 1 ระดับ = 3 คะแนน</b> · <b>ห่างมากกว่า 1 ระดับ = 0 คะแนน</b> (ไม่ตัดสินตอนกดทันที ต้องรอเทียบกับ Reference ก่อน)
     </div>
     <div class="dots" data-attr="mouthfeel"><button class="iDot" data-v="1" onclick="handleDot(this)"></button><button class="iDot" data-v="2" onclick="handleDot(this)"></button><button class="iDot" data-v="3" onclick="handleDot(this)"></button><button class="iDot" data-v="4" onclick="handleDot(this)"></button><button class="iDot" data-v="5" onclick="handleDot(this)"></button><span class="iLabel" id="lbl-mouthfeel">Medium</span></div>
     <div class="lbl" style="margin-top:10px">Texture — Positive</div>
@@ -1204,6 +1204,17 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
   <div class="card">
     <div class="card-title">เกณฑ์การให้คะแนน Calibration</div>
     <div style="font-size:12px;color:var(--text2);line-height:1.7">อธิบายวิธีคิดคะแนน 0–100 พร้อมตัวอย่างจริง</div>
+  </div>
+
+  <div class="card" style="background:var(--rbg);border:2px solid var(--rborder)">
+    <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:8px">⚠️ หมายเหตุสำคัญ — อ่านก่อนตีความคะแนน</div>
+    <div style="font-size:12.5px;color:var(--red);line-height:1.8">
+      <b>คะแนน 0–100 ในระบบนี้ วัด "ความแม่นยำในการชิม" ไม่ใช่วัด "คุณภาพกาแฟ"</b><br><br>
+      คะแนนบอกแค่ว่า <b>คนคนนี้ชิมได้ตรงกับ Reference / ทีมส่วนใหญ่แค่ไหน</b> เท่านั้น — ถ้ากาแฟตัวนั้นแย่ แต่ทุกคน (รวม Reference) รู้สึกตรงกันหมดว่าแย่ ทุกคนก็จะได้คะแนนสูง เพราะ "ตรงกับ Reference" ไม่ใช่เพราะกาแฟดี<br><br>
+      ระบบนี้ตอบคำถาม <b>"ทีมพร้อมชิมมาตรฐานเดียวกันหรือยัง"</b> (Palate Calibration) ไม่ใช่ <b>"กาแฟตัวนี้ดีกี่คะแนน"</b> (Cupping Score) — เหมาะกับฝึกทีมและเช็คความสม่ำเสมอของ QC มากกว่าใช้ตัดสินคุณภาพกาแฟ<br><br>
+      ข้อมูลที่เกี่ยวกับตัวกาแฟจริงๆ (Flavor Notes, Dose/TDS/EXT, ทีมเห็นตรงกัน) แยกไปอยู่ที่หน้า <b>Parameter</b> ไม่ปนกับคะแนนตรงนี้<br><br>
+      <b>ข้อยกเว้น:</b> กล่อง "✓ ทีมเห็นตรงกัน" (เสียงส่วนใหญ่ที่ชิมตรงกันโดยไม่ได้นัดกัน) พอใช้เป็น<b>เหตุผลรอง</b>ประเมินกาแฟทางอ้อมได้อยู่ — เพราะถ้าหลายคนอิสระต่อกันรู้สึกตรงกัน ก็มีนัยว่าเป็นลักษณะจริงของกาแฟตัวนั้น แต่ก็ยังไม่ใช่คะแนนคุณภาพแบบ SCA Cupping อยู่ดี
+    </div>
   </div>
 
   <div class="section-title">✦ โครงสร้างคะแนน</div>
