@@ -222,6 +222,13 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
         <div id="tds-edit-note" style="font-size:11px;color:var(--amber);margin-top:6px"></div>
       </div>
       <div id="shot-badge" class="shot-badge" style="display:none;margin-top:6px"></div>
+      <div id="ref2-claim-box" style="display:none;background:var(--bbg);border:1px solid var(--bborder);border-radius:var(--r2);padding:10px 12px;margin-top:8px">
+        <div id="ref2-claim-info" style="font-size:12px;color:var(--blue);margin-bottom:6px"></div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="f-claim-ref2" style="width:16px;height:16px;accent-color:var(--blue)">
+          <span style="font-size:12.5px;color:var(--blue);font-weight:600">ฉันเป็น Reference คนที่ 2 สำหรับช็อตนี้ (ทีมตกลงกันแล้ว)</span>
+        </label>
+      </div>
     </div>
 
     <div id="shot-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:210;align-items:center;justify-content:center;padding:16px">
@@ -1194,7 +1201,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
         <div style="font-size:24px;font-weight:800;color:var(--blue);min-width:40px;text-align:center">60</div>
         <div>
           <div style="font-weight:600;font-size:13px">Reference Alignment</div>
-          <div style="font-size:12px;color:var(--text2)">เปรียบกับ Reference Calibrator (Boss เป็น tiebreaker)</div>
+          <div style="font-size:12px;color:var(--text2)">เปรียบกับ Reference Calibrator (Ref 1 = คนเปิดช็อต, Ref 2 = คนที่ทีมตกลงให้เป็นตอนเข้าร่วม)</div>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--gbg);border-radius:var(--r2)">
@@ -1352,13 +1359,13 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     <div style="background:var(--bbg);border:1px solid var(--bborder);border-radius:var(--r2);padding:10px;margin-bottom:12px">
       <div style="display:flex;gap:8px;margin-bottom:8px">
         <div style="flex:1;padding:8px;background:#fff;border-radius:var(--r2);border:0.5px solid var(--bborder)">
-          <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:4px">★ Boss</div>
+          <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:4px">★ Boss (Ref 1)</div>
           <div style="font-size:11px;color:var(--text2)">Acidity: Medium-High (4)</div>
           <div style="font-size:11px;color:var(--text2)">Tags: Bright</div>
           <div style="font-size:11px;color:var(--text2)">TB: 5.0 · TC: 4.5</div>
         </div>
         <div style="flex:1;padding:8px;background:#fff;border-radius:var(--r2);border:0.5px solid var(--bborder)">
-          <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:4px">★ Jah (Branch Cal)</div>
+          <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:4px">★ Jah (Ref 2)</div>
           <div style="font-size:11px;color:var(--text2)">Acidity: Medium (3)</div>
           <div style="font-size:11px;color:var(--text2)">Tags: Bright, Balanced</div>
           <div style="font-size:11px;color:var(--text2)">TB: 4.5 · TC: 4.5</div>
@@ -1482,8 +1489,19 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
   </div>
 
   <div class="card">
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--blue)">Reference Calibrator (Ref 1 / Ref 2)</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.7">
+      <b>Ref 1</b> — คนที่กด "เปิดช็อตใหม่" จะกลายเป็น Ref 1 ให้อัตโนมัติทันที ไม่ต้องเลือกอะไรเอง<br>
+      <b>Ref 2</b> — ไม่บังคับ มีได้สูงสุดแค่ 1 คน ถ้าทีมตกลงกันว่าใครควรเป็น Ref คนที่ 2 ให้คนนั้นไปติ๊กช่อง <b>"ฉันเป็น Reference คนที่ 2"</b> ที่จะโผล่ขึ้นเองตอนเลือกชื่อในหน้ากรอกผล (ถ้ามีคนอื่นติ๊กไปแล้ว ช่องนี้จะล็อกไม่ให้ติ๊กซ้ำ)
+    </div>
+    <div style="background:var(--rbg);border:1px solid var(--rborder);border-radius:var(--r2);padding:10px;margin-top:10px;font-size:12px;color:var(--red)">
+      ⚠️ ระบบจำกัดไว้แค่ 2 คนต่อช็อตเสมอ (Ref 1 + Ref 2) เลือกได้แค่ครั้งเดียว แก้ทีหลังไม่ได้ — ถ้าตกลงกันผิดคน ต้องเปิดช็อตใหม่เท่านั้น
+    </div>
+  </div>
+
+  <div class="card">
     <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--blue)">เปิด 2 ช็อตพร้อมกัน</div>
-    <div style="font-size:13px;color:var(--text2);line-height:1.6">ถ้าวันนั้นชง 2 ตัว (คนละ Blend หรือคนละสูตร) ไม่ต้องเปิด modal ทีละรอบ — ตอนกด "สร้างช็อตใหม่" ให้ติ๊กช่อง <b>"เปิด 2 ช็อตพร้อมกัน"</b> ด้านบน modal จะขยายเป็นช็อต A และช็อต B ให้กรอกพารามิเตอร์แยกกัน (ส่วน Water Temp / Flow Rate / Ref. Calibration / Branch Calibrator ใช้ค่าเดียวกันทั้งคู่) กดเปิดครั้งเดียวได้ 2 รหัสช็อตแยกกันทันที ไม่ต้องรอให้ช็อตแรกจบก่อน</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.6">ถ้าวันนั้นชง 2 ตัว (คนละ Blend หรือคนละสูตร) ไม่ต้องเปิด modal ทีละรอบ — ตอนกด "สร้างช็อตใหม่" ให้ติ๊กช่อง <b>"เปิด 2 ช็อตพร้อมกัน"</b> ด้านบน modal จะขยายเป็นช็อต A และช็อต B ให้กรอกพารามิเตอร์แยกกัน (ส่วน Water Temp / Flow Rate ใช้ค่าเดียวกันทั้งคู่ และคุณจะเป็น Ref 1 ของทั้ง 2 ช็อตโดยอัตโนมัติ) กดเปิดครั้งเดียวได้ 2 รหัสช็อตแยกกันทันที ไม่ต้องรอให้ช็อตแรกจบก่อน</div>
   </div>
 
   <div class="card">
@@ -1605,21 +1623,8 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     <div style="display:flex;flex-direction:column;gap:10px">
 
       <div style="background:var(--bbg);border:1px solid var(--bborder);border-radius:var(--r2);padding:10px">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--blue);margin-bottom:8px">Reference Calibrators</div>
-        <div class="row">
-          <div class="col">
-            <div class="lbl">Ref. Calibration</div>
-            <select id="sm-company-cal">
-              <option value="">— เลือก Ref. Calibration —</option>
-            </select>
-          </div>
-          <div class="col">
-            <div class="lbl">Branch Calibrator</div>
-            <select id="sm-branch-cal">
-              <option value="">— เลือก Branch Calibrator —</option>
-            </select>
-          </div>
-        </div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--blue);margin-bottom:6px">Reference Calibrators</div>
+        <div style="font-size:12.5px;color:var(--blue);line-height:1.6"><b>คุณจะเป็น Reference คนที่ 1 โดยอัตโนมัติ</b> (คนเปิดช็อต) — ส่วน Reference คนที่ 2 ให้ทีมตกลงกันแล้วติ๊กเลือกตอนเข้าร่วมชิม (จำกัดแค่ 2 คนต่อช็อต)</div>
       </div>
 
       <div id="shot-a-label" style="display:none;font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.04em;margin-top:4px">ช็อต A</div>
@@ -1648,7 +1653,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
         <div class="row">
           <div class="col"><div class="lbl">TDS (%)</div><input type="number" id="sm2-tds" step="0.1" placeholder="เช่น 9.5"></div>
         </div>
-        <div style="font-size:11px;color:var(--text3)">Water Temp / Flow Rate / Ref. Calibration / Branch Calibrator ใช้ค่าเดียวกับช็อต A ด้านบน</div>
+        <div style="font-size:11px;color:var(--text3)">Water Temp / Flow Rate / Ref 1 ใช้ค่าเดียวกับช็อต A ด้านบน</div>
       </div>
     </div>
     <button class="btn btn-primary" onclick="createNewShot()" style="margin-top:16px">เปิดช็อต</button>
@@ -1662,7 +1667,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, Timestamp, query, where } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+import { getFirestore, initializeFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, Timestamp, query, where } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
 const cfg = {
   apiKey:"AIzaSyASqWQL08s1np9HEm-0_WIv0tQ9r3WmzZE",
@@ -1675,7 +1680,11 @@ const cfg = {
 
 const fbApp = initializeApp(cfg);
 const auth = getAuth(fbApp);
-const db = getFirestore(fbApp);
+// autoDetectLongPolling: falls back to long-polling instead of the
+// WebChannel/QUIC streaming connection when the network doesn't support it
+// well (common on café/store WiFi, corporate proxies) — avoids the
+// QUIC_NETWORK_IDLE_TIMEOUT / 400 errors that connection can throw.
+const db = initializeFirestore(fbApp, { experimentalAutoDetectLongPolling: true });
 // exposed so the classic <script> below (where STAFF_DIRECTORY lives) can
 // run the one-time staff-seeding helper — see window._seedStaffDirectory
 window._db=db; window._fsdoc=doc; window._fssetDoc=setDoc;
@@ -1770,6 +1779,45 @@ window._migrateShotExt = async function(){
     }catch(e){ skipped++; }
   }
   console.log(`Fixed EXT% on ${fixed} shots, skipped ${skipped}.`);
+};
+
+// ONE-TIME CLEANUP — run once from the browser console while logged in as
+// Boss: window._dedupeEntries()
+// Before the resubmit fix, submitting results twice for the same shot
+// created two separate cal: entries instead of updating one — this shows
+// up as the same name appearing multiple times in the Reference
+// Calibrators row on the ทีม page. This finds every (shotId, taster) group
+// with more than one entry and deletes all but the most recent one.
+window._dedupeEntries = async function(){
+  if(!window._isAdmin()){ console.warn('Admin only.'); return; }
+  const snap = await getDocs(collection(db,'shared'));
+  const calDocs = [];
+  snap.docs.forEach(d => {
+    const data = d.data();
+    if (data.key && data.key.startsWith('cal:')) {
+      try { calDocs.push({ docId: d.id, entry: JSON.parse(data.value) }); } catch(e) {}
+    }
+  });
+  const groups = {};
+  calDocs.forEach(({docId, entry}) => {
+    const k = entry.shotId + '::' + entry.taster;
+    if (!groups[k]) groups[k] = [];
+    groups[k].push({docId, entry});
+  });
+  const dupeGroups = Object.values(groups).filter(g => g.length > 1);
+  if (!dupeGroups.length) { console.log('ไม่พบข้อมูลซ้ำเลย'); return; }
+  const totalDupes = dupeGroups.reduce((sum,g) => sum + g.length - 1, 0);
+  const ok = confirm(`พบ ${dupeGroups.length} รายการที่มีของซ้ำ (รวม ${totalDupes} รายการที่จะลบ) — จะเก็บอันล่าสุดไว้เท่านั้น ยืนยันลบไหม?`);
+  if (!ok) { console.log('Cancelled.'); return; }
+  let deleted = 0;
+  for (const group of dupeGroups) {
+    group.sort((a,b) => (b.entry.id||'').localeCompare(a.entry.id||'')); // newest cal:<timestamp> first
+    const toDelete = group.slice(1);
+    for (const {docId} of toDelete) {
+      try { await deleteDoc(doc(db,'shared',docId)); deleted++; } catch(e) { console.error('Failed to delete', docId, e); }
+    }
+  }
+  console.log(`ลบข้อมูลซ้ำแล้ว ${deleted} รายการ (จาก ${dupeGroups.length} กลุ่มที่ซ้ำ)`);
 };
 
 // ONE-TIME CLEANUP — run once from the browser console while logged in as
@@ -2241,6 +2289,7 @@ async function onTasterSelected() {
   if (shots.length >= 1) {
     showShotPicker(shots, (result && result.countByShot) || {});
   }
+  updateRef2ClaimBox();
 }
 
 function showShotPicker(shots, countByShot) {
@@ -2400,27 +2449,6 @@ async function openShotModal() {
   if (!branch) { showToast('เลือกสาขาก่อน'); return; }
   if (!taster) { showToast('เลือกชื่อผู้ชิมก่อน'); return; }
 
-  // Both dropdowns can now select ANY staff member (not just this branch's
-  // roster, or just the Area team) — sorted alphabetically, with ★ marking
-  // Area staff for quick recognition since they're the most common picks.
-  const allStaffNames = [...new Set(STAFF_DIRECTORY.map(s => s.name))].sort((a,b)=>a.localeCompare(b));
-
-  // Populate Branch Calibrator dropdown
-  const branchCalSel = document.getElementById('sm-branch-cal');
-  branchCalSel.innerHTML = '<option value="">— เลือก Branch Calibrator —</option>';
-  allStaffNames.forEach(name => {
-    const isArea = AREA_STAFF.includes(name);
-    branchCalSel.innerHTML += `<option value="${name}">${isArea ? '★ ' : ''}${name}</option>`;
-  });
-
-  // Populate Ref. Calibration dropdown — any staff member, not fixed to Area
-  const companyCalSel = document.getElementById('sm-company-cal');
-  companyCalSel.innerHTML = '<option value="">— เลือก Ref. Calibration —</option>';
-  allStaffNames.forEach(name => {
-    const isArea = AREA_STAFF.includes(name);
-    companyCalSel.innerHTML += `<option value="${name}">${isArea ? '★ ' : ''}${name}</option>`;
-  });
-
   // Fields that always start fresh — these change every pull
   document.getElementById('sm-dose').value = 18;
   document.getElementById('sm-time').value = 27;
@@ -2467,8 +2495,6 @@ async function openShotModal() {
         if (latest.lot) document.getElementById('sm-lot').value = latest.lot;
         if (latest.waterTemp) document.getElementById('sm-temp').value = latest.waterTemp;
         if (latest.pressure) document.getElementById('sm-pressure').value = latest.pressure;
-        if (latest.branchCal) branchCalSel.value = latest.branchCal;
-        if (latest.companyCal) companyCalSel.value = latest.companyCal;
       }
     }
   } catch(e) {}
@@ -2560,6 +2586,34 @@ function autoFillFromShot(shotData) {
   if (shotData.pressure)    document.getElementById('f-pressure').value  = shotData.pressure;
   if (shotData.tds)         document.getElementById('f-tds').value       = shotData.tds;
   calcRatio();
+  updateRef2ClaimBox();
+}
+
+function updateRef2ClaimBox() {
+  const box = document.getElementById('ref2-claim-box');
+  const info = document.getElementById('ref2-claim-info');
+  const cb = document.getElementById('f-claim-ref2');
+  if (!box || !info || !cb) return;
+  const otherTaster = document.getElementById('f-other-taster').value;
+  const taster = otherTaster || document.getElementById('f-taster').value;
+  if (!currentShotData || !taster) { box.style.display = 'none'; cb.checked = false; return; }
+  if (taster === currentShotData.branchCal) {
+    // The shot opener is already Ref 1 — nothing to claim.
+    box.style.display = 'none'; cb.checked = false; return;
+  }
+  box.style.display = 'block';
+  if (currentShotData.companyCal) {
+    if (currentShotData.companyCal === taster) {
+      info.textContent = `Ref 1: ${currentShotData.branchCal} · คุณเป็น Ref 2 ของช็อตนี้อยู่แล้ว`;
+      cb.checked = true; cb.disabled = true;
+    } else {
+      info.textContent = `Ref 1: ${currentShotData.branchCal} · Ref 2: ${currentShotData.companyCal} (ครบ 2 คนแล้ว)`;
+      cb.checked = false; cb.disabled = true;
+    }
+  } else {
+    info.textContent = `Ref 1: ${currentShotData.branchCal} · ยังไม่มี Ref 2 — ติ๊กถ้าทีมตกลงให้คุณเป็น`;
+    cb.checked = false; cb.disabled = false;
+  }
 }
 
 async function createNewShot() {
@@ -2577,8 +2631,11 @@ async function createNewShot() {
   // Shared across both shots when opening 2 at once
   const temp     = +document.getElementById('sm-temp').value || 93;
   const pressure = +document.getElementById('sm-pressure').value || 9;
-  const branchCal = document.getElementById('sm-branch-cal').value;
-  const companyCal = document.getElementById('sm-company-cal').value;
+  // Ref 1 is always whoever opens the shot — no manual selection needed.
+  // Ref 2 starts empty and can be claimed by exactly one other person when
+  // they join (see the "claim Ref 2" banner on the fill-results form).
+  const branchCal = taster;
+  const companyCal = null;
 
   let existingShots = [];
   try {
@@ -2845,7 +2902,7 @@ async function submitForm() {
   if (!shotId) { showToast('กรุณาเลือกหรือสร้างรหัสช็อต'); return; }
 
   const requiredAttrs = ['acidity','sweetness','bitterness','mouthfeel'];
-  const missingAttrs = requiredAttrs.filter(a => !touchedAttrs.has(a));
+  const missingAttrs = requiredAttrs.filter(a => !touchedAttrs.has(a) && !(tags[a] && tags[a].length));
   if (missingAttrs.length) {
     missingAttrs.forEach(a => {
       const group = document.querySelector('.dots[data-attr="'+a+'"]');
@@ -2870,8 +2927,34 @@ async function submitForm() {
   btn.textContent = '✓ บันทึกแล้ว';
   btn.style.opacity = '0.6';
 
-  // Reference Calibrator status is decided once, when the shot was opened
-  // (Branch Calibrator / Ref. Calibration fields) — not re-confirmed here.
+  // Ref 1 was fixed automatically when the shot opened. Ref 2 (optional) is
+  // claimed right here if the checkbox was ticked — re-check against the
+  // live shot record first so two people can't both claim it in a race.
+  if (currentShotData && currentShotData.id === shotId) {
+    const wantsRef2 = document.getElementById('f-claim-ref2').checked && !document.getElementById('f-claim-ref2').disabled;
+    if (wantsRef2 && taster !== currentShotData.branchCal) {
+      try {
+        const keys = await window.storage.list('shot:', true, branch);
+        let shotStorageKey = null, freshShot = null;
+        if (keys && keys.keys) {
+          for (const k of keys.keys) {
+            const r = await window.storage.get(k, true);
+            if (r) { const s = JSON.parse(r.value); if (s.id === shotId) { shotStorageKey = k; freshShot = s; break; } }
+          }
+        }
+        if (freshShot && !freshShot.companyCal) {
+          freshShot.companyCal = taster;
+          await window.storage.set(shotStorageKey, JSON.stringify(freshShot), true, branch);
+          currentShotData.companyCal = taster;
+        } else if (freshShot) {
+          currentShotData.companyCal = freshShot.companyCal; // someone else got there first
+        }
+      } catch(e) {}
+    }
+  }
+
+  // Reference Calibrator status: Ref 1 (shot opener) or the person who just
+  // claimed Ref 2 above.
   const isRefCal = !!(currentShotData && currentShotData.id === shotId &&
     (taster === currentShotData.branchCal || taster === currentShotData.companyCal));
   const coffee = document.getElementById('f-coffee').value.trim();
@@ -2912,8 +2995,17 @@ async function submitForm() {
   ].filter(Boolean);
 
   const ts = Date.now();
+  // If this person already has an entry for this exact shot, reuse its ID
+  // so this submission UPDATES it instead of creating a duplicate card —
+  // resubmitting (e.g. fixing a mistake) shouldn't leave old copies behind.
+  let entryId = 'cal:'+ts+':'+Math.random().toString(36).slice(2,7);
+  try {
+    const existing = await loadEntries();
+    const dupe = existing.find(e => e.shotId === shotId && e.taster === taster);
+    if (dupe) entryId = dupe.id;
+  } catch(e) {}
   const entry = {
-    id: 'cal:'+ts+':'+Math.random().toString(36).slice(2,7),
+    id: entryId,
     branch, taster, shotId,
     date: new Date().toISOString().slice(0,10),
     time: new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}),
@@ -3664,8 +3756,8 @@ function renderParamCard(s, shotEntries) {
         <span style="color:var(--text3);font-weight:600">Coffee </span><b>${s.coffee||'—'}</b>${s.lot?`<span style="color:var(--text3);font-weight:600"> · Lot </span><b>${s.lot}</b>`:''}
       </div>
       <div style="display:flex;justify-content:space-between;font-size:14px;margin-top:8px;color:var(--text2);font-weight:600">
-        <span>Branch Cal: <b style="color:var(--text)">${s.branchCal||'—'}</b></span>
-        <span>Ref. Cal: <b style="color:var(--text)">${s.companyCal||'—'}</b></span>
+        <span>Ref 1: <b style="color:var(--text)">${s.branchCal||'—'}</b></span>
+        <span>Ref 2: <b style="color:var(--text)">${s.companyCal||'ยังไม่มี'}</b></span>
       </div>
     </div>
     <div style="padding:14px 18px;border-bottom:1px solid var(--bg3)">
