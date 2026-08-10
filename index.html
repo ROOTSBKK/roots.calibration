@@ -373,10 +373,30 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     <div class="lbl">🍍 Fruity</div>
     <div class="chips" data-attr="flavor-fruity" style="margin-bottom:8px">
       <button class="chip pos" data-v="Tropical" onclick="handleChip(this)">Tropical</button>
+      <button class="chip pos" data-v="Pineapple" onclick="handleChip(this)">Pineapple</button>
+      <button class="chip pos" data-v="Mango" onclick="handleChip(this)">Mango</button>
+      <button class="chip pos" data-v="Passion Fruit" onclick="handleChip(this)">Passion Fruit</button>
+      <button class="chip pos" data-v="Papaya" onclick="handleChip(this)">Papaya</button>
+      <button class="chip pos" data-v="Lychee" onclick="handleChip(this)">Lychee</button>
       <button class="chip pos" data-v="Stone Fruit" onclick="handleChip(this)">Stone Fruit</button>
+      <button class="chip pos" data-v="Peach" onclick="handleChip(this)">Peach</button>
+      <button class="chip pos" data-v="Plum" onclick="handleChip(this)">Plum</button>
+      <button class="chip pos" data-v="Apricot" onclick="handleChip(this)">Apricot</button>
+      <button class="chip pos" data-v="Cherry" onclick="handleChip(this)">Cherry</button>
+      <button class="chip pos" data-v="Nectarine" onclick="handleChip(this)">Nectarine</button>
       <button class="chip pos" data-v="Berry" onclick="handleChip(this)">Berry</button>
+      <button class="chip pos" data-v="Blackberry" onclick="handleChip(this)">Blackberry</button>
+      <button class="chip pos" data-v="Raspberry" onclick="handleChip(this)">Raspberry</button>
+      <button class="chip pos" data-v="Blueberry" onclick="handleChip(this)">Blueberry</button>
+      <button class="chip pos" data-v="Strawberry" onclick="handleChip(this)">Strawberry</button>
+      <button class="chip pos" data-v="Cranberry" onclick="handleChip(this)">Cranberry</button>
       <button class="chip pos" data-v="Citrus" onclick="handleChip(this)">Citrus</button>
       <button class="chip pos" data-v="Dried Fruit" onclick="handleChip(this)">Dried Fruit</button>
+      <button class="chip pos" data-v="Raisin" onclick="handleChip(this)">Raisin</button>
+      <button class="chip pos" data-v="Dried Plum" onclick="handleChip(this)">Dried Plum</button>
+      <button class="chip pos" data-v="Dried Apricot" onclick="handleChip(this)">Dried Apricot</button>
+      <button class="chip pos" data-v="Fig" onclick="handleChip(this)">Fig</button>
+      <button class="chip pos" data-v="Date" onclick="handleChip(this)">Date</button>
     </div>
 
     <div class="lbl">🌸 Floral</div>
@@ -391,9 +411,17 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     <div class="chips" data-attr="flavor-nutty" style="margin-bottom:8px">
       <button class="chip pos" data-v="Almond" onclick="handleChip(this)">Almond</button>
       <button class="chip pos" data-v="Hazelnut" onclick="handleChip(this)">Hazelnut</button>
-      <button class="chip pos" data-v="Dark Chocolate" onclick="handleChip(this)">Dark Chocolate</button>
-      <button class="chip pos" data-v="Cocoa" onclick="handleChip(this)">Cocoa</button>
+      <button class="chip pos" data-v="Walnut" onclick="handleChip(this)">Walnut</button>
+      <button class="chip pos" data-v="Macadamia" onclick="handleChip(this)">Macadamia</button>
+      <button class="chip pos" data-v="Pistachio" onclick="handleChip(this)">Pistachio</button>
       <button class="chip pos" data-v="Peanut" onclick="handleChip(this)">Peanut</button>
+      <button class="chip pos" data-v="Roasted Nut" onclick="handleChip(this)">Roasted Nut</button>
+      <button class="chip pos" data-v="Dark Chocolate" onclick="handleChip(this)">Dark Chocolate</button>
+      <button class="chip pos" data-v="Milk Chocolate" onclick="handleChip(this)">Milk Chocolate</button>
+      <button class="chip pos" data-v="White Chocolate" onclick="handleChip(this)">White Chocolate</button>
+      <button class="chip pos" data-v="Cocoa" onclick="handleChip(this)">Cocoa</button>
+      <button class="chip pos" data-v="Cocoa Nib" onclick="handleChip(this)">Cocoa Nib</button>
+      <button class="chip pos" data-v="Mocha" onclick="handleChip(this)">Mocha</button>
     </div>
 
     <div class="lbl">🍯 Sugary</div>
@@ -3531,21 +3559,27 @@ function renderParamCard(s, shotEntries) {
   const dateStr = s.id ? s.id.split('-').slice(0,2).join('-') : '';
   const ratio = s.dose ? (s.yield/s.dose).toFixed(1) : '—';
 
-  // Consensus on SPECIFIC flavors (e.g. Berry, Dark Chocolate — not just
-  // the broad category like Fruity) that 2 or more tasters agreed on.
-  const specificFlavorFreq = {};
+  // Consensus (2+ tasters agreeing) across 3 categories, shown together in
+  // one line: Flavor / Weight-Texture / Aftertaste Flavor — e.g.
+  // "Tropical Fruit / Smooth / Chocolate"
+  function topConsensus(freqMap) {
+    const ranked = Object.entries(freqMap).filter(([,c]) => c >= 2).sort((a,b) => b[1]-a[1]);
+    return ranked.length ? ranked[0] : null; // [name, count] or null
+  }
+  const flavorFreq = {}, textureFreq = {}, aftFlavorFreq = {};
   shotEntries.forEach(e => {
-    Object.values(e.flavorTags||{}).forEach(arr => {
-      (arr||[]).forEach(v => { specificFlavorFreq[v] = (specificFlavorFreq[v]||0) + 1; });
-    });
+    Object.values(e.flavorTags||{}).forEach(arr => (arr||[]).forEach(v => { flavorFreq[v] = (flavorFreq[v]||0)+1; }));
+    (e.tags?.mouthfeel||[]).forEach(v => { textureFreq[v] = (textureFreq[v]||0)+1; });
+    (e.aftertasteFlavor||[]).forEach(v => { aftFlavorFreq[v] = (aftFlavorFreq[v]||0)+1; });
   });
-  const consensusFlavors = Object.entries(specificFlavorFreq)
-    .filter(([,count]) => count >= 2)
-    .sort((a,b) => b[1]-a[1]);
-  const consensusHtml = consensusFlavors.length
+  const topFlavor = topConsensus(flavorFreq);
+  const topTexture = topConsensus(textureFreq);
+  const topAftFlavor = topConsensus(aftFlavorFreq);
+  const consensusHtml = (topFlavor || topTexture || topAftFlavor)
     ? `<div style="padding:10px 12px;background:var(--gbg);border:1px solid var(--gborder);border-radius:var(--r2);margin-bottom:10px">
         <div style="font-size:11px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">✓ ทีมเห็นตรงกัน (2 คนขึ้นไป)</div>
-        <div style="font-size:15px;font-weight:700;color:var(--text)">${consensusFlavors.map(([v,c])=>`${v} (${c})`).join(' · ')}</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text)">${topFlavor?topFlavor[0]:'—'} / ${topTexture?topTexture[0]:'—'} / ${topAftFlavor?topAftFlavor[0]:'—'}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:3px">Flavor / Weight-Texture / Aftertaste Flavor</div>
       </div>`
     : '';
 
