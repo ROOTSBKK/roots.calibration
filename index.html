@@ -2226,6 +2226,14 @@ function scoreOverall(myScore, refScore) {
 }
 function calcCalibrationScore(entry, refEntries, teamEntries) {
   if (!refEntries || refEntries.length === 0) return null;
+  // If the person being scored is themselves one of the reference
+  // calibrators, they must NOT be compared against an average that
+  // includes their own answer — that inflates their score artificially
+  // (e.g. two refs who both leave everything at default would otherwise
+  // score each other ~100% just by matching their own laziness).
+  const externalRefs = refEntries.filter(e => e.id !== entry.id);
+  if (externalRefs.length === 0) return null; // no OTHER reference to compare against
+  refEntries = externalRefs;
   const SCORE_ATTRS_CAL = ['acidity','sweetness','bitterness','mouthfeel'];
 
   // Reference Consensus = average of all ref entries (Boss + Branch Cal)
@@ -4168,9 +4176,10 @@ async function renderTeam() {
       const myTags = attr => (e.tags?.[attr]||[]).join(', ')||'—';
       const intLabel = v => INTLABELS[v-1]||v;
       const refScore = calcCalibrationScore(e, refEntries, shotEntries);
-      const refCol = refScore?.total>=85?'var(--green)':refScore?.total>=65?'var(--amber)':'var(--red)';
-      const refLvl = refScore?.total>=85?'Advanced':refScore?.total>=65?'Intermediate':'Beginner';
-      const refLvlCls = refScore?.total>=85?'pill-green':refScore?.total>=65?'pill-amber':'pill-red';
+      const hasScore = refScore && refScore.total !== null && refScore.total !== undefined;
+      const refCol = !hasScore?'var(--text3)':refScore.total>=85?'var(--green)':refScore.total>=65?'var(--amber)':'var(--red)';
+      const refLvl = !hasScore?'—':refScore.total>=85?'Advanced':refScore.total>=65?'Intermediate':'Beginner';
+      const refLvlCls = !hasScore?'':refScore.total>=85?'pill-green':refScore.total>=65?'pill-amber':'pill-red';
       return `<div onclick="showPersonEntryModal('${e.id}')" style="flex:1;background:var(--bbg);border:1px solid var(--bborder);border-radius:var(--r2);padding:10px;cursor:pointer">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
           <div style="width:32px;height:32px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0">${ini}</div>
@@ -4179,7 +4188,7 @@ async function renderTeam() {
             <div style="font-size:10px;color:var(--blue)">Reference</div>
           </div>
           <div style="text-align:right">
-            <div style="font-size:20px;font-weight:700;color:${refScore?.total!==null?refCol:'var(--text3)'}">${refScore?.total!==null?refScore.total:'—'}</div>
+            <div style="font-size:20px;font-weight:700;color:${hasScore?refCol:'var(--text3)'}">${hasScore?refScore.total:'—'}</div>
             <span class="pill ${refLvlCls}" style="font-size:9px">${refLvl}</span>
           </div>
         </div>
@@ -4209,9 +4218,10 @@ async function renderTeam() {
     const tasterCards = tasters.map(e => {
       teamEntryCache[e.id] = e;
       const score = calcCalibrationScore(e, refEntries, shotEntries);
-      const col = score?.total>=85?'var(--green)':score?.total>=65?'var(--amber)':'var(--red)';
-      const lvlCls = score?.total>=85?'pill-green':score?.total>=65?'pill-amber':'pill-red';
-      const lvlShort = score?.total>=85?'Adv':score?.total>=65?'Int':'Beg';
+      const hasScore = score && score.total !== null && score.total !== undefined;
+      const col = !hasScore?'var(--text3)':score.total>=85?'var(--green)':score.total>=65?'var(--amber)':'var(--red)';
+      const lvlCls = !hasScore?'':score.total>=85?'pill-green':score.total>=65?'pill-amber':'pill-red';
+      const lvlShort = !hasScore?'—':score.total>=85?'Adv':score.total>=65?'Int':'Beg';
       const initials = e.taster.slice(0,2).toUpperCase();
 
       const ATTR_SHORT = {acidity:'Ac',sweetness:'Sw',bitterness:'Bt',mouthfeel:'Mf'};
@@ -4244,7 +4254,7 @@ async function renderTeam() {
           <div style="width:32px;height:32px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--text2)">${initials}</div>
           <div style="font-size:12px;font-weight:600">${e.taster}</div>
           <div style="display:flex;align-items:center;gap:5px">
-            <span style="font-size:20px;font-weight:700;color:${score?.total!==null?col:'var(--text3)'}">${score?.total!==null?score.total:'—'}</span>
+            <span style="font-size:20px;font-weight:700;color:${hasScore?col:'var(--text3)'}">${hasScore?score.total:'—'}</span>
             <span class="pill ${lvlCls}" style="font-size:9px">${lvlShort}</span>
           </div>
         </div>
