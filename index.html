@@ -2462,7 +2462,7 @@ function showPersonEntryModal(entryId) {
     <span><b>${intLabel(e.intensity?.[attr]||3)}</b>${(e.tags?.[attr]||[]).length?' · '+(e.tags[attr]||[]).join(', '):''}</span>
   </div>`;
 
-  const flavor = (e.flavorCategories||[]).join(', ') || e.flavor || '—';
+  const flavor = Object.values(e.flavorTags||{}).flat().join(', ') || e.flavor || '—';
   const aftLen = e.aftertasteLength ? (AFT_LENGTH_LABELS[e.aftertasteLength-1]||'') : '';
   const aftTags = (e.tags?.aftertaste||[]).join(', ');
   const aftFlavor = (e.aftertasteFlavor||[]).join(', ');
@@ -3020,6 +3020,16 @@ async function submitForm() {
     const attrThaiLabels = {acidity:'Acidity',sweetness:'Sweetness',bitterness:'Bitterness',mouthfeel:'Mouthfeel'};
     showToast('⚠️ กรุณากรอกให้ครบ: ' + missingAttrs.map(a => attrThaiLabels[a]||a).join(', '));
     return;
+  }
+
+  // Flavor Wheel is optional and doesn't affect the score — but if someone
+  // leaves it completely empty, ask once to make sure that's intentional
+  // rather than just an oversight. Not a hard block: they can confirm
+  // "truly none" and move on.
+  const flavorWheelEmpty = Object.values(flavorTags).every(arr => !arr || arr.length === 0);
+  if (flavorWheelEmpty) {
+    const confirmNoFlavor = confirm('ยังไม่ได้เลือก Flavor เลยสักอัน — แน่ใจนะว่ากาแฟตัวนี้ไม่มีรสเด่นให้เลือก?\n\nOK = ยืนยัน ไม่มีจริง (บันทึกต่อ) · Cancel = กลับไปเพิ่ม');
+    if (!confirmNoFlavor) return;
   }
 
   const coffeeCheck = document.getElementById('f-coffee').value.trim();
@@ -3790,8 +3800,9 @@ function isHouseBlend(name) {
 
 function computeConsensus(shotEntries) {
   function topConsensus(freqMap) {
-    const ranked = Object.entries(freqMap).filter(([,c]) => c >= 2).sort((a,b) => b[1]-a[1]);
-    return ranked.length ? ranked[0] : null; // [name, count] or null
+    const ranked = Object.entries(freqMap).sort((a,b) => b[1]-a[1]);
+    if (!ranked.length) return null;
+    return { name: ranked[0][0], count: ranked[0][1], isConsensus: ranked[0][1] >= 2 };
   }
   const flavorFreq = {}, textureFreq = {}, aftFlavorFreq = {};
   shotEntries.forEach(e => {
@@ -3805,10 +3816,16 @@ function computeConsensus(shotEntries) {
 function consensusBoxHtml(consensus) {
   const { topFlavor, topTexture, topAftFlavor } = consensus;
   if (!topFlavor && !topTexture && !topAftFlavor) return '';
+  const fmt = item => {
+    if (!item) return '—';
+    return item.isConsensus
+      ? item.name
+      : `<span style="font-style:italic;color:var(--text2)">${item.name}<sup style="font-style:normal">*</sup></span>`;
+  };
   return `<div style="padding:10px 12px;background:var(--gbg);border:1px solid var(--gborder);border-radius:var(--r2);margin-bottom:10px">
-      <div style="font-size:11px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">✓ ทีมเห็นตรงกัน (2 คนขึ้นไป)</div>
-      <div style="font-size:15px;font-weight:700;color:var(--text)">${topFlavor?topFlavor[0]:'—'} / ${topTexture?topTexture[0]:'—'} / ${topAftFlavor?topAftFlavor[0]:'—'}</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:3px">Flavor / Weight-Texture / Aftertaste Flavor</div>
+      <div style="font-size:11px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">✓ สรุปผล</div>
+      <div style="font-size:15px;font-weight:700;color:var(--text)">${fmt(topFlavor)} / ${fmt(topTexture)} / ${fmt(topAftFlavor)}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px">Flavor / Weight-Texture / Aftertaste Flavor — <b>ตัวหนา</b> = ตรงกัน 2 คนขึ้นไป, <i>ตัวเอียง*</i> = มีแค่ 1 คนเลือก</div>
     </div>`;
 }
 
@@ -3825,7 +3842,7 @@ function renderParamCard(s, shotEntries) {
 
   const notesHtml = shotEntries.length
     ? shotEntries.map(e => {
-        const flavor = (e.flavorCategories||[]).join(', ') || e.flavor || '—';
+        const flavor = Object.values(e.flavorTags||{}).flat().join(', ') || e.flavor || '—';
         const texture = (e.tags?.mouthfeel||[]).join(', ') || '—';
         const aftTags = (e.tags?.aftertaste||[]).join(', ');
         const aftLen = e.aftertasteLength ? (AFT_LENGTH_LABELS[e.aftertasteLength-1]||'') : '';
@@ -3899,9 +3916,9 @@ function renderParamCompact(shot, shotEntries) {
     <div style="font-size:11.5px;color:var(--text2);margin-bottom:4px">Dose/Time/Yield: <b style="color:var(--text)">${shot.dose||'—'}/${shot.extractTime||'—'}/${shot.yield||'—'}</b></div>
     <div style="font-size:11.5px;color:var(--amber);font-weight:700;margin-bottom:8px">TDS ${shot.tds||'—'} · EXT ${shot.ext||'—'}</div>
     <div style="font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.03em">Flavor</div>
-    <div style="font-size:11.5px;font-weight:600;color:var(--text);margin-bottom:4px">${topFlavor?topFlavor[0]:'—'}</div>
+    <div style="font-size:11.5px;font-weight:600;color:var(--text);margin-bottom:4px">${topFlavor?topFlavor.name:'—'}</div>
     <div style="font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.03em">Texture / Aftertaste</div>
-    <div style="font-size:11.5px;font-weight:600;color:var(--text)">${topTexture?topTexture[0]:'—'} / ${topAftFlavor?topAftFlavor[0]:'—'}</div>
+    <div style="font-size:11.5px;font-weight:600;color:var(--text)">${topTexture?topTexture.name:'—'} / ${topAftFlavor?topAftFlavor.name:'—'}</div>
     <div style="font-size:10px;color:var(--text3);margin-top:8px">${shotEntries.length} คนชิม</div>
   </div>`;
 }
