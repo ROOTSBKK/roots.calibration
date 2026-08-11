@@ -239,21 +239,23 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
         <button class="btn-sm" onclick="closeShotPicker()" style="width:100%;margin-top:8px;background:var(--bg2)">ปิด / เลือกเองทีหลัง</button>
       </div>
     </div>
-    <div class="row" style="margin-bottom:10px">
-      <div class="col"><div class="lbl">ชื่อกาแฟ</div><input type="text" id="f-coffee" placeholder="เช่น Ethiopia Yirgacheffe"></div>
-      <div class="col"><div class="lbl">Lot</div><input type="text" id="f-lot" placeholder="เช่น Lot 24A"></div>
-    </div>
-    <div class="row" style="margin-bottom:10px">
-      <div class="col"><div class="lbl">Dose (g)</div><input type="number" id="f-dose" value="18" step="0.5" style="width:100%" oninput="calcRatio()"></div>
-      <div class="col"><div class="lbl">Time (s)</div><input type="number" id="f-time" value="27" step="1" style="width:100%"></div>
-      <div class="col"><div class="lbl">Yield (g)</div><input type="number" id="f-yield" value="36" step="0.5" style="width:100%" oninput="calcRatio()"></div>
-      <div class="col"><div class="lbl">Ratio</div><div class="ratio-display" id="f-ratio">1 : 2.0</div></div>
-    </div>
-    <div class="row">
-      <div class="col"><div class="lbl">Water Temp (°C)</div><input type="number" id="f-temp" value="93" step="0.5" style="width:100%"></div>
-      <div class="col"><div class="lbl">Water Flow Rate (g/s)</div><input type="number" id="f-pressure" value="9" step="0.5" style="width:100%"></div>
-      <div class="col"><div class="lbl">TDS (%)</div><input type="number" id="f-tds" step="0.1" placeholder="เช่น 9.5" style="width:100%" oninput="calcRatio()"></div>
-      <div class="col"><div class="lbl">EXT%</div><div class="ratio-display" id="f-ext">—</div></div>
+    <div id="param-fields-section" style="display:none">
+      <div class="row" style="margin-bottom:10px">
+        <div class="col"><div class="lbl">ชื่อกาแฟ</div><input type="text" id="f-coffee" placeholder="เช่น Ethiopia Yirgacheffe"></div>
+        <div class="col"><div class="lbl">Lot</div><input type="text" id="f-lot" placeholder="เช่น Lot 24A"></div>
+      </div>
+      <div class="row" style="margin-bottom:10px">
+        <div class="col"><div class="lbl">Dose (g)</div><input type="number" id="f-dose" value="18" step="0.5" style="width:100%" oninput="calcRatio()"></div>
+        <div class="col"><div class="lbl">Time (s)</div><input type="number" id="f-time" value="27" step="1" style="width:100%"></div>
+        <div class="col"><div class="lbl">Yield (g)</div><input type="number" id="f-yield" value="36" step="0.5" style="width:100%" oninput="calcRatio()"></div>
+        <div class="col"><div class="lbl">Ratio</div><div class="ratio-display" id="f-ratio">1 : 2.0</div></div>
+      </div>
+      <div class="row">
+        <div class="col"><div class="lbl">Water Temp (°C)</div><input type="number" id="f-temp" value="93" step="0.5" style="width:100%"></div>
+        <div class="col"><div class="lbl">Water Flow Rate (g/s)</div><input type="number" id="f-pressure" value="9" step="0.5" style="width:100%"></div>
+        <div class="col"><div class="lbl">TDS (%)</div><input type="number" id="f-tds" step="0.1" placeholder="เช่น 9.5" style="width:100%" oninput="calcRatio()"></div>
+        <div class="col"><div class="lbl">EXT%</div><div class="ratio-display" id="f-ext">—</div></div>
+      </div>
     </div>
   </div>
 
@@ -2677,6 +2679,7 @@ let currentShotData = null;
 function autoFillFromShot(shotData) {
   if (!shotData) return;
   currentShotData = shotData;
+  document.getElementById('param-fields-section').style.display = 'block';
   if (shotData.coffee)      document.getElementById('f-coffee').value    = shotData.coffee;
   if (shotData.lot)         document.getElementById('f-lot').value       = shotData.lot;
   if (shotData.dose)        document.getElementById('f-dose').value      = shotData.dose;
@@ -2942,7 +2945,7 @@ async function loadShotDropdown(selectId) {
 async function onShotSelect() {
   const v = document.getElementById('f-shotid').value;
   const badge = document.getElementById('shot-badge');
-  if (!v) { badge.style.display = 'none'; return; }
+  if (!v) { badge.style.display = 'none'; document.getElementById('param-fields-section').style.display = 'none'; currentShotData = null; return; }
   badge.style.display = 'inline-flex';
   badge.textContent = '📌 ' + v;
   // ค้นหา shot data จาก storage โดย list prefix แล้วหา id ที่ตรง
@@ -3274,6 +3277,7 @@ function resetForm() {
   document.getElementById('f-other-taster').value = '';
   document.getElementById('f-shotid').value = '';
   document.getElementById('shot-badge').style.display = 'none';
+  document.getElementById('param-fields-section').style.display = 'none';
   document.getElementById('f-coffee').value = '';
   document.getElementById('f-lot').value = '';
   document.getElementById('f-time').value = 27;
