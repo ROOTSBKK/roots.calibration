@@ -260,6 +260,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
   </div>
 
   <div class="grp-lbl">Taste Balance</div>
+  <div style="background:var(--abg);border:1px solid var(--aborder);border-radius:var(--r2);padding:8px 12px;margin-bottom:10px;font-size:11.5px;color:var(--amber)">⚠️ ทุกหัวข้อด้านล่าง ต้องเลือก <b>Positive หรือ Negative อย่างน้อย 1 อัน</b> ถึงจะบันทึกผลได้</div>
 
   <div class="card">
     <div class="card-title">Acidity</div>
@@ -319,7 +320,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     <div class="chips" data-attr="aftertaste"><button class="chip pos" data-v="Clean" onclick="handleChip(this)">Clean</button><button class="chip pos" data-v="Pleasant" onclick="handleChip(this)">Pleasant</button><button class="chip pos" data-v="Sweetness" onclick="handleChip(this)">Sweetness</button><button class="chip pos" data-v="Bitter Sweet" onclick="handleChip(this)">Bitter Sweet</button><button class="chip pos" data-v="Lingering" onclick="handleChip(this)">Lingering</button></div>
     <div class="lbl" style="margin-top:8px">Negative</div>
     <div class="chips" data-attr="aftertaste"><button class="chip neg" data-v="Unpleasant" onclick="handleChip(this)">Unpleasant</button><button class="chip neg" data-v="Astringent" onclick="handleChip(this)">Astringent</button><button class="chip neg" data-v="Bitterness" onclick="handleChip(this)">Bitterness</button><button class="chip neg" data-v="Dryness" onclick="handleChip(this)">Dryness</button><button class="chip neg" data-v="Fades fast" onclick="handleChip(this)">Fades fast</button></div>
-    <div class="lbl" style="margin-top:10px">Aftertaste Flavor <span style="color:var(--text3);font-weight:400">— รสที่ค้างอยู่หลังกลืนคือรสอะไร (ไม่มีผลต่อคะแนน)</span></div>
+    <div class="lbl" style="margin-top:10px">Aftertaste Flavor <span style="color:var(--red);font-weight:600">*บังคับเลือก</span> <span style="color:var(--text3);font-weight:400">— รสที่ค้างอยู่หลังกลืนคือรสอะไร (ไม่มีผลต่อคะแนน แต่ใช้เก็บข้อมูล)</span></div>
     <div class="chips" id="chips-aft-flavor">
       <button class="chip pos" data-v="Fruity" onclick="handleAftFlavorChip(this)">Fruity</button>
       <button class="chip pos" data-v="Floral" onclick="handleAftFlavorChip(this)">Floral</button>
@@ -2498,6 +2499,15 @@ function showPersonEntryModal(entryId) {
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bg3)">
       <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:6px">🍓 Flavor ที่เลือก</div>
       <div style="font-size:14px;font-weight:600;margin-bottom:12px">${flavor}</div>
+      ${(() => {
+        const ATTR_NOTE_LABELS = {acidity:'Acidity',sweetness:'Sweetness',bitterness:'Bitterness',aftertaste:'Aftertaste',mouthfeel:'Mouthfeel'};
+        const attrComments = Object.entries(e.notes||{}).filter(([,v]) => v && v.trim());
+        if (!attrComments.length) return '';
+        return `<div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:6px">💬 คอมเมนต์แต่ละหัวข้อ</div>
+          <div style="background:var(--bg2);border-radius:var(--r2);padding:10px 12px;margin-bottom:12px">
+            ${attrComments.map(([a,v]) => `<div style="font-size:13px;color:var(--text);margin-bottom:4px"><b style="color:var(--text2)">${ATTR_NOTE_LABELS[a]||a}:</b> ${v}</div>`).join('')}
+          </div>`;
+      })()}
       <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:6px">✍️ สิ่งที่พิมพ์เพิ่มเติม</div>
       <div style="font-size:14px;background:var(--bg2);border-radius:var(--r2);padding:10px 12px;white-space:pre-wrap">${e.flavor || '— ไม่มีบันทึกเพิ่มเติม —'}</div>
     </div>
@@ -3009,19 +3019,28 @@ async function submitForm() {
   if (!branch || !taster) { showToast('กรุณาเลือกสาขาและชื่อผู้ชิม'); return; }
   if (!shotId) { showToast('กรุณาเลือกหรือสร้างรหัสช็อต'); return; }
 
-  const requiredAttrs = ['acidity','sweetness','bitterness','mouthfeel'];
-  const missingAttrs = requiredAttrs.filter(a => !touchedAttrs.has(a) && !(tags[a] && tags[a].length));
+  const requiredAttrs = ['acidity','sweetness','bitterness','mouthfeel','aftertaste'];
+  const missingAttrs = requiredAttrs.filter(a => !(tags[a] && tags[a].length));
   if (missingAttrs.length) {
     missingAttrs.forEach(a => {
-      const group = document.querySelector('.dots[data-attr="'+a+'"]');
-      if (group) {
+      document.querySelectorAll('.chips[data-attr="'+a+'"]').forEach(group => {
         group.style.outline = '2px solid var(--red)';
         group.style.borderRadius = 'var(--r2)';
         setTimeout(() => { group.style.outline = ''; }, 2500);
-      }
+      });
     });
-    const attrThaiLabels = {acidity:'Acidity',sweetness:'Sweetness',bitterness:'Bitterness',mouthfeel:'Mouthfeel'};
-    showToast('⚠️ กรุณากรอกให้ครบ: ' + missingAttrs.map(a => attrThaiLabels[a]||a).join(', '));
+    const attrThaiLabels = {acidity:'Acidity',sweetness:'Sweetness',bitterness:'Bitterness',mouthfeel:'Mouthfeel',aftertaste:'Aftertaste'};
+    showToast('⚠️ กรุณาเลือก Positive/Negative อย่างน้อย 1 อันในหัวข้อ: ' + missingAttrs.map(a => attrThaiLabels[a]||a).join(', '));
+    return;
+  }
+
+  // Aftertaste Flavor is now required (not just Positive/Negative tags) —
+  // this is separate from the Flavor Wheel above, which stays optional.
+  if (!aftertasteFlavorTags.length) {
+    document.getElementById('chips-aft-flavor').style.outline = '2px solid var(--red)';
+    document.getElementById('chips-aft-flavor').style.borderRadius = 'var(--r2)';
+    setTimeout(() => { document.getElementById('chips-aft-flavor').style.outline = ''; }, 2500);
+    showToast('⚠️ กรุณาเลือก Aftertaste Flavor อย่างน้อย 1 อัน');
     return;
   }
 
@@ -3852,6 +3871,14 @@ function renderParamCard(s, shotEntries) {
         const aftLen = e.aftertasteLength ? (AFT_LENGTH_LABELS[e.aftertasteLength-1]||'') : '';
         const aftFlavor = (e.aftertasteFlavor||[]).join(', ');
         const aftertaste = [aftLen, aftTags, aftFlavor?'Flavor: '+aftFlavor:''].filter(Boolean).join(' · ') || '—';
+        const ATTR_NOTE_LABELS = {acidity:'Acidity',sweetness:'Sweetness',bitterness:'Bitterness',aftertaste:'Aftertaste',mouthfeel:'Mouthfeel'};
+        const attrComments = Object.entries(e.notes||{}).filter(([,v]) => v && v.trim());
+        const commentsHtml = attrComments.length
+          ? `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--bg3)">
+              <div style="color:var(--text3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">💬 คอมเมนต์</div>
+              ${attrComments.map(([a,v]) => `<div style="font-size:13px;color:var(--text);margin-bottom:2px"><b style="color:var(--text2)">${ATTR_NOTE_LABELS[a]||a}:</b> ${v}</div>`).join('')}
+            </div>`
+          : '';
         return `<div style="padding:10px 0;border-bottom:1px dashed var(--bg3)">
           <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px">${e.taster}${e.isRefCal?' ★':''}</div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:14px">
@@ -3859,6 +3886,7 @@ function renderParamCard(s, shotEntries) {
             <div><div style="color:var(--text3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px">Weight/Texture</div><div style="color:var(--text);font-weight:600">${texture}</div></div>
             <div><div style="color:var(--text3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px">Aftertaste</div><div style="color:var(--text);font-weight:600">${aftertaste}</div></div>
           </div>
+          ${commentsHtml}
         </div>`;
       }).join('')
     : '<div style="color:var(--text3);font-size:14px">ยังไม่มีใครกรอกผลชิม</div>';
@@ -4046,6 +4074,22 @@ async function renderTeam() {
   const branch = selectedTeamBranch;
   const staff = STAFF_DATA[branch] || [];
 
+  // Look up who Ref 1 / Ref 2 actually are from the shot records themselves
+  // — more reliable than entry.isRefCal, which is set once at submit time
+  // and can go stale if someone switches shots mid-session before saving.
+  const shotRefs = {};
+  try {
+    const keys = await window.storage.list('shot:', true, branch);
+    if (keys && keys.keys) {
+      await Promise.all(keys.keys.map(async k => {
+        try {
+          const r = await window.storage.get(k, true);
+          if (r) { const s = JSON.parse(r.value); shotRefs[s.id] = { branchCal: s.branchCal, companyCal: s.companyCal }; }
+        } catch(e) {}
+      }));
+    }
+  } catch(e) {}
+
   const byShot = {};
   entries.forEach(e => { if(e.shotId){ if(!byShot[e.shotId]) byShot[e.shotId]=[]; byShot[e.shotId].push(e); }});
   const multiShots = Object.fromEntries(Object.entries(byShot).filter(([,a])=>a.length>1));
@@ -4070,12 +4114,21 @@ async function renderTeam() {
     return;
   }
 
+  // Determine Ref status: prefer the shot record's actual branchCal/companyCal
+  // (authoritative, current) — fall back to entry.isRefCal only if we have
+  // no shot record for it (e.g. very old data predating this field).
+  function isRefEntry(e) {
+    const info = shotRefs[e.shotId];
+    if (info) return e.taster === info.branchCal || e.taster === info.companyCal;
+    return !!(e.isRefCal || e.taster === 'Boss');
+  }
+
   // Summary per person
   const personScores = {};
   staff.forEach(name => {
     const myEntries = entries.filter(e => e.taster===name);
     const scores = myEntries.map(myE => {
-      const refs = (byShot[myE.shotId]||[]).filter(e => e.isRefCal || e.taster==='Boss');
+      const refs = (byShot[myE.shotId]||[]).filter(isRefEntry);
       const team = byShot[myE.shotId]||[];
       return calcCalibrationScore(myE, refs, team);
     }).filter(s=>s&&s.total!==null);
@@ -4167,7 +4220,7 @@ async function renderTeam() {
   // Per-shot breakdown
   shotIds.forEach(shotId => {
     const shotEntries = multiShots[shotId];
-    const refEntries = shotEntries.filter(e => e.isRefCal || e.taster === 'Boss');
+    const refEntries = shotEntries.filter(isRefEntry);
     if (!refEntries.length) return;
 
     const refAvgInt = attr => refEntries.reduce((s,e)=>s+(e.intensity?.[attr]||3),0)/refEntries.length;
