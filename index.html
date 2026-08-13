@@ -191,12 +191,12 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
       <div class="lbl">ชื่อผู้ชิม</div>
       <select id="f-taster" onchange="onTasterSelected()"><option value="">— เลือกชื่อ —</option></select>
     </div>
-    <div class="col" style="margin-bottom:10px">
-      <div class="lbl">Other — ต่างสาขา</div>
-      <select id="f-other-taster" onchange="onOtherTasterSelect()">
-        <option value="">— ถ้ามีผู้ชิมต่างสาขาร่วมด้วย —</option>
-      </select>
+    <div id="visitor-taster-box" style="display:none;background:var(--bbg);border:1px solid var(--bborder);border-radius:var(--r2);padding:10px 12px;margin-bottom:10px">
+      <div id="visitor-taster-text" style="font-size:12.5px;color:var(--blue);margin-bottom:8px"></div>
+      <button onclick="confirmVisitorTaster()" style="width:100%;padding:9px;border:none;border-radius:6px;background:var(--blue);color:#fff;font-weight:700;font-size:13px;cursor:pointer">✓ ยืนยัน ชิมที่สาขานี้ในชื่อของฉัน</button>
     </div>
+    <input type="hidden" id="f-other-taster" value="">
+
     <div class="col" style="margin-bottom:10px">
       <div class="lbl">รหัสช็อต</div>
       <div id="active-shot-warning" style="display:none;background:var(--abg);border:1px solid var(--aborder);border-radius:var(--r2);padding:10px 12px;margin-bottom:8px">
@@ -337,7 +337,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     <div class="lbl" style="color:var(--blue);font-weight:600;margin-bottom:8px">Taste Balance — Overall Score</div>
     <div style="display:flex;gap:16px;align-items:flex-start">
       <div style="text-align:center">
-        <input type="number" id="f-tb" min="0" max="6" step="0.5" value="3" style="width:80px;font-size:22px;font-weight:700;text-align:center;border:2px solid var(--bborder);border-radius:var(--r2)">
+        <input type="number" id="f-tb" min="0" max="6" step="0.5" value="" placeholder="0-6" style="width:80px;font-size:22px;font-weight:700;text-align:center;border:2px solid var(--bborder);border-radius:var(--r2)">
         <div style="font-size:10px;color:var(--text3);margin-top:4px">0 – 6</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:2px;flex:1">
@@ -373,7 +373,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     <div class="lbl" style="color:var(--blue);font-weight:600;margin-bottom:8px">Tactile — Overall Score</div>
     <div style="display:flex;gap:16px;align-items:flex-start">
       <div style="text-align:center">
-        <input type="number" id="f-tc" min="0" max="6" step="0.5" value="3" style="width:80px;font-size:22px;font-weight:700;text-align:center;border:2px solid var(--bborder);border-radius:var(--r2)">
+        <input type="number" id="f-tc" min="0" max="6" step="0.5" value="" placeholder="0-6" style="width:80px;font-size:22px;font-weight:700;text-align:center;border:2px solid var(--bborder);border-radius:var(--r2)">
         <div style="font-size:10px;color:var(--text3);margin-top:4px">0 – 6</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:2px;flex:1">
@@ -2340,25 +2340,30 @@ let tags = {acidity:[],sweetness:[],bitterness:[],aftertaste:[],mouthfeel:[]};
 
 function populateOtherTasters() {
   const branch = document.getElementById('f-branch').value;
-  const sel = document.getElementById('f-other-taster');
-  sel.innerHTML = '<option value="">— ถ้ามีผู้ชิมต่างสาขาร่วมด้วย —</option>';
-  // All staff from all branches except current
-  const allStaff = new Set();
-  Object.entries(STAFF_DATA).forEach(([b, list]) => {
-    if (b !== branch && b !== 'Area') list.forEach(n => allStaff.add(n));
-  });
-  [...allStaff].sort().forEach(name => {
-    sel.innerHTML += `<option value="${name}">${name}</option>`;
-  });
+  const box = document.getElementById('visitor-taster-box');
+  const text = document.getElementById('visitor-taster-text');
+  document.getElementById('f-other-taster').value = '';
+  const user = window._currentUser;
+  if (!branch || !user || !box) { if (box) box.style.display = 'none'; return; }
+  // Locals (this branch's own roster, or Area staff who can visit anywhere)
+  // never need this — only show it for a genuine visitor from elsewhere.
+  const isLocal = user.branch === branch || AREA_STAFF.includes(user.name);
+  if (isLocal) {
+    box.style.display = 'none';
+  } else {
+    box.style.display = 'block';
+    text.innerHTML = `👋 คุณ <b>${user.name}</b> ไม่ได้สังกัดสาขานี้ (สาขาของคุณ: ${user.branch}) — ถ้าจะชิมที่สาขานี้ กดยืนยันด้วยชื่อตัวเองด้านล่างได้เลย ไม่ต้องหาในรายชื่อ`;
+  }
 }
 
-function onOtherTasterSelect() {
-  const other = document.getElementById('f-other-taster').value;
-  if (other) {
-    // Override taster field with selected other
-    document.getElementById('f-taster').value = '';
-    showToast(`ผู้ชิมต่างสาขา: ${other}`);
-  }
+function confirmVisitorTaster() {
+  const user = window._currentUser;
+  if (!user) return;
+  document.getElementById('f-taster').value = '';
+  document.getElementById('f-other-taster').value = user.name;
+  document.getElementById('visitor-taster-box').style.display = 'none';
+  showToast(`✓ ชิมในชื่อ ${user.name}`);
+  onTasterSelected();
 }
 
 // Init header
@@ -2382,7 +2387,8 @@ populateBranchDropdowns();
 
 async function onTasterSelected() {
   const branch = document.getElementById('f-branch').value;
-  const taster = document.getElementById('f-taster').value;
+  const otherTaster = document.getElementById('f-other-taster').value;
+  const taster = otherTaster || document.getElementById('f-taster').value;
   if (!branch || !taster) return;
   const result = await loadShotDropdown();
   const shots = (result && result.shots) || [];
@@ -2430,7 +2436,7 @@ function updateStaffList() {
 }
 
 // Tabs
-function showPage(id, btn) {
+function showPage(id, btn, extra) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
   if (btn) {
@@ -2447,7 +2453,7 @@ function showPage(id, btn) {
   }
   if (id === 'branch') loadBranch();
   if (id === 'master') loadMaster();
-  if (id === 'team') loadTeamPage();
+  if (id === 'team') loadTeamPage(extra);
   if (id === 'data') loadDataPage();
   if (id === 'person') loadPersonPage();
 }
@@ -2821,8 +2827,8 @@ function resetTastingFields() {
   // Clears only the sensory-input fields (dots/chips/notes/scores) — NOT
   // branch, taster, or shot metadata, which stay as auto-filled from the shot.
   touchedAttrs.clear();
-  document.getElementById('f-tb').value = 3;
-  document.getElementById('f-tc').value = 3;
+  document.getElementById('f-tb').value = '';
+  document.getElementById('f-tc').value = '';
   document.getElementById('f-flavor').value = '';
   aftertasteLength = 3;
   const aftSlider = document.getElementById('f-aft-length');
@@ -3019,6 +3025,23 @@ async function submitForm() {
   if (!branch || !taster) { showToast('กรุณาเลือกสาขาและชื่อผู้ชิม'); return; }
   if (!shotId) { showToast('กรุณาเลือกหรือสร้างรหัสช็อต'); return; }
 
+  // Taste Balance / Tactile now start blank — force an explicit number so
+  // it's obvious who forgot, instead of silently defaulting to 3.0.
+  const tbRaw = document.getElementById('f-tb').value;
+  const tcRaw = document.getElementById('f-tc').value;
+  if (tbRaw === '' || tcRaw === '') {
+    ['f-tb','f-tc'].forEach((id,i) => {
+      if ((i===0 && tbRaw==='') || (i===1 && tcRaw==='')) {
+        const el = document.getElementById(id);
+        el.style.outline = '2px solid var(--red)';
+        el.style.borderRadius = 'var(--r2)';
+        setTimeout(() => { el.style.outline = ''; }, 2500);
+      }
+    });
+    showToast('⚠️ กรุณากรอก Taste Balance และ Tactile ให้ครบ (0-6)');
+    return;
+  }
+
   const requiredAttrs = ['acidity','sweetness','bitterness','mouthfeel','aftertaste'];
   const missingAttrs = requiredAttrs.filter(a => !(tags[a] && tags[a].length));
   if (missingAttrs.length) {
@@ -3166,9 +3189,11 @@ async function submitForm() {
     await window.storage.set(entry.id, JSON.stringify(entry), true, branch);
     showToast('บันทึกแล้ว ✓');
     // Jump straight to the ทีม page so everyone lands on the shared summary
-    // right after submitting, instead of the old inline per-person card.
+    // right after submitting, instead of the old inline per-person card —
+    // and land on THIS branch's tab specifically (loadTeamPage used to
+    // silently reset admins/Area staff back to the first branch in the list).
     selectedTeamBranch = branch;
-    showPage('team', document.getElementById('tab-team'));
+    showPage('team', document.getElementById('tab-team'), branch);
   } catch(e) { showToast('Error: '+e.message); }
 }
 
@@ -3302,8 +3327,8 @@ function resetForm() {
   document.getElementById('f-time').value = 27;
   document.getElementById('f-temp').value = 93;
   document.getElementById('f-pressure').value = 9;
-  document.getElementById('f-tb').value = 3;
-  document.getElementById('f-tc').value = 3;
+  document.getElementById('f-tb').value = '';
+  document.getElementById('f-tc').value = '';
   document.getElementById('f-flavor').value = '';
   aftertasteLength = 5;
   touchedAttrs.clear();
@@ -4042,14 +4067,15 @@ async function loadDataPage() {
   }
 }
 
-async function loadTeamPage() {
+async function loadTeamPage(preferredBranch) {
   const tabsEl = document.getElementById('team-branch-tabs');
   tabsEl.innerHTML = '';
   if (window._isAdmin()) {
+    const target = preferredBranch && ALL_BRANCHES.includes(preferredBranch) ? preferredBranch : ALL_BRANCHES[0];
     ALL_BRANCHES.forEach((b, i) => {
-      tabsEl.innerHTML += `<button class="btab${i===0?' active':''}" onclick="switchTeamBranch('${b}',this)">${b}</button>`;
+      tabsEl.innerHTML += `<button class="btab${b===target?' active':''}" onclick="switchTeamBranch('${b}',this)">${b}</button>`;
     });
-    selectedTeamBranch = ALL_BRANCHES[0];
+    selectedTeamBranch = target;
   } else {
     const myBranch = window._currentUser && window._currentUser.branch;
     tabsEl.innerHTML = `<button class="btab active" disabled>${myBranch||''}</button>`;
@@ -4342,24 +4368,26 @@ async function renderTeam() {
       </div>`;
     }).join('');
 
-    html += `<div class="card" style="margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+    html += `<div class="card" style="margin-bottom:12px;padding:0;overflow:hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px 6px">
         <div style="font-size:13px;font-weight:600">📌 ${shotId}</div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <button onclick="showParamModal('${shotId}','${branch}')" style="font-size:11px;background:var(--bbg);color:var(--blue);border:1px solid var(--bborder);border-radius:20px;padding:3px 10px;cursor:pointer">📊 Parameter</button>
-          <div style="font-size:11px;color:var(--text3)">${shotEntries.length} คน</div>
+        <div style="font-size:11px;color:var(--text3)">${shotEntries.length} คนชิม</div>
+      </div>
+      <div style="padding:0 14px 12px">
+        <div style="background:var(--bg2);border-radius:var(--r2);padding:8px 10px;margin-bottom:10px;font-size:12px;color:var(--text2);line-height:1.7">
+          <div style="font-weight:700;color:var(--text)">${firstEntry.coffee||'ไม่ระบุชื่อกาแฟ'}${firstEntry.lot?' · Lot '+firstEntry.lot:''}</div>
+          <div>Dose <b>${firstEntry.dose||'—'}g</b> → Yield <b>${firstEntry.yield||'—'}g</b> · Ratio <b>1:${firstEntry.dose?(firstEntry.yield/firstEntry.dose).toFixed(1):'—'}</b> · Time <b>${firstEntry.extractTime||'—'}s</b></div>
+          <div>${firstEntry.waterTemp?'Water Temp <b>'+firstEntry.waterTemp+'°C</b> · ':''}${firstEntry.pressure?'Flow Rate <b>'+firstEntry.pressure+'g/s</b> · ':''}${firstEntry.tds?'TDS <b>'+firstEntry.tds+'%</b> · ':''}${firstEntry.ext?'EXT <b>'+firstEntry.ext+'%</b>':''}</div>
         </div>
       </div>
-      <div style="background:var(--bg2);border-radius:var(--r2);padding:8px 10px;margin-bottom:10px;font-size:12px;color:var(--text2);line-height:1.7">
-        <div style="font-weight:700;color:var(--text)">${firstEntry.coffee||'ไม่ระบุชื่อกาแฟ'}${firstEntry.lot?' · Lot '+firstEntry.lot:''}</div>
-        <div>Dose <b>${firstEntry.dose||'—'}g</b> → Yield <b>${firstEntry.yield||'—'}g</b> · Ratio <b>1:${firstEntry.dose?(firstEntry.yield/firstEntry.dose).toFixed(1):'—'}</b> · Time <b>${firstEntry.extractTime||'—'}s</b></div>
-        <div>${firstEntry.waterTemp?'Water Temp <b>'+firstEntry.waterTemp+'°C</b> · ':''}${firstEntry.pressure?'Flow Rate <b>'+firstEntry.pressure+'g/s</b> · ':''}${firstEntry.tds?'TDS <b>'+firstEntry.tds+'%</b> · ':''}${firstEntry.ext?'EXT <b>'+firstEntry.ext+'%</b>':''}</div>
-      </div>
-      <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">★ Reference Calibrators</div>
-      <div style="display:flex;gap:8px;margin-bottom:4px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch">${refCards}</div>
-      ${consensusHtml}
-      <div style="font-size:11px;font-weight:600;color:var(--text3);margin:10px 0 6px;text-transform:uppercase;letter-spacing:.04em">👥 ทีม (เลื่อนดูได้ →)</div>
-      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch">${tasterCards}</div>
+      <button onclick="showParamModal('${shotId}','${branch}')" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border:none;border-top:2px solid var(--blue);background:var(--bbg);color:var(--blue);font-size:14px;font-weight:700;cursor:pointer">
+        📊 ดู Parameter เต็ม (Flavor / Texture / Aftertaste) →
+      </button>
+      <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;padding:12px 14px 0">★ Reference Calibrators</div>
+      <div style="display:flex;gap:8px;margin-bottom:4px;overflow-x:auto;padding:0 14px 2px;-webkit-overflow-scrolling:touch">${refCards}</div>
+      <div style="padding:0 14px">${consensusHtml}</div>
+      <div style="font-size:11px;font-weight:600;color:var(--text3);margin:10px 0 6px;text-transform:uppercase;letter-spacing:.04em;padding:0 14px">👥 ทีม (เลื่อนดูได้ →)</div>
+      <div style="display:flex;gap:8px;overflow-x:auto;padding:0 14px 12px;-webkit-overflow-scrolling:touch">${tasterCards}</div>
     </div>`;
   });
 
