@@ -534,6 +534,8 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
   </div>
   <div class="section-title">สถานะ Calibration ตามสาขา</div>
   <div class="card"><div style="font-size:12px;color:var(--text2);margin-bottom:8px">ล่าสุดที่แต่ละสาขาบันทึกผลชิม (ไม่ขึ้นกับตัวกรองช่วงวันด้านบน)</div><div id="branch-freshness"></div></div>
+  <div class="section-title">⚠️ TDS ค้างกรอก (วันนี้)</div>
+  <div class="card"><div style="font-size:12px;color:var(--text2);margin-bottom:8px">ช็อตของวันนี้ที่ยังไม่มี TDS — กด "✏️ TDS" ในหน้ากรอกผลของสาขานั้นเพื่อเพิ่ม</div><div id="tds-pending"></div></div>
   <div class="section-title">Inter-rater: ช็อตที่ชิมร่วมกัน</div>
   <div class="card"><div style="font-size:12px;color:var(--text2);margin-bottom:8px">ช็อตที่มีผู้ชิม ≥2 คน — เทียบความสอดคล้อง</div><div id="inter-rater"></div></div>
   <div class="section-title">30 รายการล่าสุด</div>
@@ -555,6 +557,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
       <div style="display:flex;align-items:center;gap:8px"><span class="pill pill-red">ระดับ 1 Beginner</span> ต่างจากกลุ่ม ≥2 รายการ/ครั้ง</div>
     </div>
   </div>
+  <div id="tds-reminder-box"></div>
   <div class="branch-tabs" id="team-branch-tabs"></div>
   <div id="team-content"></div>
 </div>
@@ -3628,6 +3631,36 @@ async function loadMaster() {
   freshHtml += '</tbody></table>';
   document.getElementById('branch-freshness').innerHTML = freshHtml;
 
+  // TDS ค้างกรอก — every today's shot (across visible branches) missing TDS
+  try {
+    const todayYMD = todayD.getFullYear()+'-'+String(todayD.getMonth()+1).padStart(2,'0')+'-'+String(todayD.getDate()).padStart(2,'0');
+    const toYMD = ts => { const d = new Date(ts); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+    const pendingBranchFilter = window._isAdmin() ? null : window._currentUser.branch;
+    const keys = await window.storage.list('shot:', true, pendingBranchFilter);
+    const pending = [];
+    if (keys && keys.keys) {
+      await Promise.all(keys.keys.map(async k => {
+        try {
+          const r = await window.storage.get(k, true);
+          if (r) {
+            const s = JSON.parse(r.value);
+            if (s.created && toYMD(s.created) === todayYMD && !s.tds) pending.push(s);
+          }
+        } catch(e) {}
+      }));
+    }
+    pending.sort((a,b) => (a.branch||'').localeCompare(b.branch||''));
+    const pendingEl = document.getElementById('tds-pending');
+    if (!pending.length) {
+      pendingEl.innerHTML = '<div style="font-size:13px;color:var(--green);font-weight:600">✓ วันนี้ทุกช็อตมี TDS ครบแล้ว</div>';
+    } else {
+      pendingEl.innerHTML = pending.map(s => `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--bg3);font-size:13px">
+        <span><b>${s.branch}</b> · ${s.coffee||'ไม่ระบุชื่อ'}</span>
+        <span style="color:var(--red);font-weight:700">📌 ${s.id}</span>
+      </div>`).join('');
+    }
+  } catch(e) {}
+
   // Date-range filter for the branch summary table
   const range = document.getElementById('master-range').value;
   let filtered = entries;
@@ -4128,8 +4161,10 @@ function renderParamCard(s, shotEntries) {
     : '<div style="color:var(--text3);font-size:14px">ยังไม่มีใครกรอกผลชิม</div>';
 
   const checkedBy = shotEntries.map(e=>e.taster).join(', ') || '—';
+  const noTds = !s.tds;
 
-  return `<div class="card" style="margin-bottom:16px;padding:0;overflow:hidden">
+  return `<div class="card" style="margin-bottom:16px;padding:0;overflow:hidden${noTds?';border:2px solid var(--rborder)':''}">
+    ${noTds ? `<div style="background:var(--rbg);color:var(--red);text-align:center;padding:6px;font-size:12px;font-weight:700">⚠️ ยังไม่มี TDS — กด "✏️ TDS" ในหน้ากรอกผลเพื่อเพิ่ม</div>` : ''}
     <div style="background:var(--bg2);padding:14px 18px;display:flex;justify-content:space-between;align-items:flex-start">
       <div>
         <div style="font-size:11px;letter-spacing:2px;color:var(--text3);font-weight:700">ROOTS</div>
@@ -4182,7 +4217,7 @@ function renderParamCompact(shot, shotEntries) {
   return `<div onclick="showParamModal('${shot.id}','${shot.branch}')" style="flex:1;min-width:0;padding:12px 14px;cursor:pointer">
     <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${shot.coffee||'ไม่ระบุชื่อ'}</div>
     <div style="font-size:11.5px;color:var(--text2);margin-bottom:4px">Dose/Time/Yield: <b style="color:var(--text)">${shot.dose||'—'}/${shot.extractTime||'—'}/${shot.yield||'—'}</b></div>
-    <div style="font-size:11.5px;color:var(--amber);font-weight:700;margin-bottom:8px">TDS ${shot.tds||'—'} · EXT ${shot.ext||'—'}</div>
+    <div style="font-size:11.5px;color:${shot.tds?'var(--amber)':'var(--red)'};font-weight:700;margin-bottom:8px">${shot.tds?`TDS ${shot.tds} · EXT ${shot.ext||'—'}`:'⚠️ ยังไม่มี TDS'}</div>
     <div style="font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.03em">Flavor</div>
     <div style="font-size:11.5px;font-weight:600;color:var(--text);margin-bottom:4px">${topFlavor?topFlavor.name:'—'}</div>
     <div style="font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.03em">Texture / Aftertaste</div>
@@ -4302,11 +4337,64 @@ function switchTeamBranch(branch, btn) {
   renderTeam();
 }
 
+async function updateTdsReminder() {
+  const box = document.getElementById('tds-reminder-box');
+  if (!box) return;
+  const branch = selectedTeamBranch;
+  if (!branch) { box.innerHTML = ''; return; }
+  try {
+    const keys = await window.storage.list('shot:', true, branch);
+    if (!keys || !keys.keys) { box.innerHTML = ''; return; }
+    const todayYMD = new Date().toISOString().slice(0,10);
+    const pending = [];
+    await Promise.all(keys.keys.map(async k => {
+      try {
+        const r = await window.storage.get(k, true);
+        if (r) {
+          const s = JSON.parse(r.value);
+          // Keep nudging for the rest of the day it was opened — no
+          // deadline, just a persistent reminder until someone fills it in.
+          const openedYMD = s.created ? new Date(s.created).toISOString().slice(0,10) : null;
+          if (!s.tds && openedYMD === todayYMD) pending.push(s);
+        }
+      } catch(e) {}
+    }));
+    if (!pending.length) { box.innerHTML = ''; return; }
+    pending.sort((a,b) => a.created - b.created);
+    const rows = pending.map(s => {
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px dashed var(--aborder)">
+        <div style="font-size:13px;font-weight:700;color:var(--amber)">${s.coffee||'ไม่ระบุชื่อ'} <span style="font-weight:400;color:var(--text3)">(${s.id})</span></div>
+        <button onclick="jumpToTdsEdit('${s.id}','${branch}')" style="font-size:11.5px;background:var(--amber);color:#fff;border:none;border-radius:20px;padding:6px 12px;cursor:pointer;font-weight:700;white-space:nowrap">✏️ กรอกเลย</button>
+      </div>`;
+    }).join('');
+    box.innerHTML = `<div class="card" style="background:var(--abg);border:1px solid var(--aborder);margin-bottom:10px">
+      <div style="font-size:12.5px;font-weight:700;color:var(--amber);margin-bottom:6px">⏰ TDS รอกรอก (${pending.length}) — อย่าลืมนะ!</div>
+      ${rows}
+    </div>`;
+  } catch(e) { box.innerHTML = ''; }
+}
+
+async function jumpToTdsEdit(shotId, branch) {
+  showPage('form', document.querySelector('.tab[onclick*="\'form\'"]'));
+  document.getElementById('f-branch').value = branch;
+  updateStaffList();
+  await loadShotDropdown(shotId);
+  await onShotSelect();
+  setTimeout(() => toggleTdsEdit(), 300);
+}
+
+// Keep the countdown feeling live even without a full page re-render
+setInterval(() => {
+  const teamPage = document.getElementById('page-team');
+  if (teamPage && teamPage.classList.contains('active')) updateTdsReminder();
+}, 30000);
+
 async function renderTeam() {
   const el = document.getElementById('team-content');
   el.innerHTML = '<div class="empty">กำลังโหลด...</div>';
   teamEntryCache = {}; // reset each render — keyed by entry.id, used by showPersonEntryModal
   shotContextCache = {};
+  updateTdsReminder();
 
   const entries = (await loadEntries()).filter(e => e.branch === selectedTeamBranch);
   const branch = selectedTeamBranch;
