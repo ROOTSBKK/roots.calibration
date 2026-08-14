@@ -515,7 +515,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
 <!-- ═══ BRANCH ═══ -->
 <div id="page-branch" class="page">
   <div class="card">
-    <div class="card-title">เลือกสาขา</div>
+    <div class="card-title">ภาพรวมสาขา — คะแนนเฉลี่ยรายคน</div>
     <select id="b-select" onchange="renderBranch()"><option value="">— เลือกสาขา —</option></select>
   </div>
   <div id="branch-entries"></div>
@@ -3527,10 +3527,74 @@ async function renderBranch() {
   const el = document.getElementById('branch-entries');
   if (!branch) { el.innerHTML = ''; return; }
   el.innerHTML = '<div class="empty">กำลังโหลด...</div>';
-  const entries = await loadEntries();
-  const filtered = entries.filter(e => e.branch === branch).sort((a,b) => b.id.localeCompare(a.id));
-  if (!filtered.length) { el.innerHTML = '<div class="empty">ยังไม่มีรายการในสาขานี้</div>'; return; }
-  el.innerHTML = filtered.map(renderEntry).join('');
+
+  const entries = (await loadEntries()).filter(e => e.branch === branch);
+  const staff = STAFF_DATA[branch] || [];
+  if (!entries.length) { el.innerHTML = '<div class="empty">ยังไม่มีข้อมูลในสาขานี้</div>'; return; }
+
+  // Same authoritative Ref lookup as the ทีม page — read each shot's real
+  // Ref 1 / Ref 2 instead of trusting the (possibly stale) isRefCal flag.
+  const shotRefs = {};
+  try {
+    const keys = await window.storage.list('shot:', true, branch);
+    if (keys && keys.keys) {
+      await Promise.all(keys.keys.map(async k => {
+        try {
+          const r = await window.storage.get(k, true);
+          if (r) { const s = JSON.parse(r.value); shotRefs[s.id] = { branchCal: s.branchCal, companyCal: s.companyCal }; }
+        } catch(e) {}
+      }));
+    }
+  } catch(e) {}
+  function isRefEntryB(e) {
+    const info = shotRefs[e.shotId];
+    if (info) return e.taster === info.branchCal || e.taster === info.companyCal;
+    return !!(e.isRefCal || e.taster === 'Boss');
+  }
+
+  const byShot = {};
+  entries.forEach(e => { if (e.shotId) { if (!byShot[e.shotId]) byShot[e.shotId] = []; byShot[e.shotId].push(e); } });
+
+  const results = staff.map(name => {
+    const myEntries = entries.filter(e => e.taster === name);
+    const scores = myEntries.map(myE => {
+      const refs = (byShot[myE.shotId]||[]).filter(isRefEntryB);
+      const team = byShot[myE.shotId]||[];
+      return calcCalibrationScore(myE, refs, team);
+    }).filter(s => s && s.total !== null);
+    const avg = scores.length ? Math.round(scores.reduce((s,sc)=>s+sc.total,0)/scores.length) : null;
+    return { name, avg, count: myEntries.length, scored: scores.length };
+  }).sort((a,b) => (b.avg??-1) - (a.avg??-1));
+
+  const maxAvg = Math.max(1, ...results.filter(r=>r.avg!==null).map(r=>r.avg));
+  const CHART_H = 220; // px — max bar height
+
+  const cols = results.map(r => {
+    const isArea = AREA_STAFF.includes(r.name);
+    if (r.avg === null) {
+      return `<div style="display:flex;flex-direction:column;align-items:center;min-width:64px;flex-shrink:0">
+        <div style="font-size:10px;color:var(--text3);font-style:italic;margin-bottom:4px">${r.count?'รอคำนวณ':'ยังไม่ชิม'}</div>
+        <div style="width:34px;height:6px;background:var(--bg3);border-radius:3px;align-self:flex-end"></div>
+        <div style="width:34px;height:${CHART_H-6}px"></div>
+        <div style="font-size:12px;color:var(--text);font-weight:600;margin-top:8px;text-align:center">${isArea?'★ ':''}${r.name}</div>
+      </div>`;
+    }
+    const col = r.avg>=85?'var(--green)':r.avg>=65?'var(--amber)':'var(--red)';
+    const barH = Math.max(6, Math.round(r.avg/maxAvg*CHART_H));
+    return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:64px;flex-shrink:0">
+      <div style="font-size:16px;font-weight:700;color:${col};margin-bottom:4px">${r.avg}</div>
+      <div style="width:34px;height:${barH}px;background:${col};border-radius:6px 6px 0 0;transition:height .4s"></div>
+      <div style="font-size:12px;color:var(--text);font-weight:600;margin-top:8px;text-align:center">${isArea?'★ ':''}${r.name}</div>
+      <div style="font-size:10px;color:var(--text3)">${r.scored} ช็อต</div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div class="card">
+    <div style="font-size:11px;color:var(--text3);margin-bottom:14px">คะแนนเฉลี่ยสะสมทุกช็อตที่แต่ละคนเคยชิม (Reference Alignment + Team Alignment รวมกัน 0-100) — เรียงจากสูงสุดไปต่ำสุด</div>
+    <div style="display:flex;align-items:flex-end;gap:14px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;border-bottom:2px solid var(--bg3)">
+      ${cols}
+    </div>
+  </div>`;
 }
 
 // Master view
