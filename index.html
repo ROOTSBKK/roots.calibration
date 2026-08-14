@@ -2336,6 +2336,68 @@ function calcCalibrationScore(entry, refEntries, teamEntries) {
     refCount: refEntries.length
   };
 }
+
+// Same math as calcCalibrationScore but returns every intermediate step
+// (per-attribute diffs and points) instead of just totals — used by the
+// "ทำไมได้คะแนนนี้" breakdown modal on the ทีม page.
+function calcScoreBreakdown(entry, refEntries, teamEntries) {
+  if (!refEntries || refEntries.length === 0) return null;
+  const externalRefs = refEntries.filter(e => e.id !== entry.id);
+  if (externalRefs.length === 0) return null;
+  refEntries = externalRefs;
+  const SCORE_ATTRS_CAL = ['acidity','sweetness','bitterness','mouthfeel'];
+  const ATTR_TH = {acidity:'Acidity',sweetness:'Sweetness',bitterness:'Bitterness',mouthfeel:'Mouthfeel',aftertaste:'Aftertaste'};
+
+  function refAvgIntensity(attr) {
+    const vals = refEntries.map(e => e.intensity?.[attr] || 3);
+    return vals.reduce((s,v)=>s+v,0) / vals.length;
+  }
+  function refAvgScore(field) {
+    const vals = refEntries.map(e => e[field] || 0);
+    return vals.reduce((s,v)=>s+v,0) / vals.length;
+  }
+  function refAvgLength() {
+    const vals = refEntries.map(e => e.aftertasteLength || 3);
+    return vals.reduce((s,v)=>s+v,0) / vals.length;
+  }
+  function refMajorityTags(attr) {
+    const allTags = refEntries.flatMap(e => e.tags?.[attr] || []);
+    const freq = {};
+    allTags.forEach(t => freq[t] = (freq[t]||0)+1);
+    return Object.keys(freq).filter(t => freq[t] >= Math.ceil(refEntries.length * 0.5));
+  }
+
+  const attrRows = SCORE_ATTRS_CAL.map(a => {
+    const refVal = refAvgIntensity(a);
+    const myVal = entry.intensity?.[a]||3;
+    const diff = Math.abs(myVal - Math.round(refVal));
+    const points = scoreIntensityDiff(myVal, Math.round(refVal)) * 6;
+    return { label: ATTR_TH[a], myVal: INTLABELS[myVal-1], refVal: refVal.toFixed(1), diff, points, max: 6 };
+  });
+
+  const refLengthAvg = refAvgLength();
+  const myLen = entry.aftertasteLength||3;
+  const lenDiff = Math.abs(myLen - Math.round(refLengthAvg));
+  const lenPoints = scoreIntensityDiff(myLen, Math.round(refLengthAvg)) * 6;
+  const lengthRow = { label: 'Aftertaste Length', myVal: AFT_LENGTH_LABELS[myLen-1], refVal: refLengthAvg.toFixed(1), diff: lenDiff, points: lenPoints, max: 6 };
+
+  const descRows = ['acidity','sweetness','bitterness','aftertaste','mouthfeel'].map(a => {
+    const myTags = entry.tags?.[a]||[];
+    const refTags = refMajorityTags(a);
+    const score = scoreDescriptors(myTags, refTags);
+    return { label: ATTR_TH[a], myVal: myTags.join(', ')||'—', refVal: refTags.join(', ')||'—', points: score*4, max: 4 };
+  });
+
+  const refTBavg = refAvgScore('tbScore');
+  const refTCavg = refAvgScore('tcScore');
+  const tbRow = { label: 'Taste Balance', myVal: entry.tbScore.toFixed(1), refVal: refTBavg.toFixed(1), points: scoreOverall(entry.tbScore, refTBavg)*5, max: 5 };
+  const tcRow = { label: 'Tactile', myVal: entry.tcScore.toFixed(1), refVal: refTCavg.toFixed(1), points: scoreOverall(entry.tcScore, refTCavg)*5, max: 5 };
+
+  const allRows = [...attrRows, lengthRow, ...descRows, tbRow, tcRow];
+  const refTotal = Math.min(60, allRows.reduce((s,r)=>s+r.points,0));
+
+  return { rows: allRows, refTotal: Math.round(refTotal), refCount: refEntries.length };
+}
 let tags = {acidity:[],sweetness:[],bitterness:[],aftertaste:[],mouthfeel:[]};
 
 function populateOtherTasters() {
@@ -2494,6 +2556,30 @@ function showPersonEntryModal(entryId) {
         <div style="font-size:22px;font-weight:700">${e.tcScore?.toFixed(1)}</div>
       </div>
     </div>
+    ${(() => {
+      const ctx = shotContextCache[e.shotId];
+      if (!ctx) return '';
+      const bd = calcScoreBreakdown(e, ctx.refEntries, ctx.teamEntries);
+      if (!bd) return `<div style="font-size:11.5px;color:var(--text3);margin-bottom:10px;font-style:italic">ยังคำนวณคะแนนไม่ได้ (ไม่มี Reference อื่นให้เทียบ)</div>`;
+      const rows = bd.rows.map(r => {
+        const pct = r.points/r.max;
+        const col = pct>=0.9?'var(--green)':pct>0?'var(--amber)':'var(--red)';
+        const icon = pct>=0.9?'✓':pct>0?'≈':'✗';
+        return `<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:0.5px solid var(--bg3);font-size:11.5px">
+          <span style="min-width:78px;color:var(--text3)">${r.label}</span>
+          <span style="flex:1;color:var(--text2)">คุณ: <b style="color:var(--text)">${r.myVal}</b> / Ref: <b style="color:var(--text)">${r.refVal}</b></span>
+          <span style="color:${col};font-weight:700;min-width:44px;text-align:right">${r.points.toFixed(1)}/${r.max} ${icon}</span>
+        </div>`;
+      }).join('');
+      return `<div style="margin-bottom:14px;padding:10px 12px;background:var(--bg2);border-radius:var(--r2)">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:6px">🧮 ทำไมถึงได้คะแนนนี้ (เทียบกับ Ref ${bd.refCount} คน)</div>
+        ${rows}
+        <div style="display:flex;justify-content:space-between;padding:8px 0 0;font-size:13px;font-weight:700">
+          <span>รวม Reference Alignment</span>
+          <span>${bd.refTotal} / 60</span>
+        </div>
+      </div>`;
+    })()}
     ${attrRow('Acidity','acidity')}
     ${attrRow('Sweetness','sweetness')}
     ${attrRow('Bitterness','bitterness')}
@@ -3841,6 +3927,7 @@ function renderEntry(e) {
 // ── Team page ──
 let selectedTeamBranch = ALL_BRANCHES[0];
 let teamEntryCache = {};
+let shotContextCache = {}; // shotId -> {refEntries, teamEntries} — used by showScoreBreakdown
 
 function isHouseBlend(name) {
   return /house\s*blend|\bhb\b/i.test(name || '');
@@ -4095,6 +4182,7 @@ async function renderTeam() {
   const el = document.getElementById('team-content');
   el.innerHTML = '<div class="empty">กำลังโหลด...</div>';
   teamEntryCache = {}; // reset each render — keyed by entry.id, used by showPersonEntryModal
+  shotContextCache = {};
 
   const entries = (await loadEntries()).filter(e => e.branch === selectedTeamBranch);
   const branch = selectedTeamBranch;
@@ -4247,6 +4335,7 @@ async function renderTeam() {
   shotIds.forEach(shotId => {
     const shotEntries = multiShots[shotId];
     const refEntries = shotEntries.filter(isRefEntry);
+    shotContextCache[shotId] = { refEntries, teamEntries: shotEntries };
     if (!refEntries.length) return;
 
     const refAvgInt = attr => refEntries.reduce((s,e)=>s+(e.intensity?.[attr]||3),0)/refEntries.length;
