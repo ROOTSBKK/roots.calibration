@@ -1302,7 +1302,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
 
   <div class="section-title">✦ วิธีคิดคะแนน Reference (60pt)</div>
   <div class="card">
-    <div style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:12px">เปรียบ Intensity, Descriptor และ Overall Score ของผู้ชิมกับ Boss (Reference)</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:12px">เปรียบ Intensity, Descriptor และ Overall Score ของผู้ชิมกับ Reference Calibrator (Ref 1 / Ref 2) ของช็อตนั้น</div>
     <table>
       <thead><tr><th>ส่วน</th><th>วิธีคิด</th><th>คะแนน</th></tr></thead>
       <tbody>
@@ -1313,6 +1313,18 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
         <tr><td>Tactile score</td><td>ต่าง&lt;0.5=5, 0.5-0.99=2.5, ≥1=0</td><td>max 5</td></tr>
       </tbody>
     </table>
+  </div>
+
+  <div class="section-title">✦ "เทียบกับใคร" ต่างกันระหว่าง Ref กับทีม</div>
+  <div class="card" style="background:var(--abg);border:1px solid var(--aborder)">
+    <div style="font-size:13px;color:var(--amber);line-height:1.9">
+      <b>คนทั่วไปในทีม</b> — เทียบกับ<b>ค่าเฉลี่ยของ Ref ทั้งหมด</b>ในช็อตนั้น (ถ้ามี Ref 2 คน ก็เฉลี่ยทั้งคู่)<br>
+      <b>คนที่เป็น Ref เอง</b> — เทียบกับ<b>ตัวเอง</b>ไม่ได้ (จะได้คะแนนเต็มทุกครั้งแบบไม่มีความหมาย) ระบบเลย<b>ตัดตัวเองออกจากค่าเฉลี่ยก่อน</b> แล้วเทียบกับ Ref ที่เหลือเท่านั้น<br><br>
+      <b>ผลที่ตามมาที่ควรรู้ไว้:</b><br>
+      • ถ้ามี <b>Ref แค่คนเดียว</b> ในช็อตนั้น (สถานการณ์ปกติของทุกวัน ถ้าไม่มีทีม Area มาเยือน — ไม่ใช่ปัญหาอะไร) → ไม่มีใครเหลือให้เทียบ คะแนนของ <b>Ref คนนั้นเองเท่านั้น</b>จะขึ้น <b>"—"</b> (ไม่ใช่ 100 หรือ 0) <b>ส่วนคนอื่นๆ ในทีมยังได้คะแนนปกติทุกคน</b> เพราะเทียบกับ Ref คนนั้นได้อยู่แล้ว ไม่กระทบอะไรเลย<br>
+      • Ref 2 จะมีก็ต่อเมื่อ<b>ทีม Area ไปเยือนสาขานั้นแล้วติ๊กร่วมเป็น Ref</b> เท่านั้น ไม่ใช่ทุกวัน<br>
+      • ถ้ามี <b>Ref 2 คน</b> → ต่างคนต่างเทียบกับ<b>อีกคนเดียว</b>ตรงๆ ซึ่งเข้มกว่าการเทียบกับค่าเฉลี่ยกลุ่มที่ทีมได้ใช้เยอะ — <b>ถ้า Ref 2 คนให้คะแนนไม่ตรงกันเอง คะแนนของทั้งคู่จะต่ำกว่าทีมได้ ทั้งที่ทั้งคู่อาจจะแม่นจริงก็ได้</b> ไม่ได้แปลว่าใครแย่กว่า แค่ความเห็นไม่ตรงกันเท่านั้น
+    </div>
   </div>
 
   <div class="section-title">✦ Descriptor Tag — คำใกล้เคียงกัน (Synonym)</div>
