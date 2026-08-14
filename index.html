@@ -222,6 +222,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
         <div id="tds-edit-note" style="font-size:11px;color:var(--amber);margin-top:6px"></div>
       </div>
       <div id="shot-badge" class="shot-badge" style="display:none;margin-top:6px"></div>
+      <div id="ref1-info-box" style="display:none;background:var(--gbg);border:1px solid var(--gborder);border-radius:var(--r2);padding:10px 12px;margin-top:8px;font-size:12.5px;color:var(--green);font-weight:600">✓ ทีมตกลงให้คุณเป็น Reference สำหรับช็อตนี้ — ไม่ต้องทำอะไรเพิ่ม ระบบนับให้อัตโนมัติ</div>
       <div id="ref2-claim-box" style="display:none;background:var(--bbg);border:1px solid var(--bborder);border-radius:var(--r2);padding:10px 12px;margin-top:8px">
         <div id="ref2-claim-info" style="font-size:12px;color:var(--blue);margin-bottom:6px"></div>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
@@ -1713,7 +1714,11 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
 
       <div style="background:var(--bbg);border:1px solid var(--bborder);border-radius:var(--r2);padding:10px">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--blue);margin-bottom:6px">Reference Calibrators</div>
-        <div style="font-size:12.5px;color:var(--blue);line-height:1.6"><b>คุณจะเป็น Reference คนที่ 1 โดยอัตโนมัติ</b> (คนเปิดช็อต) — ส่วน Reference คนที่ 2 ให้ทีมตกลงกันแล้วติ๊กเลือกตอนเข้าร่วมชิม (จำกัดแค่ 2 คนต่อช็อต)</div>
+        <div class="lbl" style="margin-top:0">Ref 1 — ทีมตกลงกันว่าใคร</div>
+        <select id="sm-ref1">
+          <option value="">— เลือก Ref 1 —</option>
+        </select>
+        <div style="font-size:11px;color:var(--blue);line-height:1.6;margin-top:6px">ไม่จำเป็นต้องเป็นคุณ (คนเปิดช็อต) — เลือกใครก็ได้ที่ทีมตกลงกันไว้ พอคนนั้นเข้ามากรอกผลแล้วเลือกชื่อตัวเอง ระบบจะขึ้นแจ้งเตือนให้อัตโนมัติว่าเป็น Ref ไม่ต้องกดอะไรเพิ่ม<br>ส่วน Ref 2 (ไม่บังคับ) ให้ทีมตกลงกันแล้วติ๊กเลือกตอนเข้าร่วมชิมแทน (จำกัดแค่ 2 คนต่อช็อต)</div>
       </div>
 
       <div id="shot-a-label" style="display:none;font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.04em;margin-top:4px">ช็อต A</div>
@@ -1954,13 +1959,10 @@ function initApp(user){
     if(br){br.value=user.branch;if(window.updateStaffList)window.updateStaffList();}
     const bsel=document.getElementById('b-select');
     if(!window._isAdmin()){
-      if(br){
-        // Non-admins can only pick their own branch or the TESTING sandbox —
-        // remove every other branch option instead of a hard disable.
-        Array.from(br.options).forEach(opt => {
-          if(opt.value && opt.value!==user.branch && opt.value!=='TESTING') opt.remove();
-        });
-      }
+      // Non-admins default to their own branch, but the dropdown stays
+      // open to every branch — needed so someone visiting another branch
+      // can switch and be recognized via the "ผู้ชิมจากสาขาอื่น" banner.
+      // (b-select, used on other pages, stays locked to their own branch.)
       if(bsel){bsel.value=user.branch;bsel.disabled=true;}
     }
     setTimeout(()=>{
@@ -2595,6 +2597,7 @@ function showPersonEntryModal(entryId) {
       }).join('');
       return `<div style="margin-bottom:14px;padding:10px 12px;background:var(--bg2);border-radius:var(--r2)">
         <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:6px">🧮 ทำไมถึงได้คะแนนนี้ (เทียบกับ Ref ${bd.refCount} คน)</div>
+        ${bd.refCount === 1 && e.isRefCal ? `<div style="font-size:11.5px;color:var(--amber);background:var(--abg);border:1px solid var(--aborder);border-radius:var(--r2);padding:8px 10px;margin-bottom:10px;line-height:1.6">💡 คุณเป็น Ref เลยเทียบกับ<b>อีก Ref คนเดียว</b>ตรงๆ (ไม่ใช่ค่าเฉลี่ยแบบทีม) ถ้าคะแนนต่ำ อาจเป็นเพราะ 2 Ref ให้คะแนนไม่ตรงกันเอง ควรคุยปรับมาตรฐานร่วมกัน</div>` : ''}
         <div style="font-size:12.5px;color:var(--text2);line-height:1.7;margin-bottom:10px;padding-bottom:10px;border-bottom:1px dashed var(--bg3)">${summarizeScoreBreakdown(bd)}</div>
         ${rows}
         <div style="display:flex;justify-content:space-between;padding:8px 0 0;font-size:13px;font-weight:700">
@@ -2672,9 +2675,21 @@ const SHOT_TTL = 60 * 60 * 1000; // 1 hour
 
 async function openShotModal() {
   const branch = document.getElementById('f-branch').value;
-  const taster = document.getElementById('f-taster').value;
+  const otherTaster = document.getElementById('f-other-taster').value;
+  const taster = otherTaster || document.getElementById('f-taster').value;
   if (!branch) { showToast('เลือกสาขาก่อน'); return; }
   if (!taster) { showToast('เลือกชื่อผู้ชิมก่อน'); return; }
+
+  // Ref 1 dropdown — this branch's own roster only (not every branch, like
+  // the old "ผู้ชิมต่างสาขา" dropdown was) so there's much less room to
+  // accidentally pick the wrong person. Area staff included too, marked ★,
+  // since they can also serve as Ref when visiting.
+  const ref1Sel = document.getElementById('sm-ref1');
+  ref1Sel.innerHTML = '<option value="">— เลือก Ref 1 —</option>';
+  (STAFF_DATA[branch] || []).forEach(name => {
+    const isArea = AREA_STAFF.includes(name);
+    ref1Sel.innerHTML += `<option value="${name}"${name===taster?' selected':''}>${isArea?'★ ':''}${name}</option>`;
+  });
 
   // Fields that always start fresh — these change every pull
   document.getElementById('sm-dose').value = 18;
@@ -2821,14 +2836,25 @@ function updateRef2ClaimBox() {
   const box = document.getElementById('ref2-claim-box');
   const info = document.getElementById('ref2-claim-info');
   const cb = document.getElementById('f-claim-ref2');
+  const ref1Box = document.getElementById('ref1-info-box');
   if (!box || !info || !cb) return;
   const otherTaster = document.getElementById('f-other-taster').value;
   const taster = otherTaster || document.getElementById('f-taster').value;
-  if (!currentShotData || !taster) { box.style.display = 'none'; cb.checked = false; return; }
+  if (!currentShotData || !taster) { box.style.display = 'none'; cb.checked = false; if (ref1Box) ref1Box.style.display = 'none'; return; }
   if (taster === currentShotData.branchCal) {
-    // The shot opener is already Ref 1 — nothing to claim.
-    box.style.display = 'none'; cb.checked = false; return;
+    // This person is the team-agreed Ref 1 — just confirm it, nothing to
+    // claim or tick. Ref 2 box stays hidden since Ref 1 doesn't need it.
+    box.style.display = 'none'; cb.checked = false;
+    if (ref1Box) ref1Box.style.display = 'block';
+    return;
   }
+  if (ref1Box) ref1Box.style.display = 'none';
+
+  // Ref 2 is reserved for Area staff visiting a branch (spot-checking /
+  // calibrating against the branch's own Ref 1) — regular branch staff
+  // don't get this option at all, even if Ref 2 is still unclaimed.
+  if (!AREA_STAFF.includes(taster)) { box.style.display = 'none'; cb.checked = false; return; }
+
   box.style.display = 'block';
   if (currentShotData.companyCal) {
     if (currentShotData.companyCal === taster) {
@@ -2839,7 +2865,7 @@ function updateRef2ClaimBox() {
       cb.checked = false; cb.disabled = true;
     }
   } else {
-    info.textContent = `Ref 1: ${currentShotData.branchCal} · ยังไม่มี Ref 2 — ติ๊กถ้าทีมตกลงให้คุณเป็น`;
+    info.textContent = `Ref 1: ${currentShotData.branchCal} · ยังไม่มี Ref 2 — ติ๊กถ้าทีมตกลงให้คุณเป็น (สำหรับทีม Area ที่มาเยือนสาขานี้)`;
     cb.checked = false; cb.disabled = false;
   }
 }
@@ -2859,10 +2885,11 @@ async function createNewShot() {
   // Shared across both shots when opening 2 at once
   const temp     = +document.getElementById('sm-temp').value || 93;
   const pressure = +document.getElementById('sm-pressure').value || 9;
-  // Ref 1 is always whoever opens the shot — no manual selection needed.
-  // Ref 2 starts empty and can be claimed by exactly one other person when
-  // they join (see the "claim Ref 2" banner on the fill-results form).
-  const branchCal = taster;
+  // Ref 1 is whoever the team agreed on (picked from this branch's roster
+  // dropdown) — doesn't have to be the person opening the shot. Ref 2
+  // starts empty and can be claimed by exactly one other person when they
+  // join (see the "claim Ref 2" banner on the fill-results form).
+  const branchCal = document.getElementById('sm-ref1').value || taster;
   const companyCal = null;
 
   let existingShots = [];
@@ -3200,7 +3227,7 @@ async function submitForm() {
   // claimed right here if the checkbox was ticked — re-check against the
   // live shot record first so two people can't both claim it in a race.
   if (currentShotData && currentShotData.id === shotId) {
-    const wantsRef2 = document.getElementById('f-claim-ref2').checked && !document.getElementById('f-claim-ref2').disabled;
+    const wantsRef2 = document.getElementById('f-claim-ref2').checked && !document.getElementById('f-claim-ref2').disabled && AREA_STAFF.includes(taster);
     if (wantsRef2 && taster !== currentShotData.branchCal) {
       try {
         const keys = await window.storage.list('shot:', true, branch);
@@ -3297,6 +3324,16 @@ async function submitForm() {
   try {
     await window.storage.set(entry.id, JSON.stringify(entry), true, branch);
     showToast('บันทึกแล้ว ✓');
+    // Clear sensory inputs + shot selection so the form is ready for the
+    // next shot — but keep branch/taster selected since that's usually
+    // unchanged for the next tasting right after.
+    resetTastingFields();
+    document.getElementById('f-shotid').value = '';
+    document.getElementById('shot-badge').style.display = 'none';
+    document.getElementById('param-fields-section').style.display = 'none';
+    document.getElementById('ref1-info-box').style.display = 'none';
+    document.getElementById('ref2-claim-box').style.display = 'none';
+    currentShotData = null;
     // Jump straight to the ทีม page so everyone lands on the shared summary
     // right after submitting, instead of the old inline per-person card —
     // and land on THIS branch's tab specifically (loadTeamPage used to
@@ -4480,22 +4517,31 @@ async function renderTeam() {
       </div>`;
     }).join('');
 
-    html += `<div class="card" style="margin-bottom:12px;padding:0;overflow:hidden">
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px 6px">
-        <div style="font-size:13px;font-weight:600">📌 ${shotId}</div>
-        <div style="font-size:11px;color:var(--text3)">${shotEntries.length} คนชิม</div>
-      </div>
-      <div style="padding:0 14px 12px">
-        <div style="background:var(--bg2);border-radius:var(--r2);padding:8px 10px;margin-bottom:10px;font-size:12px;color:var(--text2);line-height:1.7">
-          <div style="font-weight:700;color:var(--text)">${firstEntry.coffee||'ไม่ระบุชื่อกาแฟ'}${firstEntry.lot?' · Lot '+firstEntry.lot:''}</div>
-          <div>Dose <b>${firstEntry.dose||'—'}g</b> → Yield <b>${firstEntry.yield||'—'}g</b> · Ratio <b>1:${firstEntry.dose?(firstEntry.yield/firstEntry.dose).toFixed(1):'—'}</b> · Time <b>${firstEntry.extractTime||'—'}s</b></div>
-          <div>${firstEntry.waterTemp?'Water Temp <b>'+firstEntry.waterTemp+'°C</b> · ':''}${firstEntry.pressure?'Flow Rate <b>'+firstEntry.pressure+'g/s</b> · ':''}${firstEntry.tds?'TDS <b>'+firstEntry.tds+'%</b> · ':''}${firstEntry.ext?'EXT <b>'+firstEntry.ext+'%</b>':''}</div>
+    html += `<div class="card" style="margin-bottom:16px;padding:0;overflow:hidden;border:2px solid var(--text)">
+      <div style="background:var(--text);color:var(--bg);padding:14px 16px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div style="font-size:11px;letter-spacing:1.5px;opacity:0.7;text-transform:uppercase">Session · 📌 ${shotId}</div>
+          <div style="font-size:11px;background:rgba(255,255,255,.15);border-radius:20px;padding:2px 10px">${shotEntries.length} คนชิม</div>
         </div>
+        <div style="font-size:20px;font-weight:800">${firstEntry.coffee||'ไม่ระบุชื่อกาแฟ'}</div>
+        <div style="font-size:12px;opacity:0.75">${firstEntry.lot?'Lot '+firstEntry.lot:''}</div>
+      </div>
+      <div style="padding:12px 16px 14px;background:var(--bg2)">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;text-align:center;gap:4px;margin-bottom:8px">
+          <div><div style="font-size:9.5px;color:var(--text3);font-weight:700;text-transform:uppercase">Dose</div><div style="font-size:19px;font-weight:800">${firstEntry.dose||'—'}g</div></div>
+          <div><div style="font-size:9.5px;color:var(--text3);font-weight:700;text-transform:uppercase">Yield</div><div style="font-size:19px;font-weight:800">${firstEntry.yield||'—'}g</div></div>
+          <div><div style="font-size:9.5px;color:var(--text3);font-weight:700;text-transform:uppercase">Ratio</div><div style="font-size:19px;font-weight:800">1:${firstEntry.dose?(firstEntry.yield/firstEntry.dose).toFixed(1):'—'}</div></div>
+        </div>
+        <div style="text-align:center;font-size:12px;color:var(--text2)">
+          Time <b>${firstEntry.extractTime||'—'}s</b> · ${firstEntry.waterTemp?'Temp <b>'+firstEntry.waterTemp+'°C</b> · ':''}${firstEntry.pressure?'Flow <b>'+firstEntry.pressure+'g/s</b>':''}
+        </div>
+        ${(firstEntry.tds || firstEntry.ext) ? `<div style="text-align:center;font-size:13px;color:var(--amber);font-weight:700;margin-top:4px">${firstEntry.tds?'TDS '+firstEntry.tds+'%':''}${firstEntry.tds&&firstEntry.ext?' · ':''}${firstEntry.ext?'EXT '+firstEntry.ext+'%':''}</div>` : ''}
       </div>
       <button onclick="showParamModal('${shotId}','${branch}')" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border:none;border-top:2px solid var(--blue);background:var(--bbg);color:var(--blue);font-size:14px;font-weight:700;cursor:pointer">
         📊 ดู Parameter เต็ม (Flavor / Texture / Aftertaste) →
       </button>
       <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;padding:12px 14px 0">★ Reference Calibrators</div>
+      ${refEntries.length === 2 ? `<div style="margin:0 14px 8px;padding:8px 10px;background:var(--abg);border:1px solid var(--aborder);border-radius:var(--r2);font-size:11.5px;color:var(--amber);line-height:1.6">💡 คะแนนของ Ref ทั้ง 2 คนนี้ <b>เทียบกันเองโดยตรง</b> (ไม่ใช่เทียบกับค่าเฉลี่ยแบบทีมด้านล่าง) — ถ้าคะแนนต่ำกว่าทีม แปลว่า Ref 2 คนให้คะแนนไม่ตรงกันเอง ควรคุยปรับมาตรฐานร่วมกัน ไม่ได้แปลว่าใครแย่กว่า</div>` : ''}
       <div style="display:flex;gap:8px;margin-bottom:4px;overflow-x:auto;padding:0 14px 2px;-webkit-overflow-scrolling:touch">${refCards}</div>
       <div style="padding:0 14px">${consensusHtml}</div>
       <div style="font-size:11px;font-weight:600;color:var(--text3);margin:10px 0 6px;text-transform:uppercase;letter-spacing:.04em;padding:0 14px">👥 ทีม (เลื่อนดูได้ →)</div>
