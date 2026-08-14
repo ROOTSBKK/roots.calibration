@@ -2398,6 +2398,28 @@ function calcScoreBreakdown(entry, refEntries, teamEntries) {
 
   return { rows: allRows, refTotal: Math.round(refTotal), refCount: refEntries.length };
 }
+
+// Turns the row-by-row breakdown into a plain-language explanation —
+// "ได้เต็มเพราะตรง X, Y แต่เสียคะแนนเยอะที่ Z (ให้...ต่างจาก Ref ที่ให้...)"
+function summarizeScoreBreakdown(bd) {
+  if (!bd) return '';
+  const perfect = bd.rows.filter(r => r.points >= r.max - 0.01).map(r => r.label);
+  const zero = bd.rows.filter(r => r.points <= 0.01);
+  const partial = bd.rows.filter(r => r.points > 0.01 && r.points < r.max - 0.01);
+
+  const parts = [];
+  if (perfect.length) {
+    parts.push(`ตรงกับ Reference เป๊ะในหัวข้อ ${perfect.join(', ')} (ได้คะแนนเต็มทุกอัน)`);
+  }
+  if (zero.length) {
+    const detail = zero.map(r => `${r.label} (คุณให้ ${r.myVal} แต่ Ref ให้ ${r.refVal})`).join(', ');
+    parts.push(`เสียคะแนนไปเยอะสุดที่ ${detail} — ต่างกันมากจนไม่ได้คะแนนเลยในหัวข้อนี้`);
+  }
+  if (partial.length && !zero.length) {
+    parts.push(`ส่วน ${partial.map(r=>r.label).join(', ')} ใกล้เคียงแต่ไม่ตรงเป๊ะ เลยได้แค่บางส่วน`);
+  }
+  return parts.length ? parts.join(' ') + '.' : 'ไม่มีข้อมูลเพียงพอสรุปเป็นประโยคได้';
+}
 let tags = {acidity:[],sweetness:[],bitterness:[],aftertaste:[],mouthfeel:[]};
 
 function populateOtherTasters() {
@@ -2573,6 +2595,7 @@ function showPersonEntryModal(entryId) {
       }).join('');
       return `<div style="margin-bottom:14px;padding:10px 12px;background:var(--bg2);border-radius:var(--r2)">
         <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:6px">🧮 ทำไมถึงได้คะแนนนี้ (เทียบกับ Ref ${bd.refCount} คน)</div>
+        <div style="font-size:12.5px;color:var(--text2);line-height:1.7;margin-bottom:10px;padding-bottom:10px;border-bottom:1px dashed var(--bg3)">${summarizeScoreBreakdown(bd)}</div>
         ${rows}
         <div style="display:flex;justify-content:space-between;padding:8px 0 0;font-size:13px;font-weight:700">
           <span>รวม Reference Alignment</span>
