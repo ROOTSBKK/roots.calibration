@@ -1977,11 +1977,17 @@ function initApp(user){
 }
 
 // iOS/Android home-screen ("Add to Home Screen") launches run in standalone
-// mode, where signInWithPopup's session storage isn't reliably shared with
-// the popup window — causes intermittent "missing initial state" errors.
-// Use signInWithRedirect instead when running standalone; popup is fine
-// (and smoother) in a normal browser tab.
+// mode, where signInWithPopup's session storage isn't always shared with
+// the popup window — can cause "missing initial state" errors. Redirect
+// was used as the fix, but iOS standalone specifically has the OPPOSITE
+// problem: iOS partitions storage for home-screen apps so hard that the
+// redirect round-trip to Google and back loses its state entirely, which
+// looks like an infinite login loop. So: iOS standalone → popup (the one
+// that actually works there) · Android standalone → redirect · normal
+// browser tab (either OS) → popup.
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const useRedirect = isStandalone && !isIOS;
 
 window.doLogin = async function(){
   const btn=document.getElementById('google-btn');
@@ -1990,7 +1996,7 @@ window.doLogin = async function(){
   status.textContent='กำลัง login...';
   try{
     const provider=new GoogleAuthProvider();
-    if(isStandalone){
+    if(useRedirect){
       await signInWithRedirect(auth,provider);
       return; // page navigates away — onAuthStateChanged picks up the result after redirect back
     }
