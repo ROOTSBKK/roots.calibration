@@ -2767,13 +2767,27 @@ async function showCompareModal(shotId, branch) {
       scoresByEntry[e.id] = sc && sc.total !== null ? sc.total : null;
     });
 
+    function quickScoreSummary(e) {
+      const refs = refEntriesForScore.filter(r => r.id !== e.id);
+      if (!refs.length) return 'ยังคำนวณคะแนนไม่ได้ (ไม่มี Ref ให้เทียบ)';
+      const bd = calcScoreBreakdown(e, refs, entries);
+      if (!bd) return 'ยังคำนวณคะแนนไม่ได้';
+      const intensity = bd.rows.slice(0,4).reduce((s,r)=>s+r.points,0);
+      const length = bd.rows[4].points;
+      const desc = bd.rows.slice(5,10).reduce((s,r)=>s+r.points,0);
+      const tb = bd.rows[10].points;
+      const tc = bd.rows[11].points;
+      return `Intensity ${intensity.toFixed(1)}/24 · Length ${length.toFixed(1)}/6 · Descriptor ${desc.toFixed(1)}/20 · TB ${tb.toFixed(1)}/5 · TC ${tc.toFixed(1)}/5 = ${bd.refTotal}/60`;
+    }
+
     const headerCells = entries.map(e => {
       const sc = scoresByEntry[e.id];
       const scCol = sc===null?'var(--text3)':sc>=85?'var(--green)':sc>=65?'var(--amber)':'var(--red)';
-      return `<div style="min-width:${COL_W}px;max-width:${COL_W}px;padding:10px 6px;text-align:center;border-left:1px solid var(--bg3);cursor:pointer" onclick="showPersonEntryModal('${e.id}')">
-      <div style="font-size:19px;font-weight:800;color:${scCol};margin-bottom:4px">${sc===null?'—':sc}</div>
-      <div style="width:30px;height:30px;border-radius:50%;background:${isRef(e)?'var(--bbg)':'var(--bg2)'};color:${isRef(e)?'var(--blue)':'var(--text2)'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin:0 auto 4px">${e.taster.slice(0,2).toUpperCase()}</div>
-      <div style="font-size:12px;font-weight:700;color:var(--text)">${isRef(e)?'★ ':''}${e.taster}</div>
+      const summary = sc===null ? '' : quickScoreSummary(e).replace(/'/g,"\\'");
+      return `<div style="min-width:${COL_W}px;max-width:${COL_W}px;padding:10px 6px;text-align:center;border-left:1px solid var(--bg3)">
+      <div ${sc!==null?`onclick="showToast('${summary}')" style="cursor:pointer;`:'style="'}font-size:19px;font-weight:800;color:${scCol};margin-bottom:4px">${sc===null?'—':sc}</div>
+      <div onclick="showPersonEntryModal('${e.id}')" style="cursor:pointer;width:30px;height:30px;border-radius:50%;background:${isRef(e)?'var(--bbg)':'var(--bg2)'};color:${isRef(e)?'var(--blue)':'var(--text2)'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin:0 auto 4px">${e.taster.slice(0,2).toUpperCase()}</div>
+      <div onclick="showPersonEntryModal('${e.id}')" style="cursor:pointer;font-size:12px;font-weight:700;color:var(--text)">${isRef(e)?'★ ':''}${e.taster}</div>
     </div>`;
     }).join('');
 
