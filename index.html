@@ -2729,15 +2729,20 @@ async function showCompareModal(shotId, branch) {
     function renderRowGroup(rows) {
       return rows.map(row => {
         const disagree = row.spread(entries);
+        const vals = entries.map(e => row.get(e) || '—');
+        const agree = !disagree && new Set(vals).size === 1;
+        const rowBg = disagree ? 'var(--rbg)' : agree ? 'var(--gbg)' : 'var(--bg)';
+        const labelCol = disagree ? 'var(--red)' : agree ? 'var(--green)' : 'var(--text3)';
+        const icon = disagree ? '⚠️' : agree ? '✓' : '·';
         const cells = entries.map(e => {
           const val = row.get(e) || '—';
           const sub = row.sub(e);
-          return `<div style="min-width:${COL_W}px;max-width:${COL_W}px;padding:9px 6px;text-align:center;border-left:1px solid var(--bg3);font-size:13px;color:${disagree?'var(--red)':'var(--text)'};font-weight:${disagree?'700':'600'}">
+          return `<div style="min-width:${COL_W}px;max-width:${COL_W}px;padding:9px 6px;text-align:center;border-left:1px solid var(--bg3);font-size:13px;color:${disagree?'var(--red)':agree?'var(--green)':'var(--text)'};font-weight:${disagree||agree?'700':'600'}">
             ${val}${sub?`<div style="font-size:10.5px;color:var(--text3);font-weight:400;margin-top:2px">${sub}</div>`:''}
           </div>`;
         }).join('');
-        return `<div style="display:flex;${disagree?'background:var(--rbg);':''}">
-          <div style="min-width:96px;max-width:96px;flex-shrink:0;padding:9px 8px;font-size:12px;color:${disagree?'var(--red)':'var(--text3)'};font-weight:700;display:flex;align-items:center;gap:4px;background:${disagree?'var(--rbg)':'var(--bg)'}">${disagree?'⚠️':'✓'} ${row.label}</div>
+        return `<div style="display:flex;background:${rowBg}">
+          <div style="min-width:96px;max-width:96px;flex-shrink:0;padding:9px 8px;font-size:12px;color:${labelCol};font-weight:700;display:flex;align-items:center;gap:4px;background:${rowBg}">${icon} ${row.label}</div>
           <div style="display:flex">${cells}</div>
         </div>`;
       }).join('');
@@ -2758,8 +2763,9 @@ async function showCompareModal(shotId, branch) {
     }).join('');
 
     body.innerHTML = `
-      <div style="display:flex;gap:10px;font-size:11px;color:var(--text2);margin-bottom:10px">
-        <span><span style="color:var(--green);font-weight:700">✓</span> ตรงกัน</span>
+      <div style="display:flex;gap:10px;font-size:11px;color:var(--text2);margin-bottom:10px;flex-wrap:wrap">
+        <span><span style="color:var(--green);font-weight:700">✓</span> ทุกคนตรงกันเป๊ะ</span>
+        <span><span style="color:var(--text3);font-weight:700">·</span> ใกล้เคียงกัน</span>
         <span><span style="color:var(--red);font-weight:700">⚠️</span> เห็นต่างชัดเจน</span>
         <span style="color:var(--text3)">· เลื่อนดู/แตะชื่อคนได้</span>
       </div>
