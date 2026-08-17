@@ -2712,8 +2712,32 @@ async function showCompareModal(shotId, branch) {
     // Marks which SPECIFIC entries are outliers for a row — numeric rows
     // compare against the group median; text rows compare against the
     // majority exact value (only when more than half agree on one).
+    const refEntriesForScore = entries.filter(isRef);
+
+    // Marks which SPECIFIC entries are outliers for a row — anchored on
+    // the Reference (same baseline the score above uses, so the red marks
+    // directly explain why a score is low) with self-exclusion just like
+    // scoring does. Falls back to the group's own median/majority only
+    // when there's no Ref at all to compare against.
     function getOutlierFlags(row) {
       const vals = entries.map(row.raw);
+      if (refEntriesForScore.length) {
+        return entries.map((e, i) => {
+          const refsExcludingSelf = refEntriesForScore.filter(r => r.id !== e.id);
+          if (!refsExcludingSelf.length) return false; // sole Ref — nothing to compare against
+          const refVals = refsExcludingSelf.map(row.raw);
+          if (row.numeric) {
+            const refAvg = refVals.reduce((s,v)=>s+v,0) / refVals.length;
+            return Math.abs(vals[i] - refAvg) >= row.threshold;
+          }
+          const freq = {}; refVals.forEach(v => freq[v] = (freq[v]||0)+1);
+          const maxCount = Math.max(...Object.values(freq));
+          const refMajority = Object.keys(freq).find(k => freq[k] === maxCount);
+          return vals[i] !== refMajority;
+        });
+      }
+      // No Ref in this session — fall back to comparing against the
+      // group's own median/majority instead.
       if (row.numeric) {
         const sorted = [...vals].sort((a,b)=>a-b);
         const median = sorted[Math.floor(sorted.length/2)];
@@ -2727,7 +2751,6 @@ async function showCompareModal(shotId, branch) {
       return vals.map(v => hasMajority ? v !== majority : false);
     }
 
-    const refEntriesForScore = entries.filter(isRef);
     const scoresByEntry = {};
     entries.forEach(e => {
       const sc = calcCalibrationScore(e, refEntriesForScore, entries);
@@ -2784,7 +2807,7 @@ async function showCompareModal(shotId, branch) {
       <div style="display:flex;gap:10px;font-size:11px;color:var(--text2);margin-bottom:10px;flex-wrap:wrap">
         <span><span style="color:var(--green);font-weight:700">✓</span> ทุกคนตรงกันเป๊ะ</span>
         <span><span style="color:var(--text3);font-weight:700">·</span> ใกล้เคียงกัน</span>
-        <span><span style="color:var(--red);font-weight:700">⚠️</span> มีคนเห็นต่าง (ช่องสีแดง = คนนั้น)</span>
+        <span><span style="color:var(--red);font-weight:700">⚠️</span> ต่างจาก Ref (ตรงกับที่ทำให้คะแนนตก)</span>
         <span style="color:var(--text3)">· เลื่อนดู/แตะชื่อคนได้</span>
       </div>
       <div style="overflow-x:auto;border:1px solid var(--bg3);border-radius:var(--r2);-webkit-overflow-scrolling:touch">
