@@ -2699,10 +2699,22 @@ async function showCompareModal(shotId, branch) {
       { label: 'TC', get: e => e.tcScore?.toFixed(1), sub: () => '', spread: es => (Math.max(...es.map(e=>e.tcScore||3)) - Math.min(...es.map(e=>e.tcScore||3)) >= 1) },
     ];
 
-    const headerCells = entries.map(e => `<div style="min-width:${COL_W}px;max-width:${COL_W}px;padding:8px 6px;text-align:center;border-left:1px solid var(--bg3);cursor:pointer" onclick="showPersonEntryModal('${e.id}')">
+    const refEntriesForScore = entries.filter(isRef);
+    const scoresByEntry = {};
+    entries.forEach(e => {
+      const sc = calcCalibrationScore(e, refEntriesForScore, entries);
+      scoresByEntry[e.id] = sc && sc.total !== null ? sc.total : null;
+    });
+
+    const headerCells = entries.map(e => {
+      const sc = scoresByEntry[e.id];
+      const scCol = sc===null?'var(--text3)':sc>=85?'var(--green)':sc>=65?'var(--amber)':'var(--red)';
+      return `<div style="min-width:${COL_W}px;max-width:${COL_W}px;padding:8px 6px;text-align:center;border-left:1px solid var(--bg3);cursor:pointer" onclick="showPersonEntryModal('${e.id}')">
+      <div style="font-size:16px;font-weight:800;color:${scCol};margin-bottom:2px">${sc===null?'—':sc}</div>
       <div style="width:26px;height:26px;border-radius:50%;background:${isRef(e)?'var(--bbg)':'var(--bg2)'};color:${isRef(e)?'var(--blue)':'var(--text2)'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;margin:0 auto 4px">${e.taster.slice(0,2).toUpperCase()}</div>
       <div style="font-size:11px;font-weight:700;color:var(--text)">${isRef(e)?'★ ':''}${e.taster}</div>
-    </div>`).join('');
+    </div>`;
+    }).join('');
 
     const bodyRows = rows.map(row => {
       const disagree = row.spread(entries);
@@ -2719,6 +2731,16 @@ async function showCompareModal(shotId, branch) {
       </div>`;
     }).join('');
 
+    const ATTR_NOTE_LABELS = {acidity:'Acidity',sweetness:'Sweetness',bitterness:'Bitterness',aftertaste:'Aftertaste',mouthfeel:'Mouthfeel'};
+    const notesSection = entries.map(e => {
+      const comments = Object.entries(e.notes||{}).filter(([,v]) => v && v.trim());
+      if (!comments.length) return '';
+      return `<div style="margin-bottom:10px;padding:10px 12px;background:var(--bg2);border-radius:var(--r2)">
+        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">${isRef(e)?'★ ':''}${e.taster}</div>
+        ${comments.map(([a,v]) => `<div style="font-size:12px;color:var(--text2);margin-bottom:2px"><b style="color:var(--text3)">${ATTR_NOTE_LABELS[a]||a}:</b> ${v}</div>`).join('')}
+      </div>`;
+    }).join('');
+
     body.innerHTML = `
       <div style="font-size:11.5px;color:var(--text2);margin-bottom:10px;line-height:1.6">เลื่อนดูซ้าย-ขวาเพื่อดูทุกคน · <span style="color:var(--red);font-weight:700">⚠️ แถวสีแดง</span> = มีคนเห็นต่างกันชัดเจน · แตะชื่อคนเพื่อดูรายละเอียดเต็ม</div>
       <div style="overflow-x:auto;border:1px solid var(--bg3);border-radius:var(--r2);-webkit-overflow-scrolling:touch">
@@ -2728,6 +2750,10 @@ async function showCompareModal(shotId, branch) {
         </div>
         ${bodyRows}
       </div>
+      ${notesSection ? `<div style="margin-top:16px">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:8px">💬 โน้ตที่พิมพ์เพิ่มเติม</div>
+        ${notesSection}
+      </div>` : ''}
     `;
   } catch(e) {
     body.innerHTML = '<div class="empty">โหลดข้อมูลไม่สำเร็จ</div>';
