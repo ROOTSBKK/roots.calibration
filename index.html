@@ -2705,8 +2705,8 @@ async function showCompareModal(shotId, branch) {
       { label: 'Flavor', raw: e => Object.values(e.flavorTags||{}).flat().join(','), numeric: false, unscored: true, get: e => Object.values(e.flavorTags||{}).flat().join(', ')||'—', sub: () => '' },
     ];
     const scoreRows = [
-      { label: 'Taste Balance', raw: e => e.tbScore||3, numeric: true, threshold: 1, get: e => e.tbScore?.toFixed(1), sub: () => '' },
-      { label: 'Tactile', raw: e => e.tcScore||3, numeric: true, threshold: 1, get: e => e.tcScore?.toFixed(1), sub: () => '' },
+      { label: 'Taste Balance', raw: e => e.tbScore||3, scoreType: 'overall', get: e => e.tbScore?.toFixed(1), sub: () => '' },
+      { label: 'Tactile', raw: e => e.tcScore||3, scoreType: 'overall', get: e => e.tcScore?.toFixed(1), sub: () => '' },
     ];
 
     // Marks which SPECIFIC entries are outliers for a row — numeric rows
@@ -2719,69 +2719,45 @@ async function showCompareModal(shotId, branch) {
     // directly explain why a score is low) with self-exclusion just like
     // scoring does. Falls back to the group's own median/majority only
     // when there's no Ref at all to compare against.
-    function getOutlierFlags(row) {
-      // Flavor Wheel rows don't affect score at all — never mark them red,
-      // just show the info plainly.
-      if (row.unscored) return entries.map(() => ({ outlier: false, reason: '' }));
+    function getCellQuality(row) {
+      // Flavor Wheel rows don't affect score at all — never color them.
+      if (row.unscored) return entries.map(() => ({ tier: 'none', reason: '' }));
 
-      const vals = entries.map(row.raw);
-      // Descriptor tags carry real score weight (20/60) but aren't captured
-      // by the intensity number alone — check tag overlap too (synonym-aware,
-      // same as the actual scoring formula) so a mismatch like "Balanced" vs
-      // "Vibrant" gets flagged even when the Medium/Medium number matches.
-      function tagMismatch(e, refs) {
-        if (!row.tagAttr) return false;
-        const myTags = e.tags?.[row.tagAttr] || [];
-        const refTags = refs.flatMap(r => r.tags?.[row.tagAttr] || []);
-        if (!refTags.length && !myTags.length) return false;
-        if (!refTags.length || !myTags.length) return true;
-        return !myTags.some(t => refTags.some(rt => isSynonym(t, rt)));
-      }
-      if (refEntriesForScore.length) {
-        return entries.map((e, i) => {
-          const refsExcludingSelf = refEntriesForScore.filter(r => r.id !== e.id);
-          if (!refsExcludingSelf.length) return { outlier: false, reason: '' }; // sole Ref — nothing to compare against
-          const refVals = refsExcludingSelf.map(row.raw);
-          if (row.numeric) {
-            const refAvg = refVals.reduce((s,v)=>s+v,0) / refVals.length;
-            const diff = Math.abs(vals[i] - refAvg);
-            const intOff = diff >= row.threshold;
-            const tagOff = tagMismatch(e, refsExcludingSelf);
-            if (!intOff && !tagOff) return { outlier: false, reason: '' };
-            const parts = [];
-            if (intOff) parts.push(`Intensity ห่างจาก Ref ${diff.toFixed(1)} ระดับ (คุณ ${row.get(e)}, Ref เฉลี่ย ${refAvg.toFixed(1)})`);
-            if (tagOff) {
-              const myTags = (e.tags?.[row.tagAttr]||[]).join(', ')||'ไม่ได้เลือก';
-              const refTagsList = [...new Set(refsExcludingSelf.flatMap(r=>r.tags?.[row.tagAttr]||[]))].join(', ')||'ไม่ได้เลือก';
-              parts.push(`Tag ไม่ตรงกับ Ref (คุณ: ${myTags} / Ref: ${refTagsList})`);
-            }
-            return { outlier: true, reason: parts.join(' · ') };
-          }
-          const freq = {}; refVals.forEach(v => freq[v] = (freq[v]||0)+1);
-          const maxCount = Math.max(...Object.values(freq));
-          const refMajority = Object.keys(freq).find(k => freq[k] === maxCount);
-          const off = vals[i] !== refMajority;
-          return { outlier: off, reason: off ? `ต่างจาก Ref (คุณ: ${row.get(e)}, Ref: ${refMajority||'—'})` : '' };
-        });
-      }
-      // No Ref in this session — fall back to comparing against the
-      // group's own median/majority instead.
-      if (row.numeric) {
-        const sorted = [...vals].sort((a,b)=>a-b);
-        const median = sorted[Math.floor(sorted.length/2)];
-        return vals.map(v => {
-          const off = Math.abs(v - median) >= row.threshold;
-          return { outlier: off, reason: off ? `ห่างจากค่ากลางของกลุ่ม ${Math.abs(v-median).toFixed(1)} ระดับ` : '' };
-        });
-      }
-      const freq = {};
-      vals.forEach(v => freq[v] = (freq[v]||0)+1);
-      const maxCount = Math.max(...Object.values(freq));
-      const majority = Object.keys(freq).find(k => freq[k] === maxCount);
-      const hasMajority = maxCount > vals.length / 2 && vals.length > 1;
-      return vals.map(v => {
-        const off = hasMajority ? v !== majority : false;
-        return { outlier: off, reason: off ? `ส่วนใหญ่เลือก: ${majority}` : '' };
+      return entries.map(e => {
+        let refs = [];
+        if (refEntriesForScore.length) {
+          refs = refEntriesForScore.filter(r => r.id !== e.id);
+          if (!refs.length) return { tier: 'none', reason: '' }; // sole Ref — nothing to compare against
+        } else {
+          refs = entries.filter(x => x.id !== e.id); // no Ref at all — compare against the rest of the group instead
+          if (!refs.length) return { tier: 'none', reason: '' };
+        }
+
+        if (row.scoreType === 'overall') {
+          const refAvg = refs.reduce((s,r)=>s+(row.raw(r)),0) / refs.length;
+          const sc = scoreOverall(row.raw(e), refAvg); // 1 / 0.5 / 0 — same as real scoring
+          const tier = sc===1?'green':sc===0.5?'amber':'red';
+          const reason = sc===1 ? '' : `ต่างจาก Ref ${Math.abs(row.raw(e)-refAvg).toFixed(1)} (คุณ ${row.get(e)}, Ref เฉลี่ย ${refAvg.toFixed(1)})`;
+          return { tier, reason };
+        }
+
+        // scoreType 'intensity': combine the real Intensity score + real
+        // Descriptor (tag) score, same weighting logic as calcCalibrationScore
+        // — this is what makes the color always match the actual points lost.
+        const refAvg = refs.reduce((s,r)=>s+(row.raw(r)),0) / refs.length;
+        const intScore = scoreIntensityDiff(row.raw(e), Math.round(refAvg)); // 1 / 0.5 / 0
+        let combined = intScore;
+        const parts = [];
+        if (intScore < 1) parts.push(`Intensity ${intScore===0.5?'ใกล้เคียงแต่ไม่ตรง':'ต่างมาก'} (คุณ ${row.get(e)}, Ref เฉลี่ย ${refAvg.toFixed(1)})`);
+        if (row.tagAttr) {
+          const myTags = e.tags?.[row.tagAttr] || [];
+          const refTags = [...new Set(refs.flatMap(r => r.tags?.[row.tagAttr] || []))];
+          const tagScore = scoreDescriptors(myTags, refTags); // continuous 0-1, same formula as real scoring
+          combined = (intScore + tagScore) / 2;
+          if (tagScore < 0.9) parts.push(`Tag ตรงกัน ${Math.round(tagScore*100)}% (คุณ: ${myTags.join(', ')||'ไม่ได้เลือก'} / Ref: ${refTags.join(', ')||'ไม่ได้เลือก'})`);
+        }
+        const tier = combined >= 0.9 ? 'green' : combined > 0 ? 'amber' : 'red';
+        return { tier, reason: parts.join(' · ') };
       });
     }
 
@@ -2803,18 +2779,22 @@ async function showCompareModal(shotId, branch) {
 
     function renderRowGroup(rows) {
       return rows.map(row => {
-        const outliers = getOutlierFlags(row);
-        const anyOutlier = outliers.some(o => o.outlier);
-        const allAgree = !anyOutlier && !row.unscored && new Set(entries.map(row.raw)).size === 1;
-        const labelCol = anyOutlier ? 'var(--red)' : allAgree ? 'var(--green)' : 'var(--text3)';
-        const icon = anyOutlier ? '⚠️' : allAgree ? '✓' : '·';
+        const quality = getCellQuality(row);
+        const anyRed = quality.some(q => q.tier === 'red');
+        const anyAmber = quality.some(q => q.tier === 'amber');
+        const allGreen = !row.unscored && quality.length && quality.every(q => q.tier === 'green');
+        const labelCol = anyRed ? 'var(--red)' : anyAmber ? 'var(--amber)' : allGreen ? 'var(--green)' : 'var(--text3)';
+        const icon = anyRed ? '⚠️' : anyAmber ? '△' : allGreen ? '✓' : '·';
+        const TIER_COLOR = { green: 'var(--green)', amber: 'var(--amber)', red: 'var(--red)', none: 'var(--text)' };
+        const TIER_BG = { green: 'transparent', amber: 'var(--abg)', red: 'var(--rbg)', none: 'transparent' };
         const cells = entries.map((e,i) => {
           const val = row.get(e) || '—';
           const sub = row.sub(e);
-          const { outlier: isOutlier, reason } = outliers[i];
-          const tapAttr = isOutlier ? `onclick="showToast('${reason.replace(/'/g,"\\'")}')" style="cursor:pointer;` : `style="`;
-          return `<div ${tapAttr}min-width:${COL_W}px;max-width:${COL_W}px;padding:9px 6px;text-align:center;border-left:1px solid var(--bg3);font-size:13px;color:${isOutlier?'var(--red)':allAgree?'var(--green)':'var(--text)'};font-weight:${isOutlier||allAgree?'700':'600'};background:${isOutlier?'var(--rbg)':'transparent'}">
-            ${val}${isOutlier?' 💬':''}${sub?`<div style="font-size:10.5px;color:var(--text3);font-weight:400;margin-top:2px">${sub}</div>`:''}
+          const { tier, reason } = quality[i];
+          const tappable = reason && (tier==='amber'||tier==='red');
+          const tapAttr = tappable ? `onclick="showToast('${reason.replace(/'/g,"\\'")}')" style="cursor:pointer;` : `style="`;
+          return `<div ${tapAttr}min-width:${COL_W}px;max-width:${COL_W}px;padding:9px 6px;text-align:center;border-left:1px solid var(--bg3);font-size:13px;color:${TIER_COLOR[tier]};font-weight:${tier==='green'||tier==='red'?'700':'600'};background:${TIER_BG[tier]}">
+            ${val}${tappable?' 💬':''}${sub?`<div style="font-size:10.5px;color:var(--text3);font-weight:400;margin-top:2px">${sub}</div>`:''}
           </div>`;
         }).join('');
         return `<div style="display:flex">
@@ -2840,9 +2820,9 @@ async function showCompareModal(shotId, branch) {
 
     body.innerHTML = `
       <div style="display:flex;gap:10px;font-size:11px;color:var(--text2);margin-bottom:10px;flex-wrap:wrap">
-        <span><span style="color:var(--green);font-weight:700">✓</span> ทุกคนตรงกันเป๊ะ</span>
-        <span><span style="color:var(--text3);font-weight:700">·</span> ใกล้เคียงกัน</span>
-        <span><span style="color:var(--red);font-weight:700">⚠️</span> ต่างจาก Ref (ตรงกับที่ทำให้คะแนนตก)</span>
+        <span><span style="color:var(--green);font-weight:700">✓</span> ได้คะแนนเต็ม</span>
+        <span><span style="color:var(--amber);font-weight:700">△</span> ได้คะแนนบางส่วน (แตะดูเหตุผล)</span>
+        <span><span style="color:var(--red);font-weight:700">⚠️</span> ได้ 0 คะแนน (แตะดูเหตุผล)</span>
         <span style="color:var(--text3)">· เลื่อนดู/แตะชื่อคนได้</span>
       </div>
       <div style="overflow-x:auto;border:1px solid var(--bg3);border-radius:var(--r2);-webkit-overflow-scrolling:touch">
