@@ -1760,9 +1760,11 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
           <div class="col"><div class="lbl">Yield (g)</div><input type="number" id="sm2-yield" value="36" step="0.5"></div>
         </div>
         <div class="row">
+          <div class="col"><div class="lbl">Water Temp (°C)</div><input type="number" id="sm2-temp" value="93" step="0.5"></div>
+          <div class="col"><div class="lbl">Water Flow Rate (g/s)</div><input type="number" id="sm2-pressure" value="9" step="0.5"></div>
           <div class="col"><div class="lbl">TDS (%)</div><input type="number" id="sm2-tds" step="0.1" placeholder="เช่น 9.5"></div>
         </div>
-        <div style="font-size:11px;color:var(--text3)">Water Temp / Flow Rate / Ref 1 ใช้ค่าเดียวกับช็อต A ด้านบน</div>
+        <div style="font-size:11px;color:var(--text3)">Ref 1 ใช้ค่าเดียวกับช็อต A ด้านบน (Water Temp/Flow Rate กรอกแยกอิสระได้แล้ว)</div>
       </div>
     </div>
     <button class="btn btn-primary" onclick="createNewShot()" style="margin-top:16px">เปิดช็อต</button>
@@ -2499,10 +2501,13 @@ async function onTasterSelected() {
   if (!branch || !taster) return;
   const result = await loadShotDropdown();
   const shots = (result && result.shots) || [];
-  // Anyone picking their name (i.e. about to taste, not the person who
-  // just clicked "เปิดช็อตใหม่") sees this if there's already something
-  // open — makes joining an explicit tap instead of a passive default.
-  if (shots.length >= 1) {
+  // With exactly 1 active shot, loadShotDropdown() already auto-selected
+  // and filled it in — showing the picker again on top of that was
+  // redundant and confusing (could lead to re-picking into a bad state).
+  // Only show it when there's genuine ambiguity (2+ shots) or nothing
+  // ended up selected at all.
+  const alreadySelected = document.getElementById('f-shotid').value;
+  if (shots.length >= 2 || (shots.length >= 1 && !alreadySelected)) {
     showShotPicker(shots, (result && result.countByShot) || {});
   }
   updateRef2ClaimBox();
@@ -2725,6 +2730,8 @@ async function openShotModal() {
   document.getElementById('sm2-dose').value = 18;
   document.getElementById('sm2-time').value = 27;
   document.getElementById('sm2-yield').value = 36;
+  document.getElementById('sm2-temp').value = 93;
+  document.getElementById('sm2-pressure').value = 9;
   document.getElementById('sm2-tds').value = '';
 
   // Defaults while we look up the last shot (below) — House Blend is the
@@ -2963,16 +2970,18 @@ async function createNewShot() {
     return occurrences === 0 ? base : base + (occurrences + 1);
   }
 
-  async function buildAndSaveShot(coffee, lot, dose, extractT, yieldW, tds, idPart) {
+  async function buildAndSaveShot(coffee, lot, dose, extractT, yieldW, tds, idPart, tempOverride, pressureOverride) {
     const id = branchCode + '-' + dateStr + '-' + idPart;
     const storageKey = 'shot:' + id + ':' + Date.now();
+    const shotTemp = tempOverride !== undefined ? tempOverride : temp;
+    const shotPressure = pressureOverride !== undefined ? pressureOverride : pressure;
     const ext = (tds && dose) ? +(tds * yieldW / dose).toFixed(1) : 0;
     const shotData = {
       id, branch,
       label: `${id}${coffee?' · '+coffee:''} · ${timeStr} (${taster})`,
       createdBy: taster, time: timeStr, created: Date.now(),
       coffee, lot, dose, extractTime: extractT,
-      yield: yieldW, waterTemp: temp, pressure, tds, ext,
+      yield: yieldW, waterTemp: shotTemp, pressure: shotPressure, tds, ext,
       companyCal: companyCal || null,
       branchCal: branchCal || null
     };
@@ -3027,7 +3036,9 @@ function resetTastingFields() {
       const timeB   = +document.getElementById('sm2-time').value || 27;
       const yieldB  = +document.getElementById('sm2-yield').value || 36;
       const tdsB    = +document.getElementById('sm2-tds').value || 0;
-      const shotB = await buildAndSaveShot(coffeeB, lotB, doseB, timeB, yieldB, tdsB, nextCoffeeIdPart(coffeeB));
+      const tempB   = +document.getElementById('sm2-temp').value || 93;
+      const pressureB = +document.getElementById('sm2-pressure').value || 9;
+      const shotB = await buildAndSaveShot(coffeeB, lotB, doseB, timeB, yieldB, tdsB, nextCoffeeIdPart(coffeeB), tempB, pressureB);
       toastMsg = `✓ เปิด 2 ช็อต — ${shotA.id} (${coffeeA||'ไม่มีชื่อ'}) และ ${shotB.id} (${coffeeB||'ไม่มีชื่อ'})`;
     }
 
@@ -3274,7 +3285,24 @@ async function submitForm() {
   // claimed Ref 2 above.
   const isRefCal = !!(currentShotData && currentShotData.id === shotId &&
     (taster === currentShotData.branchCal || taster === currentShotData.companyCal));
-  const coffee = document.getElementById('f-coffee').value.trim();
+
+  // Safety net: re-fetch the shot record fresh (don't trust the in-memory
+  // currentShotData or the on-screen fields alone) — if the coffee name on
+  // screen is empty, that's never correct (every shot has one), so fall
+  // back to whatever the shot record actually says.
+  let freshShotForSubmit = null;
+  try {
+    const shotKeys = await window.storage.list('shot:', true, branch);
+    if (shotKeys && shotKeys.keys) {
+      for (const k of shotKeys.keys) {
+        const r = await window.storage.get(k, true);
+        if (r) { const s = JSON.parse(r.value); if (s.id === shotId) { freshShotForSubmit = s; break; } }
+      }
+    }
+  } catch(e) {}
+
+  let coffee = document.getElementById('f-coffee').value.trim();
+  if (!coffee && freshShotForSubmit && freshShotForSubmit.coffee) coffee = freshShotForSubmit.coffee;
   const lot = document.getElementById('f-lot').value.trim();
   const dose = +document.getElementById('f-dose').value || 1;
   const yieldW = +document.getElementById('f-yield').value || 0;
@@ -4426,13 +4454,14 @@ async function renderTeam() {
   // — more reliable than entry.isRefCal, which is set once at submit time
   // and can go stale if someone switches shots mid-session before saving.
   const shotRefs = {};
+  const shotFullData = {}; // shotId -> full shot record, for the session header
   try {
     const keys = await window.storage.list('shot:', true, branch);
     if (keys && keys.keys) {
       await Promise.all(keys.keys.map(async k => {
         try {
           const r = await window.storage.get(k, true);
-          if (r) { const s = JSON.parse(r.value); shotRefs[s.id] = { branchCal: s.branchCal, companyCal: s.companyCal }; }
+          if (r) { const s = JSON.parse(r.value); shotRefs[s.id] = { branchCal: s.branchCal, companyCal: s.companyCal }; shotFullData[s.id] = s; }
         } catch(e) {}
       }));
     }
@@ -4587,7 +4616,8 @@ async function renderTeam() {
       return Object.keys(freq).filter(t=>freq[t]>=Math.ceil(refEntries.length*0.5));
     };
 
-    const firstEntry = shotEntries[0];
+    const shotRecord = shotFullData[shotId] || {};
+    const firstEntry = { ...shotEntries[0], ...shotRecord }; // shot record wins for parameter fields — always accurate even if an entry saved bad/blank data
 
     // Round to nearest 0.5
     function round5(v) { return Math.round(v * 2) / 2; }
