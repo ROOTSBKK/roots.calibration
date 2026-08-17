@@ -573,6 +573,17 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
   </div>
 </div>
 
+<!-- Quick score-breakdown popup — overlays on top of the compare table without navigating away from it -->
+<div id="quick-score-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeQuickScore()">
+  <div style="background:var(--bg);border-radius:12px;max-width:340px;width:100%;padding:16px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div id="quick-score-title" style="font-size:14px;font-weight:700"></div>
+      <button onclick="closeQuickScore()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text3)">✕</button>
+    </div>
+    <div id="quick-score-body" style="font-size:13px;color:var(--text);line-height:2"></div>
+  </div>
+</div>
+
 <!-- ═══ DATA ═══ -->
 <div id="page-data" class="page">
   <div class="card">
@@ -2767,25 +2778,35 @@ async function showCompareModal(shotId, branch) {
       scoresByEntry[e.id] = sc && sc.total !== null ? sc.total : null;
     });
 
-    function quickScoreSummary(e) {
+    window._quickScoreCache = window._quickScoreCache || {};
+    function quickScoreRows(e) {
       const refs = refEntriesForScore.filter(r => r.id !== e.id);
-      if (!refs.length) return 'ยังคำนวณคะแนนไม่ได้ (ไม่มี Ref ให้เทียบ)';
+      if (!refs.length) return null;
       const bd = calcScoreBreakdown(e, refs, entries);
-      if (!bd) return 'ยังคำนวณคะแนนไม่ได้';
+      if (!bd) return null;
       const intensity = bd.rows.slice(0,4).reduce((s,r)=>s+r.points,0);
       const length = bd.rows[4].points;
       const desc = bd.rows.slice(5,10).reduce((s,r)=>s+r.points,0);
       const tb = bd.rows[10].points;
       const tc = bd.rows[11].points;
-      return `Intensity ${intensity.toFixed(1)}/24 · Length ${length.toFixed(1)}/6 · Descriptor ${desc.toFixed(1)}/20 · TB ${tb.toFixed(1)}/5 · TC ${tc.toFixed(1)}/5 = ${bd.refTotal}/60`;
+      return {
+        cats: [
+          { label: 'Intensity (4 หัวข้อ)', pts: intensity, max: 24 },
+          { label: 'Aftertaste Length', pts: length, max: 6 },
+          { label: 'Descriptor Tags (5 หัวข้อ)', pts: desc, max: 20 },
+          { label: 'Taste Balance', pts: tb, max: 5 },
+          { label: 'Tactile', pts: tc, max: 5 },
+        ],
+        total: bd.refTotal
+      };
     }
 
     const headerCells = entries.map(e => {
       const sc = scoresByEntry[e.id];
       const scCol = sc===null?'var(--text3)':sc>=85?'var(--green)':sc>=65?'var(--amber)':'var(--red)';
-      const summary = sc===null ? '' : quickScoreSummary(e).replace(/'/g,"\\'");
+      if (sc !== null) window._quickScoreCache[e.id] = { name: e.taster, data: quickScoreRows(e) };
       return `<div style="min-width:${COL_W}px;max-width:${COL_W}px;padding:10px 6px;text-align:center;border-left:1px solid var(--bg3)">
-      <div ${sc!==null?`onclick="showToast('${summary}')" style="cursor:pointer;`:'style="'}font-size:19px;font-weight:800;color:${scCol};margin-bottom:4px">${sc===null?'—':sc}</div>
+      <div ${sc!==null?`onclick="showQuickScore('${e.id}')" style="cursor:pointer;`:'style="'}font-size:19px;font-weight:800;color:${scCol};margin-bottom:4px">${sc===null?'—':sc}</div>
       <div onclick="showPersonEntryModal('${e.id}')" style="cursor:pointer;width:30px;height:30px;border-radius:50%;background:${isRef(e)?'var(--bbg)':'var(--bg2)'};color:${isRef(e)?'var(--blue)':'var(--text2)'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin:0 auto 4px">${e.taster.slice(0,2).toUpperCase()}</div>
       <div onclick="showPersonEntryModal('${e.id}')" style="cursor:pointer;font-size:12px;font-weight:700;color:var(--text)">${isRef(e)?'★ ':''}${e.taster}</div>
     </div>`;
@@ -2889,6 +2910,36 @@ async function showParamModal(shotId, branch) {
 }
 function closeParamModal() {
   document.getElementById('param-modal').style.display = 'none';
+}
+
+function showQuickScore(entryId) {
+  const cached = (window._quickScoreCache || {})[entryId];
+  const modal = document.getElementById('quick-score-modal');
+  const titleEl = document.getElementById('quick-score-title');
+  const body = document.getElementById('quick-score-body');
+  if (!cached || !cached.data) {
+    titleEl.textContent = 'คะแนน';
+    body.innerHTML = '<div style="color:var(--text3);font-size:13px">ยังคำนวณคะแนนไม่ได้</div>';
+  } else {
+    titleEl.textContent = `${cached.name} — ${cached.data.total}/60`;
+    body.innerHTML = cached.data.cats.map(c => {
+      const pct = Math.round(c.pts / c.max * 100);
+      const col = pct>=90?'var(--green)':pct>0?'var(--amber)':'var(--red)';
+      return `<div style="margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+          <span style="color:var(--text2)">${c.label}</span>
+          <span style="font-weight:700;color:${col}">${c.pts.toFixed(1)}/${c.max}</span>
+        </div>
+        <div style="height:8px;background:var(--bg3);border-radius:4px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:${col}"></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  modal.style.display = 'flex';
+}
+function closeQuickScore() {
+  document.getElementById('quick-score-modal').style.display = 'none';
 }
 
 // Ratio / Shot ID
