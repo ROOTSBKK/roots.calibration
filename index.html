@@ -2664,7 +2664,7 @@ async function showCompareModal(shotId, branch) {
   const modal = document.getElementById('param-modal');
   const body = document.getElementById('param-modal-body');
   const titleEl = document.getElementById('param-modal-title');
-  if (titleEl) titleEl.textContent = '👥 เทียบทุกคน — Session นี้';
+  if (titleEl) titleEl.innerHTML = `👥 เทียบทุกคน — Session นี้ <button onclick="showCompareModal('${shotId}','${branch}')" style="float:right;font-size:12px;background:var(--bbg);color:var(--blue);border:1px solid var(--bborder);border-radius:20px;padding:3px 10px;cursor:pointer;font-weight:700">🔄 รีเฟรช</button>`;
   body.innerHTML = '<div class="empty">กำลังโหลด...</div>';
   modal.style.display = 'flex';
   try {
@@ -2683,20 +2683,24 @@ async function showCompareModal(shotId, branch) {
     const isRef = e => shotInfo && (e.taster === shotInfo.branchCal || e.taster === shotInfo.companyCal);
     entries.sort((a,b) => (isRef(b)?1:0) - (isRef(a)?1:0));
 
-    const COL_W = 108;
+    const COL_W = 132;
     const intLabel = v => INTLABELS[(v||3)-1];
 
     // Each row: label + a function that reads a comparable value/text per entry
-    const rows = [
-      { label: 'Acidity', get: e => intLabel(e.intensity?.acidity), sub: e => (e.tags?.acidity||[]).join(', '), spread: es => new Set(es.map(e=>e.intensity?.acidity||3)).size > 1 && (Math.max(...es.map(e=>e.intensity?.acidity||3)) - Math.min(...es.map(e=>e.intensity?.acidity||3)) >= 2) },
+    const tasteRows = [
+      { label: 'Acidity', get: e => intLabel(e.intensity?.acidity), sub: e => (e.tags?.acidity||[]).join(', '), spread: es => (Math.max(...es.map(e=>e.intensity?.acidity||3)) - Math.min(...es.map(e=>e.intensity?.acidity||3)) >= 2) },
       { label: 'Sweetness', get: e => intLabel(e.intensity?.sweetness), sub: e => (e.tags?.sweetness||[]).join(', '), spread: es => (Math.max(...es.map(e=>e.intensity?.sweetness||3)) - Math.min(...es.map(e=>e.intensity?.sweetness||3)) >= 2) },
       { label: 'Bitterness', get: e => intLabel(e.intensity?.bitterness), sub: e => (e.tags?.bitterness||[]).join(', '), spread: es => (Math.max(...es.map(e=>e.intensity?.bitterness||3)) - Math.min(...es.map(e=>e.intensity?.bitterness||3)) >= 2) },
       { label: 'Mouthfeel', get: e => intLabel(e.intensity?.mouthfeel), sub: e => (e.tags?.mouthfeel||[]).join(', '), spread: es => (Math.max(...es.map(e=>e.intensity?.mouthfeel||3)) - Math.min(...es.map(e=>e.intensity?.mouthfeel||3)) >= 2) },
       { label: 'Aftertaste', get: e => AFT_LENGTH_LABELS[(e.aftertasteLength||3)-1], sub: e => (e.tags?.aftertaste||[]).join(', '), spread: es => (Math.max(...es.map(e=>e.aftertasteLength||3)) - Math.min(...es.map(e=>e.aftertasteLength||3)) >= 2) },
+    ];
+    const flavorRows = [
       { label: 'Aft. Flavor', get: e => (e.aftertasteFlavor||[]).join(', ')||'—', sub: () => '', spread: es => { const vals = es.map(e=>(e.aftertasteFlavor||[]).join(',')); return new Set(vals).size === vals.length && vals.length > 1; } },
       { label: 'Flavor', get: e => Object.values(e.flavorTags||{}).flat().join(', ')||'—', sub: () => '', spread: () => false },
-      { label: 'TB', get: e => e.tbScore?.toFixed(1), sub: () => '', spread: es => (Math.max(...es.map(e=>e.tbScore||3)) - Math.min(...es.map(e=>e.tbScore||3)) >= 1) },
-      { label: 'TC', get: e => e.tcScore?.toFixed(1), sub: () => '', spread: es => (Math.max(...es.map(e=>e.tcScore||3)) - Math.min(...es.map(e=>e.tcScore||3)) >= 1) },
+    ];
+    const scoreRows = [
+      { label: 'Taste Balance', get: e => e.tbScore?.toFixed(1), sub: () => '', spread: es => (Math.max(...es.map(e=>e.tbScore||3)) - Math.min(...es.map(e=>e.tbScore||3)) >= 1) },
+      { label: 'Tactile', get: e => e.tcScore?.toFixed(1), sub: () => '', spread: es => (Math.max(...es.map(e=>e.tcScore||3)) - Math.min(...es.map(e=>e.tcScore||3)) >= 1) },
     ];
 
     const refEntriesForScore = entries.filter(isRef);
@@ -2709,27 +2713,33 @@ async function showCompareModal(shotId, branch) {
     const headerCells = entries.map(e => {
       const sc = scoresByEntry[e.id];
       const scCol = sc===null?'var(--text3)':sc>=85?'var(--green)':sc>=65?'var(--amber)':'var(--red)';
-      return `<div style="min-width:${COL_W}px;max-width:${COL_W}px;padding:8px 6px;text-align:center;border-left:1px solid var(--bg3);cursor:pointer" onclick="showPersonEntryModal('${e.id}')">
-      <div style="font-size:16px;font-weight:800;color:${scCol};margin-bottom:2px">${sc===null?'—':sc}</div>
-      <div style="width:26px;height:26px;border-radius:50%;background:${isRef(e)?'var(--bbg)':'var(--bg2)'};color:${isRef(e)?'var(--blue)':'var(--text2)'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;margin:0 auto 4px">${e.taster.slice(0,2).toUpperCase()}</div>
-      <div style="font-size:11px;font-weight:700;color:var(--text)">${isRef(e)?'★ ':''}${e.taster}</div>
+      return `<div style="min-width:${COL_W}px;max-width:${COL_W}px;padding:10px 6px;text-align:center;border-left:1px solid var(--bg3);cursor:pointer" onclick="showPersonEntryModal('${e.id}')">
+      <div style="font-size:19px;font-weight:800;color:${scCol};margin-bottom:4px">${sc===null?'—':sc}</div>
+      <div style="width:30px;height:30px;border-radius:50%;background:${isRef(e)?'var(--bbg)':'var(--bg2)'};color:${isRef(e)?'var(--blue)':'var(--text2)'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin:0 auto 4px">${e.taster.slice(0,2).toUpperCase()}</div>
+      <div style="font-size:12px;font-weight:700;color:var(--text)">${isRef(e)?'★ ':''}${e.taster}</div>
     </div>`;
     }).join('');
 
-    const bodyRows = rows.map(row => {
-      const disagree = row.spread(entries);
-      const cells = entries.map(e => {
-        const val = row.get(e) || '—';
-        const sub = row.sub(e);
-        return `<div style="min-width:${COL_W}px;max-width:${COL_W}px;padding:7px 6px;text-align:center;border-left:1px solid var(--bg3);font-size:11.5px;color:${disagree?'var(--red)':'var(--text)'};font-weight:${disagree?'700':'600'}">
-          ${val}${sub?`<div style="font-size:9.5px;color:var(--text3);font-weight:400;margin-top:1px">${sub}</div>`:''}
+    function renderRowGroup(rows) {
+      return rows.map(row => {
+        const disagree = row.spread(entries);
+        const cells = entries.map(e => {
+          const val = row.get(e) || '—';
+          const sub = row.sub(e);
+          return `<div style="min-width:${COL_W}px;max-width:${COL_W}px;padding:9px 6px;text-align:center;border-left:1px solid var(--bg3);font-size:13px;color:${disagree?'var(--red)':'var(--text)'};font-weight:${disagree?'700':'600'}">
+            ${val}${sub?`<div style="font-size:10.5px;color:var(--text3);font-weight:400;margin-top:2px">${sub}</div>`:''}
+          </div>`;
+        }).join('');
+        return `<div style="display:flex;${disagree?'background:var(--rbg);':''}">
+          <div style="min-width:96px;max-width:96px;flex-shrink:0;padding:9px 8px;font-size:12px;color:${disagree?'var(--red)':'var(--text3)'};font-weight:700;display:flex;align-items:center;gap:4px;position:sticky;left:0;background:${disagree?'var(--rbg)':'var(--bg)'};z-index:1">${disagree?'⚠️':'✓'} ${row.label}</div>
+          <div style="display:flex">${cells}</div>
         </div>`;
       }).join('');
-      return `<div style="display:flex;${disagree?'background:var(--rbg);':''}">
-        <div style="min-width:82px;max-width:82px;flex-shrink:0;padding:7px 8px;font-size:11px;color:var(--text3);font-weight:700;display:flex;align-items:center;position:sticky;left:0;background:${disagree?'var(--rbg)':'var(--bg)'};z-index:1">${disagree?'⚠️ ':''}${row.label}</div>
-        <div style="display:flex">${cells}</div>
-      </div>`;
-    }).join('');
+    }
+    const sectionHeader = (label) => `<div style="display:flex;background:var(--bg2);border-top:1px solid var(--bg3)">
+      <div style="min-width:96px;max-width:96px;flex-shrink:0;padding:5px 8px;font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.03em;position:sticky;left:0;background:var(--bg2);z-index:1">${label}</div>
+      <div style="flex:1"></div>
+    </div>`;
 
     const ATTR_NOTE_LABELS = {acidity:'Acidity',sweetness:'Sweetness',bitterness:'Bitterness',aftertaste:'Aftertaste',mouthfeel:'Mouthfeel'};
     const notesSection = entries.map(e => {
@@ -2742,13 +2752,22 @@ async function showCompareModal(shotId, branch) {
     }).join('');
 
     body.innerHTML = `
-      <div style="font-size:11.5px;color:var(--text2);margin-bottom:10px;line-height:1.6">เลื่อนดูซ้าย-ขวาเพื่อดูทุกคน · <span style="color:var(--red);font-weight:700">⚠️ แถวสีแดง</span> = มีคนเห็นต่างกันชัดเจน · แตะชื่อคนเพื่อดูรายละเอียดเต็ม</div>
+      <div style="display:flex;gap:10px;font-size:11px;color:var(--text2);margin-bottom:10px">
+        <span><span style="color:var(--green);font-weight:700">✓</span> ตรงกัน</span>
+        <span><span style="color:var(--red);font-weight:700">⚠️</span> เห็นต่างชัดเจน</span>
+        <span style="color:var(--text3)">· เลื่อนดู/แตะชื่อคนได้</span>
+      </div>
       <div style="overflow-x:auto;border:1px solid var(--bg3);border-radius:var(--r2);-webkit-overflow-scrolling:touch">
         <div style="display:flex;border-bottom:2px solid var(--bg3);background:var(--bg2)">
-          <div style="min-width:82px;max-width:82px;flex-shrink:0;position:sticky;left:0;background:var(--bg2);z-index:1"></div>
+          <div style="min-width:96px;max-width:96px;flex-shrink:0;position:sticky;left:0;background:var(--bg2);z-index:1"></div>
           <div style="display:flex">${headerCells}</div>
         </div>
-        ${bodyRows}
+        ${sectionHeader('รสชาติ')}
+        ${renderRowGroup(tasteRows)}
+        ${sectionHeader('Flavor Wheel')}
+        ${renderRowGroup(flavorRows)}
+        ${sectionHeader('คะแนนรวม')}
+        ${renderRowGroup(scoreRows)}
       </div>
       ${notesSection ? `<div style="margin-top:16px">
         <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:8px">💬 โน้ตที่พิมพ์เพิ่มเติม</div>
@@ -3489,6 +3508,7 @@ async function submitForm() {
     // silently reset admins/Area staff back to the first branch in the list).
     selectedTeamBranch = branch;
     showPage('team', document.getElementById('tab-team'), branch);
+    setTimeout(() => showCompareModal(shotId, branch), 400);
   } catch(e) { showToast('Error: '+e.message); }
 }
 
