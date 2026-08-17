@@ -2660,6 +2660,80 @@ function showPersonEntryModal(entryId) {
   modal.style.display = 'flex';
 }
 
+async function showCompareModal(shotId, branch) {
+  const modal = document.getElementById('param-modal');
+  const body = document.getElementById('param-modal-body');
+  const titleEl = document.getElementById('param-modal-title');
+  if (titleEl) titleEl.textContent = '👥 เทียบทุกคน — Session นี้';
+  body.innerHTML = '<div class="empty">กำลังโหลด...</div>';
+  modal.style.display = 'flex';
+  try {
+    const entries = (await loadEntries()).filter(e => e.shotId === shotId);
+    if (!entries.length) { body.innerHTML = '<div class="empty">ยังไม่มีใครกรอกผลชิม</div>'; return; }
+
+    // Sort: Ref (via shot record) first, then everyone else
+    const keys = await window.storage.list('shot:', true, branch);
+    let shotInfo = null;
+    if (keys && keys.keys) {
+      for (const k of keys.keys) {
+        const r = await window.storage.get(k, true);
+        if (r) { const s = JSON.parse(r.value); if (s.id === shotId) { shotInfo = s; break; } }
+      }
+    }
+    const isRef = e => shotInfo && (e.taster === shotInfo.branchCal || e.taster === shotInfo.companyCal);
+    entries.sort((a,b) => (isRef(b)?1:0) - (isRef(a)?1:0));
+
+    const COL_W = 108;
+    const intLabel = v => INTLABELS[(v||3)-1];
+
+    // Each row: label + a function that reads a comparable value/text per entry
+    const rows = [
+      { label: 'Acidity', get: e => intLabel(e.intensity?.acidity), sub: e => (e.tags?.acidity||[]).join(', '), spread: es => new Set(es.map(e=>e.intensity?.acidity||3)).size > 1 && (Math.max(...es.map(e=>e.intensity?.acidity||3)) - Math.min(...es.map(e=>e.intensity?.acidity||3)) >= 2) },
+      { label: 'Sweetness', get: e => intLabel(e.intensity?.sweetness), sub: e => (e.tags?.sweetness||[]).join(', '), spread: es => (Math.max(...es.map(e=>e.intensity?.sweetness||3)) - Math.min(...es.map(e=>e.intensity?.sweetness||3)) >= 2) },
+      { label: 'Bitterness', get: e => intLabel(e.intensity?.bitterness), sub: e => (e.tags?.bitterness||[]).join(', '), spread: es => (Math.max(...es.map(e=>e.intensity?.bitterness||3)) - Math.min(...es.map(e=>e.intensity?.bitterness||3)) >= 2) },
+      { label: 'Mouthfeel', get: e => intLabel(e.intensity?.mouthfeel), sub: e => (e.tags?.mouthfeel||[]).join(', '), spread: es => (Math.max(...es.map(e=>e.intensity?.mouthfeel||3)) - Math.min(...es.map(e=>e.intensity?.mouthfeel||3)) >= 2) },
+      { label: 'Aftertaste', get: e => AFT_LENGTH_LABELS[(e.aftertasteLength||3)-1], sub: e => (e.tags?.aftertaste||[]).join(', '), spread: es => (Math.max(...es.map(e=>e.aftertasteLength||3)) - Math.min(...es.map(e=>e.aftertasteLength||3)) >= 2) },
+      { label: 'Aft. Flavor', get: e => (e.aftertasteFlavor||[]).join(', ')||'—', sub: () => '', spread: es => { const vals = es.map(e=>(e.aftertasteFlavor||[]).join(',')); return new Set(vals).size === vals.length && vals.length > 1; } },
+      { label: 'Flavor', get: e => Object.values(e.flavorTags||{}).flat().join(', ')||'—', sub: () => '', spread: () => false },
+      { label: 'TB', get: e => e.tbScore?.toFixed(1), sub: () => '', spread: es => (Math.max(...es.map(e=>e.tbScore||3)) - Math.min(...es.map(e=>e.tbScore||3)) >= 1) },
+      { label: 'TC', get: e => e.tcScore?.toFixed(1), sub: () => '', spread: es => (Math.max(...es.map(e=>e.tcScore||3)) - Math.min(...es.map(e=>e.tcScore||3)) >= 1) },
+    ];
+
+    const headerCells = entries.map(e => `<div style="min-width:${COL_W}px;max-width:${COL_W}px;padding:8px 6px;text-align:center;border-left:1px solid var(--bg3);cursor:pointer" onclick="showPersonEntryModal('${e.id}')">
+      <div style="width:26px;height:26px;border-radius:50%;background:${isRef(e)?'var(--bbg)':'var(--bg2)'};color:${isRef(e)?'var(--blue)':'var(--text2)'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;margin:0 auto 4px">${e.taster.slice(0,2).toUpperCase()}</div>
+      <div style="font-size:11px;font-weight:700;color:var(--text)">${isRef(e)?'★ ':''}${e.taster}</div>
+    </div>`).join('');
+
+    const bodyRows = rows.map(row => {
+      const disagree = row.spread(entries);
+      const cells = entries.map(e => {
+        const val = row.get(e) || '—';
+        const sub = row.sub(e);
+        return `<div style="min-width:${COL_W}px;max-width:${COL_W}px;padding:7px 6px;text-align:center;border-left:1px solid var(--bg3);font-size:11.5px;color:${disagree?'var(--red)':'var(--text)'};font-weight:${disagree?'700':'600'}">
+          ${val}${sub?`<div style="font-size:9.5px;color:var(--text3);font-weight:400;margin-top:1px">${sub}</div>`:''}
+        </div>`;
+      }).join('');
+      return `<div style="display:flex;${disagree?'background:var(--rbg);':''}">
+        <div style="min-width:82px;max-width:82px;flex-shrink:0;padding:7px 8px;font-size:11px;color:var(--text3);font-weight:700;display:flex;align-items:center;position:sticky;left:0;background:${disagree?'var(--rbg)':'var(--bg)'};z-index:1">${disagree?'⚠️ ':''}${row.label}</div>
+        <div style="display:flex">${cells}</div>
+      </div>`;
+    }).join('');
+
+    body.innerHTML = `
+      <div style="font-size:11.5px;color:var(--text2);margin-bottom:10px;line-height:1.6">เลื่อนดูซ้าย-ขวาเพื่อดูทุกคน · <span style="color:var(--red);font-weight:700">⚠️ แถวสีแดง</span> = มีคนเห็นต่างกันชัดเจน · แตะชื่อคนเพื่อดูรายละเอียดเต็ม</div>
+      <div style="overflow-x:auto;border:1px solid var(--bg3);border-radius:var(--r2);-webkit-overflow-scrolling:touch">
+        <div style="display:flex;border-bottom:2px solid var(--bg3);background:var(--bg2)">
+          <div style="min-width:82px;max-width:82px;flex-shrink:0;position:sticky;left:0;background:var(--bg2);z-index:1"></div>
+          <div style="display:flex">${headerCells}</div>
+        </div>
+        ${bodyRows}
+      </div>
+    `;
+  } catch(e) {
+    body.innerHTML = '<div class="empty">โหลดข้อมูลไม่สำเร็จ</div>';
+  }
+}
+
 async function showParamModal(shotId, branch) {
   const modal = document.getElementById('param-modal');
   const body = document.getElementById('param-modal-body');
@@ -4743,6 +4817,9 @@ async function renderTeam() {
       </div>
       <button onclick="showParamModal('${shotId}','${branch}')" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border:none;border-top:2px solid var(--blue);background:var(--bbg);color:var(--blue);font-size:14px;font-weight:700;cursor:pointer">
         📊 ดู Parameter เต็ม (Flavor / Texture / Aftertaste) →
+      </button>
+      <button onclick="showCompareModal('${shotId}','${branch}')" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border:none;border-top:2px solid var(--green);background:var(--gbg);color:var(--green);font-size:14px;font-weight:700;cursor:pointer">
+        👥 เทียบทุกคนในช็อตนี้ →
       </button>
       <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;padding:12px 14px 0">★ Reference Calibrators</div>
       ${refEntries.length === 2 ? `<div style="margin:0 14px 8px;padding:8px 10px;background:var(--abg);border:1px solid var(--aborder);border-radius:var(--r2);font-size:11.5px;color:var(--amber);line-height:1.6">💡 คะแนนของ Ref ทั้ง 2 คนนี้ <b>เทียบกันเองโดยตรง</b> (ไม่ใช่เทียบกับค่าเฉลี่ยแบบทีมด้านล่าง) — ถ้าคะแนนต่ำกว่าทีม แปลว่า Ref 2 คนให้คะแนนไม่ตรงกันเอง ควรคุยปรับมาตรฐานร่วมกัน ไม่ได้แปลว่าใครแย่กว่า</div>` : ''}
