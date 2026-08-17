@@ -2701,8 +2701,8 @@ async function showCompareModal(shotId, branch) {
       { label: 'Aftertaste', raw: e => e.aftertasteLength||3, numeric: true, threshold: 2, tagAttr: 'aftertaste', get: e => AFT_LENGTH_LABELS[(e.aftertasteLength||3)-1], sub: e => (e.tags?.aftertaste||[]).join(', ') },
     ];
     const flavorRows = [
-      { label: 'Aft. Flavor', raw: e => (e.aftertasteFlavor||[]).join(','), numeric: false, get: e => (e.aftertasteFlavor||[]).join(', ')||'—', sub: () => '' },
-      { label: 'Flavor', raw: e => Object.values(e.flavorTags||{}).flat().join(','), numeric: false, get: e => Object.values(e.flavorTags||{}).flat().join(', ')||'—', sub: () => '' },
+      { label: 'Aft. Flavor', raw: e => (e.aftertasteFlavor||[]).join(','), numeric: false, unscored: true, get: e => (e.aftertasteFlavor||[]).join(', ')||'—', sub: () => '' },
+      { label: 'Flavor', raw: e => Object.values(e.flavorTags||{}).flat().join(','), numeric: false, unscored: true, get: e => Object.values(e.flavorTags||{}).flat().join(', ')||'—', sub: () => '' },
     ];
     const scoreRows = [
       { label: 'Taste Balance', raw: e => e.tbScore||3, numeric: true, threshold: 1, get: e => e.tbScore?.toFixed(1), sub: () => '' },
@@ -2720,6 +2720,10 @@ async function showCompareModal(shotId, branch) {
     // scoring does. Falls back to the group's own median/majority only
     // when there's no Ref at all to compare against.
     function getOutlierFlags(row) {
+      // Flavor Wheel rows don't affect score at all — never mark them red,
+      // just show the info plainly.
+      if (row.unscored) return entries.map(() => ({ outlier: false, reason: '' }));
+
       const vals = entries.map(row.raw);
       // Descriptor tags carry real score weight (20/60) but aren't captured
       // by the intensity number alone — check tag overlap too (synonym-aware,
@@ -2736,16 +2740,28 @@ async function showCompareModal(shotId, branch) {
       if (refEntriesForScore.length) {
         return entries.map((e, i) => {
           const refsExcludingSelf = refEntriesForScore.filter(r => r.id !== e.id);
-          if (!refsExcludingSelf.length) return false; // sole Ref — nothing to compare against
+          if (!refsExcludingSelf.length) return { outlier: false, reason: '' }; // sole Ref — nothing to compare against
           const refVals = refsExcludingSelf.map(row.raw);
           if (row.numeric) {
             const refAvg = refVals.reduce((s,v)=>s+v,0) / refVals.length;
-            return Math.abs(vals[i] - refAvg) >= row.threshold || tagMismatch(e, refsExcludingSelf);
+            const diff = Math.abs(vals[i] - refAvg);
+            const intOff = diff >= row.threshold;
+            const tagOff = tagMismatch(e, refsExcludingSelf);
+            if (!intOff && !tagOff) return { outlier: false, reason: '' };
+            const parts = [];
+            if (intOff) parts.push(`Intensity ห่างจาก Ref ${diff.toFixed(1)} ระดับ (คุณ ${row.get(e)}, Ref เฉลี่ย ${refAvg.toFixed(1)})`);
+            if (tagOff) {
+              const myTags = (e.tags?.[row.tagAttr]||[]).join(', ')||'ไม่ได้เลือก';
+              const refTagsList = [...new Set(refsExcludingSelf.flatMap(r=>r.tags?.[row.tagAttr]||[]))].join(', ')||'ไม่ได้เลือก';
+              parts.push(`Tag ไม่ตรงกับ Ref (คุณ: ${myTags} / Ref: ${refTagsList})`);
+            }
+            return { outlier: true, reason: parts.join(' · ') };
           }
           const freq = {}; refVals.forEach(v => freq[v] = (freq[v]||0)+1);
           const maxCount = Math.max(...Object.values(freq));
           const refMajority = Object.keys(freq).find(k => freq[k] === maxCount);
-          return vals[i] !== refMajority;
+          const off = vals[i] !== refMajority;
+          return { outlier: off, reason: off ? `ต่างจาก Ref (คุณ: ${row.get(e)}, Ref: ${refMajority||'—'})` : '' };
         });
       }
       // No Ref in this session — fall back to comparing against the
@@ -2753,14 +2769,20 @@ async function showCompareModal(shotId, branch) {
       if (row.numeric) {
         const sorted = [...vals].sort((a,b)=>a-b);
         const median = sorted[Math.floor(sorted.length/2)];
-        return vals.map(v => Math.abs(v - median) >= row.threshold);
+        return vals.map(v => {
+          const off = Math.abs(v - median) >= row.threshold;
+          return { outlier: off, reason: off ? `ห่างจากค่ากลางของกลุ่ม ${Math.abs(v-median).toFixed(1)} ระดับ` : '' };
+        });
       }
       const freq = {};
       vals.forEach(v => freq[v] = (freq[v]||0)+1);
       const maxCount = Math.max(...Object.values(freq));
       const majority = Object.keys(freq).find(k => freq[k] === maxCount);
       const hasMajority = maxCount > vals.length / 2 && vals.length > 1;
-      return vals.map(v => hasMajority ? v !== majority : false);
+      return vals.map(v => {
+        const off = hasMajority ? v !== majority : false;
+        return { outlier: off, reason: off ? `ส่วนใหญ่เลือก: ${majority}` : '' };
+      });
     }
 
     const scoresByEntry = {};
@@ -2782,16 +2804,17 @@ async function showCompareModal(shotId, branch) {
     function renderRowGroup(rows) {
       return rows.map(row => {
         const outliers = getOutlierFlags(row);
-        const anyOutlier = outliers.some(Boolean);
-        const allAgree = !anyOutlier && new Set(entries.map(row.raw)).size === 1;
+        const anyOutlier = outliers.some(o => o.outlier);
+        const allAgree = !anyOutlier && !row.unscored && new Set(entries.map(row.raw)).size === 1;
         const labelCol = anyOutlier ? 'var(--red)' : allAgree ? 'var(--green)' : 'var(--text3)';
         const icon = anyOutlier ? '⚠️' : allAgree ? '✓' : '·';
         const cells = entries.map((e,i) => {
           const val = row.get(e) || '—';
           const sub = row.sub(e);
-          const isOutlier = outliers[i];
-          return `<div style="min-width:${COL_W}px;max-width:${COL_W}px;padding:9px 6px;text-align:center;border-left:1px solid var(--bg3);font-size:13px;color:${isOutlier?'var(--red)':allAgree?'var(--green)':'var(--text)'};font-weight:${isOutlier||allAgree?'700':'600'};background:${isOutlier?'var(--rbg)':'transparent'}">
-            ${val}${sub?`<div style="font-size:10.5px;color:var(--text3);font-weight:400;margin-top:2px">${sub}</div>`:''}
+          const { outlier: isOutlier, reason } = outliers[i];
+          const tapAttr = isOutlier ? `onclick="showToast('${reason.replace(/'/g,"\\'")}')" style="cursor:pointer;` : `style="`;
+          return `<div ${tapAttr}min-width:${COL_W}px;max-width:${COL_W}px;padding:9px 6px;text-align:center;border-left:1px solid var(--bg3);font-size:13px;color:${isOutlier?'var(--red)':allAgree?'var(--green)':'var(--text)'};font-weight:${isOutlier||allAgree?'700':'600'};background:${isOutlier?'var(--rbg)':'transparent'}">
+            ${val}${isOutlier?' 💬':''}${sub?`<div style="font-size:10.5px;color:var(--text3);font-weight:400;margin-top:2px">${sub}</div>`:''}
           </div>`;
         }).join('');
         return `<div style="display:flex">
