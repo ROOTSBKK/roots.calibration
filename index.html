@@ -4105,7 +4105,9 @@ let teamEntryCache = {};
 let shotContextCache = {}; // shotId -> {refEntries, teamEntries} — used by showScoreBreakdown
 
 function isHouseBlend(name) {
-  return /house\s*blend|\bhb\b/i.test(name || '');
+  // "Bland" is a common typo for "Blend" (easy to miss — one letter off)
+  // so it's tolerated here too, alongside the correct spelling.
+  return /house\s*bl[ae]nd|\bhb\b/i.test(name || '');
 }
 
 function computeConsensus(shotEntries) {
@@ -4296,8 +4298,10 @@ async function loadDataPage() {
     const hb = shots.filter(s => isHouseBlend(s.coffee));
     const so = shots.filter(s => !isHouseBlend(s.coffee));
     let html = '';
-    if (hb.length) html += `<div style="font-size:12px;font-weight:700;color:#9A5F0A;margin:4px 0 8px">🏠 House Blend</div>` + hb.map(s => renderParamCard(s, entries.filter(e => e.shotId === s.id))).join('');
-    if (so.length) html += `<div style="font-size:12px;font-weight:700;color:#1A5FA8;margin:16px 0 8px">☕ Single Origin</div>` + so.map(s => renderParamCard(s, entries.filter(e => e.shotId === s.id))).join('');
+    html += `<div style="font-size:12px;font-weight:700;color:#9A5F0A;margin:4px 0 8px">🏠 House Blend</div>`;
+    html += hb.length ? hb.map(s => renderParamCard(s, entries.filter(e => e.shotId === s.id))).join('') : `<div style="font-size:12.5px;color:var(--text3);font-style:italic;margin-bottom:16px">ยังไม่มีช็อต House Blend ในวันนี้ (ตรวจสอบว่าชื่อกาแฟมีคำว่า "House Blend" หรือ "HB" ไหม ถ้าตั้งชื่ออื่นจะถูกจัดเป็น Single Origin แทน)</div>`;
+    html += `<div style="font-size:12px;font-weight:700;color:#1A5FA8;margin:16px 0 8px">☕ Single Origin</div>`;
+    html += so.length ? so.map(s => renderParamCard(s, entries.filter(e => e.shotId === s.id))).join('') : `<div style="font-size:12.5px;color:var(--text3);font-style:italic">ยังไม่มีช็อต Single Origin ในวันนี้</div>`;
     el.innerHTML = html;
   } else {
     // All branches: compact box per branch, HB and SO side-by-side
