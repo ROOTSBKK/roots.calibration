@@ -2694,11 +2694,11 @@ async function showCompareModal(shotId, branch) {
 
     // Each row: label + a function that reads a comparable value/text per entry
     const tasteRows = [
-      { label: 'Acidity', raw: e => e.intensity?.acidity||3, numeric: true, threshold: 2, get: e => intLabel(e.intensity?.acidity), sub: e => (e.tags?.acidity||[]).join(', ') },
-      { label: 'Sweetness', raw: e => e.intensity?.sweetness||3, numeric: true, threshold: 2, get: e => intLabel(e.intensity?.sweetness), sub: e => (e.tags?.sweetness||[]).join(', ') },
-      { label: 'Bitterness', raw: e => e.intensity?.bitterness||3, numeric: true, threshold: 2, get: e => intLabel(e.intensity?.bitterness), sub: e => (e.tags?.bitterness||[]).join(', ') },
-      { label: 'Mouthfeel', raw: e => e.intensity?.mouthfeel||3, numeric: true, threshold: 2, get: e => intLabel(e.intensity?.mouthfeel), sub: e => (e.tags?.mouthfeel||[]).join(', ') },
-      { label: 'Aftertaste', raw: e => e.aftertasteLength||3, numeric: true, threshold: 2, get: e => AFT_LENGTH_LABELS[(e.aftertasteLength||3)-1], sub: e => (e.tags?.aftertaste||[]).join(', ') },
+      { label: 'Acidity', raw: e => e.intensity?.acidity||3, numeric: true, threshold: 2, tagAttr: 'acidity', get: e => intLabel(e.intensity?.acidity), sub: e => (e.tags?.acidity||[]).join(', ') },
+      { label: 'Sweetness', raw: e => e.intensity?.sweetness||3, numeric: true, threshold: 2, tagAttr: 'sweetness', get: e => intLabel(e.intensity?.sweetness), sub: e => (e.tags?.sweetness||[]).join(', ') },
+      { label: 'Bitterness', raw: e => e.intensity?.bitterness||3, numeric: true, threshold: 2, tagAttr: 'bitterness', get: e => intLabel(e.intensity?.bitterness), sub: e => (e.tags?.bitterness||[]).join(', ') },
+      { label: 'Mouthfeel', raw: e => e.intensity?.mouthfeel||3, numeric: true, threshold: 2, tagAttr: 'mouthfeel', get: e => intLabel(e.intensity?.mouthfeel), sub: e => (e.tags?.mouthfeel||[]).join(', ') },
+      { label: 'Aftertaste', raw: e => e.aftertasteLength||3, numeric: true, threshold: 2, tagAttr: 'aftertaste', get: e => AFT_LENGTH_LABELS[(e.aftertasteLength||3)-1], sub: e => (e.tags?.aftertaste||[]).join(', ') },
     ];
     const flavorRows = [
       { label: 'Aft. Flavor', raw: e => (e.aftertasteFlavor||[]).join(','), numeric: false, get: e => (e.aftertasteFlavor||[]).join(', ')||'—', sub: () => '' },
@@ -2721,6 +2721,18 @@ async function showCompareModal(shotId, branch) {
     // when there's no Ref at all to compare against.
     function getOutlierFlags(row) {
       const vals = entries.map(row.raw);
+      // Descriptor tags carry real score weight (20/60) but aren't captured
+      // by the intensity number alone — check tag overlap too (synonym-aware,
+      // same as the actual scoring formula) so a mismatch like "Balanced" vs
+      // "Vibrant" gets flagged even when the Medium/Medium number matches.
+      function tagMismatch(e, refs) {
+        if (!row.tagAttr) return false;
+        const myTags = e.tags?.[row.tagAttr] || [];
+        const refTags = refs.flatMap(r => r.tags?.[row.tagAttr] || []);
+        if (!refTags.length && !myTags.length) return false;
+        if (!refTags.length || !myTags.length) return true;
+        return !myTags.some(t => refTags.some(rt => isSynonym(t, rt)));
+      }
       if (refEntriesForScore.length) {
         return entries.map((e, i) => {
           const refsExcludingSelf = refEntriesForScore.filter(r => r.id !== e.id);
@@ -2728,7 +2740,7 @@ async function showCompareModal(shotId, branch) {
           const refVals = refsExcludingSelf.map(row.raw);
           if (row.numeric) {
             const refAvg = refVals.reduce((s,v)=>s+v,0) / refVals.length;
-            return Math.abs(vals[i] - refAvg) >= row.threshold;
+            return Math.abs(vals[i] - refAvg) >= row.threshold || tagMismatch(e, refsExcludingSelf);
           }
           const freq = {}; refVals.forEach(v => freq[v] = (freq[v]||0)+1);
           const maxCount = Math.max(...Object.values(freq));
