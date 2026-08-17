@@ -2435,6 +2435,46 @@ function calcScoreBreakdown(entry, refEntries, teamEntries) {
   return { rows: allRows, refTotal: Math.round(refTotal), refCount: refEntries.length };
 }
 
+// Same idea as calcScoreBreakdown but for the Team Alignment (40pt) side —
+// compares against the whole group's own average/majority instead of Ref.
+function calcTeamScoreBreakdown(entry, teamEntries) {
+  if (!teamEntries || teamEntries.length < 2) return null;
+  const SCORE_ATTRS_CAL = ['acidity','sweetness','bitterness','mouthfeel'];
+  const ATTR_TH = {acidity:'Acidity',sweetness:'Sweetness',bitterness:'Bitterness',mouthfeel:'Mouthfeel',aftertaste:'Aftertaste'};
+
+  let teamInt = 0;
+  SCORE_ATTRS_CAL.forEach(a => {
+    const avg = teamEntries.reduce((s,e)=>s+(e.intensity?.[a]||3),0)/teamEntries.length;
+    teamInt += scoreIntensityDiff(entry.intensity?.[a]||3, Math.round(avg)) * 4;
+  });
+  const teamAftAvg = teamEntries.reduce((s,e)=>s+(e.aftertasteLength||3),0)/teamEntries.length;
+  const lengthPts = scoreIntensityDiff(entry.aftertasteLength||3, Math.round(teamAftAvg)) * 4;
+
+  let teamDesc = 0;
+  ['acidity','sweetness','bitterness','aftertaste','mouthfeel'].forEach(a => {
+    const allTags = teamEntries.flatMap(e => e.tags?.[a]||[]);
+    const freq = {};
+    allTags.forEach(t => freq[t]=(freq[t]||0)+1);
+    const majority = Object.keys(freq).filter(t => freq[t] >= Math.ceil(teamEntries.length*0.5));
+    teamDesc += scoreDescriptors(entry.tags?.[a]||[], majority) * 2.6;
+  });
+
+  const teamAvgTB = teamEntries.reduce((s,e)=>s+e.tbScore,0)/teamEntries.length;
+  const teamAvgTC = teamEntries.reduce((s,e)=>s+e.tcScore,0)/teamEntries.length;
+  const teamTB = scoreOverall(entry.tbScore, teamAvgTB) * 3.5;
+  const teamTC = scoreOverall(entry.tcScore, teamAvgTC) * 3.5;
+
+  const teamTotal = Math.min(40, teamInt + lengthPts + teamDesc + teamTB + teamTC);
+  return {
+    cats: [
+      { label: 'Intensity + Length (ทีม)', pts: teamInt + lengthPts, max: 20 },
+      { label: 'Descriptor Tags (ทีม)', pts: teamDesc, max: 13 },
+      { label: 'TB + Tactile (ทีม)', pts: teamTB + teamTC, max: 7 },
+    ],
+    total: Math.round(teamTotal)
+  };
+}
+
 // Turns the row-by-row breakdown into a plain-language explanation —
 // "ได้เต็มเพราะตรง X, Y แต่เสียคะแนนเยอะที่ Z (ให้...ต่างจาก Ref ที่ให้...)"
 function summarizeScoreBreakdown(bd) {
@@ -2781,32 +2821,37 @@ async function showCompareModal(shotId, branch) {
     window._quickScoreCache = window._quickScoreCache || {};
     function quickScoreRows(e) {
       const refs = refEntriesForScore.filter(r => r.id !== e.id);
-      if (!refs.length) return null;
-      const bd = calcScoreBreakdown(e, refs, entries);
-      if (!bd) return null;
-      const intensity = bd.rows.slice(0,4).reduce((s,r)=>s+r.points,0);
-      const length = bd.rows[4].points;
-      const desc = bd.rows.slice(5,10).reduce((s,r)=>s+r.points,0);
-      const tb = bd.rows[10].points;
-      const tc = bd.rows[11].points;
-      return {
-        cats: [
+      const refBd = refs.length ? calcScoreBreakdown(e, refs, entries) : null;
+      const teamBd = calcTeamScoreBreakdown(e, entries);
+      if (!refBd && !teamBd) return null;
+      const refCats = refBd ? (() => {
+        const intensity = refBd.rows.slice(0,4).reduce((s,r)=>s+r.points,0);
+        const length = refBd.rows[4].points;
+        const desc = refBd.rows.slice(5,10).reduce((s,r)=>s+r.points,0);
+        const tb = refBd.rows[10].points;
+        const tc = refBd.rows[11].points;
+        return [
           { label: 'Intensity (4 หัวข้อ)', pts: intensity, max: 24 },
           { label: 'Aftertaste Length', pts: length, max: 6 },
           { label: 'Descriptor Tags (5 หัวข้อ)', pts: desc, max: 20 },
           { label: 'Taste Balance', pts: tb, max: 5 },
           { label: 'Tactile', pts: tc, max: 5 },
-        ],
-        total: bd.refTotal
-      };
+        ];
+      })() : null;
+      const refTotal = refBd ? refBd.refTotal : null;
+      const teamTotal = teamBd ? teamBd.total : null;
+      const grandTotal = (refTotal||0) + (teamTotal||0);
+      return { refCats, refTotal, teamCats: teamBd ? teamBd.cats : null, teamTotal, grandTotal };
     }
 
     const headerCells = entries.map(e => {
       const sc = scoresByEntry[e.id];
       const scCol = sc===null?'var(--text3)':sc>=85?'var(--green)':sc>=65?'var(--amber)':'var(--red)';
-      if (sc !== null) window._quickScoreCache[e.id] = { name: e.taster, data: quickScoreRows(e) };
+      const qData = quickScoreRows(e);
+      const hasAnything = qData && (qData.refCats || qData.teamCats);
+      window._quickScoreCache[e.id] = { name: e.taster, data: qData };
       return `<div style="min-width:${COL_W}px;max-width:${COL_W}px;padding:10px 6px;text-align:center;border-left:1px solid var(--bg3)">
-      <div ${sc!==null?`onclick="showQuickScore('${e.id}')" style="cursor:pointer;`:'style="'}font-size:19px;font-weight:800;color:${scCol};margin-bottom:4px">${sc===null?'—':sc}</div>
+      <div ${hasAnything?`onclick="showQuickScore('${e.id}')" style="cursor:pointer;`:'style="'}font-size:19px;font-weight:800;color:${scCol};margin-bottom:4px">${sc===null?'—':sc}</div>
       <div onclick="showPersonEntryModal('${e.id}')" style="cursor:pointer;width:30px;height:30px;border-radius:50%;background:${isRef(e)?'var(--bbg)':'var(--bg2)'};color:${isRef(e)?'var(--blue)':'var(--text2)'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin:0 auto 4px">${e.taster.slice(0,2).toUpperCase()}</div>
       <div onclick="showPersonEntryModal('${e.id}')" style="cursor:pointer;font-size:12px;font-weight:700;color:var(--text)">${isRef(e)?'★ ':''}${e.taster}</div>
     </div>`;
@@ -2920,22 +2965,32 @@ function showQuickScore(entryId) {
   if (!cached || !cached.data) {
     titleEl.textContent = 'คะแนน';
     body.innerHTML = '<div style="color:var(--text3);font-size:13px">ยังคำนวณคะแนนไม่ได้</div>';
-  } else {
-    titleEl.textContent = `${cached.name} — ${cached.data.total}/60`;
-    body.innerHTML = cached.data.cats.map(c => {
+    modal.style.display = 'flex';
+    return;
+  }
+  const d = cached.data;
+  titleEl.textContent = `${cached.name} — ${d.grandTotal}/100`;
+  function barsHtml(cats) {
+    return cats.map(c => {
       const pct = Math.round(c.pts / c.max * 100);
       const col = pct>=90?'var(--green)':pct>0?'var(--amber)':'var(--red)';
-      return `<div style="margin-bottom:8px">
-        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+      return `<div style="margin-bottom:7px">
+        <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px">
           <span style="color:var(--text2)">${c.label}</span>
           <span style="font-weight:700;color:${col}">${c.pts.toFixed(1)}/${c.max}</span>
         </div>
-        <div style="height:8px;background:var(--bg3);border-radius:4px;overflow:hidden">
+        <div style="height:7px;background:var(--bg3);border-radius:4px;overflow:hidden">
           <div style="width:${pct}%;height:100%;background:${col}"></div>
         </div>
       </div>`;
     }).join('');
   }
+  let html = '';
+  html += `<div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px">Reference Alignment — ${d.refTotal===null?'—':d.refTotal}/60</div>`;
+  html += d.refCats ? barsHtml(d.refCats) : `<div style="color:var(--text3);font-size:12px;margin-bottom:10px">ไม่มี Ref อื่นให้เทียบ</div>`;
+  html += `<div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.03em;margin:10px 0 6px">Team Alignment — ${d.teamTotal===null?'—':d.teamTotal}/40</div>`;
+  html += d.teamCats ? barsHtml(d.teamCats) : `<div style="color:var(--text3);font-size:12px">ต้องมีคนชิมช็อตเดียวกันตั้งแต่ 2 คนขึ้นไป</div>`;
+  body.innerHTML = html;
   modal.style.display = 'flex';
 }
 function closeQuickScore() {
