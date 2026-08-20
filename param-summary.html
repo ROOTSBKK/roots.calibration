@@ -117,21 +117,21 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
       <div class="card-title">Dose / Time / Yield (สูงสุด 3 ครั้ง)</div>
       <div class="pull-cols">
         <div class="pull-col">
-          <div class="pull-col-title">ครั้งที่ 1</div>
+          <div class="pull-col-title">Dose1</div>
           <input type="number" id="f-dose1" placeholder="Dose" step="0.5" oninput="calcExt()">
           <input type="number" id="f-time1" placeholder="Time (s)" step="1">
           <input type="number" id="f-yield1" placeholder="Yield" step="0.5" oninput="calcExt()">
           <div class="ratio-line" id="ratio1">1 : —</div>
         </div>
         <div class="pull-col">
-          <div class="pull-col-title">ครั้งที่ 2</div>
+          <div class="pull-col-title">Dose2</div>
           <input type="number" id="f-dose2" placeholder="Dose" step="0.5">
           <input type="number" id="f-time2" placeholder="Time (s)" step="1">
           <input type="number" id="f-yield2" placeholder="Yield" step="0.5">
           <div class="ratio-line" id="ratio2">1 : —</div>
         </div>
         <div class="pull-col">
-          <div class="pull-col-title">ครั้งที่ 3</div>
+          <div class="pull-col-title">Dose3</div>
           <input type="number" id="f-dose3" placeholder="Dose" step="0.5">
           <input type="number" id="f-time3" placeholder="Time (s)" step="1">
           <input type="number" id="f-yield3" placeholder="Yield" step="0.5">
@@ -291,7 +291,16 @@ function setupForm() {
   loadRecentEntries();
 
   document.getElementById('nav-tabs').style.display = 'block';
-  document.getElementById('ov-branch-filter').innerHTML = '<option value="">ทุกสาขา</option>' + ALL_BRANCHES.map(b => `<option value="${b}">${b}</option>`).join('');
+  const ovSel = document.getElementById('ov-branch-filter');
+  if (isArea) {
+    ovSel.innerHTML = '<option value="">ทุกสาขา</option>' + ALL_BRANCHES.map(b => `<option value="${b}">${b}</option>`).join('');
+    ovSel.disabled = false;
+  } else {
+    // Non-Area staff can only look back at their own branch's history —
+    // no cross-branch comparison.
+    ovSel.innerHTML = `<option value="${window._currentStaff.branch}">${window._currentStaff.branch}</option>`;
+    ovSel.disabled = true;
+  }
 }
 
 function showTrackPage(page) {
@@ -321,7 +330,9 @@ async function loadExtChart() {
         } catch(err) {}
       }
     });
-    const results = ALL_BRANCHES.map(b => {
+    const isArea = AREA_STAFF.includes(window._currentStaff.name);
+    const branchesToShow = isArea ? ALL_BRANCHES : [window._currentStaff.branch];
+    const results = branchesToShow.map(b => {
       const vals = byBranch[b] || [];
       const avg = vals.length ? vals.reduce((s,v)=>s+v,0)/vals.length : null;
       return { branch: b, avg, count: vals.length };
