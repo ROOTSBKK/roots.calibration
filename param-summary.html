@@ -254,8 +254,20 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
 
   <div class="wrap" id="page-overview" style="display:none">
     <div class="card">
-      <div class="card-title">EXT% เฉลี่ยแต่ละสาขา</div>
-      <div id="ext-chart" style="display:flex;align-items:flex-end;gap:10px;overflow-x:auto;padding-bottom:4px;border-bottom:2px solid var(--bg3);min-height:180px">
+      <div class="row" style="margin-bottom:0;align-items:center">
+        <div class="col-block" style="margin-bottom:0">
+          <div class="lbl">EXT% รายวัน — ย้อนหลัง</div>
+          <select id="ext-days-range" onchange="loadExtChart()">
+            <option value="7">7 วัน</option>
+            <option value="14">14 วัน</option>
+            <option value="30">30 วัน</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div id="ext-chart" style="overflow-x:auto;-webkit-overflow-scrolling:touch">
         <div style="color:var(--text3);font-size:13px">กำลังโหลด...</div>
       </div>
     </div>
@@ -433,43 +445,58 @@ async function loadExtChart() {
   const chartEl = document.getElementById('ext-chart');
   chartEl.innerHTML = '<div style="color:var(--text3);font-size:13px">กำลังโหลด...</div>';
   try {
+    const days = +document.getElementById('ext-days-range').value || 7;
+    const isArea = AREA_STAFF.includes(window._currentStaff.name);
+    const branchesToShow = isArea ? ALL_BRANCHES : [window._currentStaff.branch];
+
+    // Build the list of dates to show, newest first
+    const today = new Date();
+    const dateList = [];
+    for (let i = 0; i < days; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      dateList.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
+    }
+
     const snap = await window._fsgetDocs(window._fscollection(window._db, 'shared'));
-    const byBranch = {};
+    // key: date|branch -> [ext, ext, ...]
+    const grid = {};
     snap.forEach(d => {
       const data = d.data();
       if (data.key && data.key.startsWith('ps:')) {
         try {
           const e = JSON.parse(data.value);
-          if (e.ext) { if (!byBranch[e.branch]) byBranch[e.branch] = []; byBranch[e.branch].push(e.ext); }
+          if (e.ext && e.date && dateList.includes(e.date) && branchesToShow.includes(e.branch)) {
+            const k = e.date + '|' + e.branch;
+            if (!grid[k]) grid[k] = [];
+            grid[k].push(e.ext);
+          }
         } catch(err) {}
       }
     });
-    const isArea = AREA_STAFF.includes(window._currentStaff.name);
-    const branchesToShow = isArea ? ALL_BRANCHES : [window._currentStaff.branch];
-    const results = branchesToShow.map(b => {
-      const vals = byBranch[b] || [];
-      const avg = vals.length ? vals.reduce((s,v)=>s+v,0)/vals.length : null;
-      return { branch: b, avg, count: vals.length };
-    });
-    const maxAvg = Math.max(1, ...results.filter(r=>r.avg!==null).map(r=>r.avg));
-    const CHART_H = 130;
-    chartEl.innerHTML = results.map(r => {
-      if (r.avg === null) {
-        return `<div style="display:flex;flex-direction:column;align-items:center;min-width:58px;flex-shrink:0">
-          <div style="font-size:10px;color:var(--text3);font-style:italic;margin-bottom:4px">—</div>
-          <div style="width:28px;height:6px;background:var(--bg3);border-radius:3px;align-self:flex-end"></div>
-          <div style="width:28px;height:${CHART_H-6}px"></div>
-          <div style="font-size:11px;color:var(--text);font-weight:600;margin-top:6px;text-align:center">${r.branch}</div>
-        </div>`;
-      }
-      const barH = Math.max(6, Math.round(r.avg/maxAvg*CHART_H));
-      return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:58px;flex-shrink:0">
-        <div style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:4px">${r.avg.toFixed(1)}%</div>
-        <div style="width:28px;height:${barH}px;background:var(--amber);border-radius:5px 5px 0 0"></div>
-        <div style="font-size:11px;color:var(--text);font-weight:600;margin-top:6px;text-align:center">${r.branch}</div>
-        <div style="font-size:9.5px;color:var(--text3)">${r.count} รายการ</div>
+
+    const COL_W = 78;
+    const headerCells = branchesToShow.map(b => `<div style="min-width:${COL_W}px;max-width:${COL_W}px;padding:8px 4px;text-align:center;border-left:1px solid var(--bg3);font-size:10.5px;font-weight:700;color:var(--text2)">${b}</div>`).join('');
+    const bodyRows = dateList.map(dt => {
+      const shortDate = dt.slice(5).split('-').reverse().join('/'); // MM-DD -> DD/MM
+      const cells = branchesToShow.map(b => {
+        const vals = grid[dt+'|'+b];
+        const avg = vals && vals.length ? vals.reduce((s,v)=>s+v,0)/vals.length : null;
+        return `<div style="min-width:${COL_W}px;max-width:${COL_W}px;padding:8px 4px;text-align:center;border-left:1px solid var(--bg3);font-size:12.5px;font-weight:${avg?'700':'400'};color:${avg?'var(--amber)':'var(--text3)'}">${avg?avg.toFixed(1):'—'}</div>`;
+      }).join('');
+      return `<div style="display:flex;border-top:1px solid var(--bg3)">
+        <div style="min-width:56px;max-width:56px;flex-shrink:0;padding:8px 6px;font-size:11px;color:var(--text3);font-weight:700">${shortDate}</div>
+        <div style="display:flex">${cells}</div>
       </div>`;
     }).join('');
+
+    chartEl.innerHTML = `
+      <div style="display:flex;border-bottom:2px solid var(--bg3);background:var(--bg2)">
+        <div style="min-width:56px;max-width:56px;flex-shrink:0;padding:6px"></div>
+        <div style="display:flex">${headerCells}</div>
+      </div>
+      ${bodyRows}
+    `;
   } catch(e) {
     chartEl.innerHTML = '<div style="color:var(--text3);font-size:13px">โหลดไม่สำเร็จ</div>';
   }
