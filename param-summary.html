@@ -139,9 +139,8 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
         <div class="col"><div class="lbl">Milk Lot</div><input type="text" id="f-milklota"></div>
         <div class="col"><div class="lbl">Water Temp (°C)</div><input type="number" id="f-tempa" value="93" step="0.5"></div>
       </div>
-      <div class="row" style="margin:10px 0 0">
+      <div class="row" style="margin:10px 0 0;margin-bottom:0">
         <div class="col"><div class="lbl">Water Flow (g/s)</div><input type="number" id="f-flowa" value="9" step="0.5"></div>
-        <div class="col" style="flex:2"><div class="lbl">Steps</div><input type="text" id="f-stepsa" placeholder="เช่น Taps 2, Tamp, WDT, OCD×2"></div>
       </div>
     </div>
 
@@ -216,9 +215,8 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
         <div class="col"><div class="lbl">Milk Lot</div><input type="text" id="f-milklotb"></div>
         <div class="col"><div class="lbl">Water Temp (°C)</div><input type="number" id="f-tempb" value="93" step="0.5"></div>
       </div>
-      <div class="row" style="margin:10px 0 0">
+      <div class="row" style="margin:10px 0 0;margin-bottom:0">
         <div class="col"><div class="lbl">Water Flow (g/s)</div><input type="number" id="f-flowb" value="9" step="0.5"></div>
-        <div class="col" style="flex:2"><div class="lbl">Steps</div><input type="text" id="f-stepsb" placeholder="เช่น Taps 2, Tamp, WDT, OCD×2"></div>
       </div>
     </div>
 
@@ -576,6 +574,24 @@ function parseAndFillFromOcr(text, suffix) {
   return n;
 }
 
+// Pressing Enter/Next (mobile numeric keyboards show this as "Next" or
+// "Go") jumps focus to the next input/select in the form instead of
+// doing nothing — makes typing a long row of numbers much faster since
+// there's no need to tap each field by hand.
+function setupAutoAdvance() {
+  const fields = Array.from(document.querySelectorAll('#page-form input, #page-form select'));
+  fields.forEach((el, i) => {
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const next = fields[i+1];
+        if (next) { next.focus(); if (next.select) next.select(); }
+        else el.blur();
+      }
+    });
+  });
+}
+
 function setupForm() {
   const branchSel = document.getElementById('f-branch');
   const isArea = AREA_STAFF.includes(window._currentStaff.name);
@@ -609,6 +625,7 @@ function setupForm() {
   updateTasterDefault();
   populateShotBy();
   loadRecentEntries();
+  setupAutoAdvance();
 
   document.getElementById('nav-tabs').style.display = 'block';
   const ovSel = document.getElementById('ov-branch-filter');
@@ -759,7 +776,6 @@ async function loadOverviewList() {
         <div style="padding:10px 16px;border-bottom:1px solid var(--bg3)">
           <div style="font-size:15px"><b>${e.coffee}</b>${e.coffeeLot?` <span style="color:var(--text3);font-weight:600">· Lot ${e.coffeeLot}</span>`:''}</div>
           <div style="font-size:11.5px;color:var(--text2);margin-top:2px">${e.process?e.process+' · ':''}${e.milkLot?'Milk Lot '+e.milkLot+' · ':''}Temp ${e.waterTemp||'—'}°C · Flow ${e.waterFlow||'—'}g/s</div>
-          ${e.steps?`<div style="font-size:11.5px;color:var(--text2);margin-top:2px">🔧 ${e.steps}</div>`:''}
         </div>
         <div style="padding:10px 16px;border-bottom:1px solid var(--bg3);background:${slotBg}">
           <div style="display:flex;gap:6px">${pullsHtml}</div>
@@ -861,7 +877,6 @@ function buildEntry(suffix, branch, label) {
     coffeeLot: document.getElementById('f-coffeelot'+suffix).value.trim(),
     milkLot: document.getElementById('f-milklot'+suffix).value.trim(),
     process: document.getElementById('f-process'+suffix).value.trim(),
-    steps: document.getElementById('f-steps'+suffix).value.trim(),
     waterTemp: +document.getElementById('f-temp'+suffix).value || 0,
     waterFlow: +document.getElementById('f-flow'+suffix).value || 0,
     dose1, time1: +document.getElementById('f-time1'+suffix).value || 0, yield1,
@@ -1051,7 +1066,6 @@ function resetForm() {
     document.getElementById('f-milklot'+suf).value = '';
     document.getElementById('f-process'+suf).value = '';
     document.getElementById('f-time'+suf).value = '';
-    document.getElementById('f-steps'+suf).value = '';
     ['1','2','3'].forEach(n => {
       document.getElementById('f-dose'+n+suf).value = '';
       document.getElementById('f-time'+n+suf).value = '';
