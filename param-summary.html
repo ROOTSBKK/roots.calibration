@@ -505,10 +505,9 @@ async function loadOverviewList() {
         {n:3, dose:e.dose3, time:e.time3, yieldW:e.yield3},
       ].filter(p => p.dose || p.yieldW);
       const pullsHtml = pulls.length ? pulls.map(p => `
-        <div style="flex:1;min-width:0;background:#fff;border:1px solid var(--bg3);border-radius:8px;padding:6px 4px;text-align:center">
-          <div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-bottom:3px">Dose${p.n}</div>
-          <div style="font-size:15px;font-weight:800;line-height:1.2">${p.dose||'—'}</div>
-          <div style="font-size:9.5px;color:var(--text3)">${p.time||'—'}s · ${p.yieldW||'—'}g</div>
+        <div style="flex:1;min-width:0;background:#fff;border:1px solid var(--bg3);border-radius:8px;padding:8px 4px;text-align:center">
+          <div style="font-size:9.5px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-bottom:4px">Dose${p.n}</div>
+          <div style="font-size:16px;font-weight:800;line-height:1.2">${p.dose||'—'}/${p.time||'—'}/${p.yieldW||'—'}</div>
         </div>
       `).join('') : '<div style="font-size:12px;color:var(--text3)">ไม่มีข้อมูล Dose</div>';
       const notes = [e.flavor1,e.flavor2,e.flavor3].filter(Boolean);
