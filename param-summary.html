@@ -99,6 +99,17 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
 
   <div class="wrap" id="page-form">
 
+    <div class="card" style="border:2px dashed var(--bborder);background:var(--bbg)">
+      <div class="card-title" style="color:var(--blue)">📷 ถ่ายรูปกระดาษ (ช่วยอ่าน ไม่ใช่บันทึกอัตโนมัติ)</div>
+      <input type="file" id="ocr-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleOcrPhoto(event)">
+      <button type="button" onclick="document.getElementById('ocr-photo-input').click()" style="width:100%;padding:12px;border:none;border-radius:8px;background:var(--blue);color:#fff;font-weight:700;font-size:14px;cursor:pointer">📷 ถ่ายรูป / เลือกรูป</button>
+      <div id="ocr-result-box" style="display:none;margin-top:10px;background:#fff;border:1px solid var(--bg3);border-radius:8px;padding:10px 12px">
+        <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-bottom:6px">ข้อความที่อ่านได้จากรูป — เทียบแล้วพิมพ์ลงช่องด้านล่างเอง</div>
+        <div id="ocr-result-text" style="font-size:12.5px;color:var(--text);white-space:pre-wrap;line-height:1.6;max-height:200px;overflow-y:auto"></div>
+      </div>
+      <div id="ocr-status" style="font-size:11px;color:var(--text3);margin-top:6px"></div>
+    </div>
+
     <div class="card">
       <div class="row" style="margin-bottom:0">
         <div class="col"><div class="lbl">วันที่</div><input type="date" id="f-date"></div>
@@ -113,12 +124,16 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
       <div class="row">
         <div class="col" style="flex:1.4"><div class="lbl">Coffee</div><input type="text" id="f-coffeea" list="coffee-list" placeholder="พิมพ์ชื่อกาแฟ"></div>
         <div class="col"><div class="lbl">Coffee Lot</div><input type="text" id="f-coffeelota" placeholder="24/7"></div>
-        <div class="col"><div class="lbl">Milk Lot</div><input type="text" id="f-milklota"></div>
+        <div class="col"><div class="lbl">Time</div><input type="text" id="f-timea" placeholder="7:15"></div>
       </div>
       <div class="row" style="margin-bottom:0">
         <div class="col"><div class="lbl">Process</div><input type="text" id="f-processa" placeholder="Washed/Natural..."></div>
+        <div class="col"><div class="lbl">Milk Lot</div><input type="text" id="f-milklota"></div>
         <div class="col"><div class="lbl">Water Temp (°C)</div><input type="number" id="f-tempa" value="93" step="0.5"></div>
+      </div>
+      <div class="row" style="margin:10px 0 0">
         <div class="col"><div class="lbl">Water Flow (g/s)</div><input type="number" id="f-flowa" value="9" step="0.5"></div>
+        <div class="col" style="flex:2"><div class="lbl">Steps</div><input type="text" id="f-stepsa" placeholder="เช่น Taps 2, Tamp, WDT, OCD×2"></div>
       </div>
     </div>
 
@@ -168,10 +183,14 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
         <span style="color:var(--text3);font-weight:700">/</span>
         <input type="text" id="f-flavor3a" placeholder="..............">
       </div>
+      <div class="lbl">With Milk</div>
+      <input type="text" id="f-milknotesa" placeholder="เช่น Berry Cake" style="margin-bottom:10px">
       <div class="row" style="margin-bottom:0">
         <div class="col"><div class="lbl">Shot by</div><select id="f-shotbya"></select></div>
         <div class="col"><div class="lbl">ชื่อคนชิม</div><input type="text" id="f-tastera" placeholder="ชื่อผู้บันทึก"></div>
       </div>
+      <div class="lbl" style="margin-top:10px">Check by <span style="font-weight:400;color:var(--text3)">(หลายคนได้ คั่นด้วย , )</span></div>
+      <input type="text" id="f-checkbya" placeholder="เช่น Por, Hot, Give, Pang">
     </div>
     </div>
 
@@ -182,12 +201,16 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
       <div class="row">
         <div class="col" style="flex:1.4"><div class="lbl">Coffee</div><input type="text" id="f-coffeeb" list="coffee-list" placeholder="พิมพ์ชื่อกาแฟ"></div>
         <div class="col"><div class="lbl">Coffee Lot</div><input type="text" id="f-coffeelotb" placeholder="24/7"></div>
-        <div class="col"><div class="lbl">Milk Lot</div><input type="text" id="f-milklotb"></div>
+        <div class="col"><div class="lbl">Time</div><input type="text" id="f-timeb" placeholder="7:15"></div>
       </div>
       <div class="row" style="margin-bottom:0">
         <div class="col"><div class="lbl">Process</div><input type="text" id="f-processb" placeholder="Washed/Natural..."></div>
+        <div class="col"><div class="lbl">Milk Lot</div><input type="text" id="f-milklotb"></div>
         <div class="col"><div class="lbl">Water Temp (°C)</div><input type="number" id="f-tempb" value="93" step="0.5"></div>
+      </div>
+      <div class="row" style="margin:10px 0 0">
         <div class="col"><div class="lbl">Water Flow (g/s)</div><input type="number" id="f-flowb" value="9" step="0.5"></div>
+        <div class="col" style="flex:2"><div class="lbl">Steps</div><input type="text" id="f-stepsb" placeholder="เช่น Taps 2, Tamp, WDT, OCD×2"></div>
       </div>
     </div>
 
@@ -237,10 +260,14 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
         <span style="color:var(--text3);font-weight:700">/</span>
         <input type="text" id="f-flavor3b" placeholder="..............">
       </div>
+      <div class="lbl">With Milk</div>
+      <input type="text" id="f-milknotesb" placeholder="เช่น Berry Cake" style="margin-bottom:10px">
       <div class="row" style="margin-bottom:0">
         <div class="col"><div class="lbl">Shot by</div><select id="f-shotbyb"></select></div>
         <div class="col"><div class="lbl">ชื่อคนชิม</div><input type="text" id="f-tasterb" placeholder="ชื่อผู้บันทึก"></div>
       </div>
+      <div class="lbl" style="margin-top:10px">Check by <span style="font-weight:400;color:var(--text3)">(หลายคนได้ คั่นด้วย , )</span></div>
+      <input type="text" id="f-checkbyb" placeholder="เช่น Por, Hot, Give, Pang">
     </div>
     </div>
 
@@ -375,6 +402,60 @@ const STAFF_DATA = {
   'Area':      ['Lhing','Eve','Boss','Nu','Ball']
 };
 const COFFEE_OPTIONS = ['House Blend','Nui and Aoy','Tor','Jaroon','Sanchai','Kaleb','Ake','Manop','Beansprie','Sri','Sopa','Nawin','Nawin and Tina','Chang Pao','Chatree'];
+
+// ─── OCR (photo → text) via Google Cloud Vision API ───
+// GOOGLE_VISION_API_KEY must be set up in Google Cloud Console and
+// restricted to the rootsbkk.github.io referrer (see setup notes).
+// Leave as '' to disable the photo-read feature gracefully.
+const GOOGLE_VISION_API_KEY = '';
+
+async function handleOcrPhoto(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('ocr-status');
+  const resultBox = document.getElementById('ocr-result-box');
+  const resultText = document.getElementById('ocr-result-text');
+
+  if (!GOOGLE_VISION_API_KEY) {
+    statusEl.textContent = 'ยังไม่ได้ตั้งค่า Google Vision API Key — ดูขั้นตอนตั้งค่าจาก Boss';
+    return;
+  }
+
+  statusEl.textContent = 'กำลังอ่านรูป...';
+  resultBox.style.display = 'none';
+
+  try {
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const res = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_VISION_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        requests: [{
+          image: { content: base64 },
+          features: [{ type: 'DOCUMENT_TEXT_DETECTION' }]
+        }]
+      })
+    });
+    const data = await res.json();
+    const text = data?.responses?.[0]?.fullTextAnnotation?.text;
+    if (!text) {
+      statusEl.textContent = 'อ่านรูปไม่เจอตัวหนังสือ ลองถ่ายใหม่ให้ชัดกว่านี้';
+      return;
+    }
+    resultText.textContent = text;
+    resultBox.style.display = 'block';
+    statusEl.textContent = 'อ่านเสร็จแล้ว — เทียบข้อความด้านบนแล้วพิมพ์ลงช่องด้านล่างเอง (ระบบไม่เติมให้อัตโนมัติ กันอ่านผิดแล้วหลุดเข้าระบบ)';
+  } catch(e) {
+    statusEl.textContent = 'อ่านรูปไม่สำเร็จ: ' + e.message;
+  }
+}
+
 
 
 function setupForm() {
@@ -555,11 +636,12 @@ async function loadOverviewList() {
       <div style="background:#fff;border-radius:12px;overflow:hidden;margin-bottom:14px;border:2px solid ${slotBorder}">
         <div style="background:${slotColor};padding:10px 16px;display:flex;justify-content:space-between;align-items:center">
           <div style="font-size:12px;color:#fff;font-weight:800;letter-spacing:.5px">${e.slot?e.slot.toUpperCase():'ROOTS'} · ${e.branch}</div>
-          <div style="font-size:11px;color:#fff;font-weight:600">${e.date}</div>
+          <div style="font-size:11px;color:#fff;font-weight:600">${e.date}${e.time?' · '+e.time:''}</div>
         </div>
         <div style="padding:10px 16px;border-bottom:1px solid var(--bg3)">
           <div style="font-size:15px"><b>${e.coffee}</b>${e.coffeeLot?` <span style="color:var(--text3);font-weight:600">· Lot ${e.coffeeLot}</span>`:''}</div>
           <div style="font-size:11.5px;color:var(--text2);margin-top:2px">${e.process?e.process+' · ':''}${e.milkLot?'Milk Lot '+e.milkLot+' · ':''}Temp ${e.waterTemp||'—'}°C · Flow ${e.waterFlow||'—'}g/s</div>
+          ${e.steps?`<div style="font-size:11.5px;color:var(--text2);margin-top:2px">🔧 ${e.steps}</div>`:''}
         </div>
         <div style="padding:10px 16px;border-bottom:1px solid var(--bg3);background:${slotBg}">
           <div style="display:flex;gap:6px">${pullsHtml}</div>
@@ -571,9 +653,10 @@ async function loadOverviewList() {
         <div style="padding:14px 16px;background:${notes.length?slotBg:'#fff'};border-bottom:1px solid var(--bg3)">
           <div style="font-size:10px;color:${slotColor};text-transform:uppercase;font-weight:800;letter-spacing:.4px;margin-bottom:6px">📝 Flavor / Texture / Aftertaste</div>
           ${notes.length ? `<div style="font-size:17px;font-weight:800;color:var(--text);line-height:1.4">${notes.join(' / ')}</div>` : `<div style="font-size:13px;color:var(--text3);font-style:italic">ไม่ได้กรอกไว้</div>`}
+          ${e.milkNotes?`<div style="font-size:12px;color:var(--text2);margin-top:8px">🥛 With Milk: <b>${e.milkNotes}</b></div>`:''}
         </div>
         <div style="padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px">
-          <div style="font-size:11.5px;color:var(--text2)">${e.shotBy?'Shot by <b>'+e.shotBy+'</b> · ':''}ชิมโดย <b>${e.taster}</b></div>
+          <div style="font-size:11.5px;color:var(--text2)">${e.shotBy?'Shot by <b>'+e.shotBy+'</b> · ':''}ชิมโดย <b>${e.taster}</b>${e.checkBy?'<br>Check by <b>'+e.checkBy+'</b>':''}</div>
           <button onclick="shareOverviewEntry(${i})" style="flex-shrink:0;font-size:11px;background:var(--bg2);color:var(--text2);border:none;border-radius:20px;padding:5px 12px;cursor:pointer;font-weight:700">📤 แชร์</button>
         </div>
       </div>
@@ -632,12 +715,14 @@ function buildEntry(suffix, branch, label) {
   return {
     id: 'ps:' + Date.now() + ':' + Math.random().toString(36).slice(2,7) + suffix,
     date: document.getElementById('f-date').value,
+    time: document.getElementById('f-time'+suffix).value.trim(),
     branch,
     slot: label,
     coffee,
     coffeeLot: document.getElementById('f-coffeelot'+suffix).value.trim(),
     milkLot: document.getElementById('f-milklot'+suffix).value.trim(),
     process: document.getElementById('f-process'+suffix).value.trim(),
+    steps: document.getElementById('f-steps'+suffix).value.trim(),
     waterTemp: +document.getElementById('f-temp'+suffix).value || 0,
     waterFlow: +document.getElementById('f-flow'+suffix).value || 0,
     dose1, time1: +document.getElementById('f-time1'+suffix).value || 0, yield1,
@@ -647,8 +732,10 @@ function buildEntry(suffix, branch, label) {
     flavor1: document.getElementById('f-flavor1'+suffix).value.trim(),
     flavor2: document.getElementById('f-flavor2'+suffix).value.trim(),
     flavor3: document.getElementById('f-flavor3'+suffix).value.trim(),
+    milkNotes: document.getElementById('f-milknotes'+suffix).value.trim(),
     shotBy: document.getElementById('f-shotby'+suffix).value.trim(),
     taster: document.getElementById('f-taster'+suffix).value.trim() || window._currentStaff.name,
+    checkBy: document.getElementById('f-checkby'+suffix).value.trim(),
     created: Date.now()
   };
 }
@@ -819,6 +906,8 @@ function resetForm() {
     document.getElementById('f-coffeelot'+suf).value = '';
     document.getElementById('f-milklot'+suf).value = '';
     document.getElementById('f-process'+suf).value = '';
+    document.getElementById('f-time'+suf).value = '';
+    document.getElementById('f-steps'+suf).value = '';
     ['1','2','3'].forEach(n => {
       document.getElementById('f-dose'+n+suf).value = '';
       document.getElementById('f-time'+n+suf).value = '';
@@ -830,7 +919,9 @@ function resetForm() {
     document.getElementById('f-flavor1'+suf).value = '';
     document.getElementById('f-flavor2'+suf).value = '';
     document.getElementById('f-flavor3'+suf).value = '';
+    document.getElementById('f-milknotes'+suf).value = '';
     document.getElementById('f-shotby'+suf).value = '';
+    document.getElementById('f-checkby'+suf).value = '';
   });
 }
 async function loadRecentEntries() {
@@ -869,6 +960,7 @@ async function loadRecentEntries() {
 window.setupForm = setupForm;
 window.updateTasterDefault = updateTasterDefault;
 window.populateShotBy = populateShotBy;
+window.handleOcrPhoto = handleOcrPhoto;
 window.calcExt = calcExt;
 window.saveEntry = saveEntry;
 window.loadRecentEntries = loadRecentEntries;
