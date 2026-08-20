@@ -3683,6 +3683,16 @@ async function submitForm() {
   try {
     await window.storage.set(entry.id, JSON.stringify(entry), true, branch);
     showToast('บันทึกแล้ว ✓');
+  } catch(e) {
+    console.error('Save failed', e);
+    showToast('Error: '+e.message);
+    return; // data wasn't saved — stop here, don't touch the form
+  }
+
+  // Cleanup and navigation are separate try/catches from the save above —
+  // the entry is already safely saved at this point either way, so a
+  // glitch here should never look like "nothing happened."
+  try {
     // Clear sensory inputs + shot selection so the form is ready for the
     // next shot — but keep branch/taster selected since that's usually
     // unchanged for the next tasting right after.
@@ -3693,6 +3703,9 @@ async function submitForm() {
     document.getElementById('ref1-info-box').style.display = 'none';
     document.getElementById('ref2-claim-box').style.display = 'none';
     currentShotData = null;
+  } catch(e) { console.error('Post-submit cleanup failed', e); }
+
+  try {
     // Jump straight to the ทีม page so everyone lands on the shared summary
     // right after submitting, instead of the old inline per-person card —
     // and land on THIS branch's tab specifically (loadTeamPage used to
@@ -3700,7 +3713,10 @@ async function submitForm() {
     selectedTeamBranch = branch;
     showPage('team', document.getElementById('tab-team'), branch);
     setTimeout(() => showCompareModal(shotId, branch), 400);
-  } catch(e) { showToast('Error: '+e.message); }
+  } catch(e) {
+    console.error('Post-submit navigation failed', e);
+    showToast('บันทึกสำเร็จแล้ว — กดแท็บ "ทีม" เพื่อดูผลได้เลย');
+  }
 }
 
 async function showFormSummary(e) {
