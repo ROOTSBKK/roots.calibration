@@ -380,16 +380,32 @@ async function loadOverviewList() {
       listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">ยังไม่มีข้อมูล</div>';
       return;
     }
-    listEl.innerHTML = entries.map(e => `
-      <div class="entry-card">
+    window._overviewCache = entries;
+    listEl.innerHTML = entries.map((e,i) => `
+      <div class="entry-card" onclick="toggleOverviewDetail(${i})" style="cursor:pointer">
         <div class="entry-top"><span>${e.branch} · ${e.coffee}</span><span style="color:var(--amber)">${e.ext?e.ext+'% EXT':''}</span></div>
-        <div class="entry-meta">${e.date} · Dose ${e.dose1||'—'}g → Yield ${e.yield1||'—'}g · TDS ${e.tds||'—'}%</div>
-        <div class="entry-meta">${e.shotBy?'Shot by '+e.shotBy+' · ':''}ชิมโดย ${e.taster}</div>
+        <div class="entry-meta">${e.date} · ${e.taster} · แตะดูรายละเอียด ▾</div>
+        <div id="ov-detail-${i}" style="display:none;margin-top:8px;padding-top:8px;border-top:1px dashed var(--bg3);font-size:12px;color:var(--text2);line-height:1.9">
+          <b>Coffee Lot:</b> ${e.coffeeLot||'—'} &nbsp; <b>Milk Lot:</b> ${e.milkLot||'—'}<br>
+          <b>Water Temp:</b> ${e.waterTemp||'—'}°C &nbsp; <b>Water Flow:</b> ${e.waterFlow||'—'}g/s<br>
+          <b>Dose1:</b> ${e.dose1||'—'}g / ${e.time1||'—'}s / ${e.yield1||'—'}g<br>
+          ${e.dose2?`<b>Dose2:</b> ${e.dose2}g / ${e.time2||'—'}s / ${e.yield2||'—'}g<br>`:''}
+          ${e.dose3?`<b>Dose3:</b> ${e.dose3}g / ${e.time3||'—'}s / ${e.yield3||'—'}g<br>`:''}
+          <b>TDS:</b> ${e.tds||'—'}% &nbsp; <b>EXT%:</b> ${e.ext||'—'}%<br>
+          ${(e.flavor1||e.flavor2||e.flavor3)?`<b>Flavor/Texture/Aftertaste:</b> ${[e.flavor1,e.flavor2,e.flavor3].filter(Boolean).join(' / ')}<br>`:''}
+          ${e.shotBy?`<b>Shot by:</b> ${e.shotBy}<br>`:''}
+          <b>ชิมโดย:</b> ${e.taster}
+        </div>
       </div>
     `).join('');
   } catch(e) {
     listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">โหลดไม่สำเร็จ</div>';
   }
+}
+
+function toggleOverviewDetail(i) {
+  const el = document.getElementById('ov-detail-'+i);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
 function updateTasterDefault() {
@@ -526,6 +542,7 @@ window.loadRecentEntries = loadRecentEntries;
 window.showTrackPage = showTrackPage;
 window.loadExtChart = loadExtChart;
 window.loadOverviewList = loadOverviewList;
+window.toggleOverviewDetail = toggleOverviewDetail;
 
 // Wire ratio calc immediately too (in case DOMContentLoaded already fired)
 ['1','2','3'].forEach(n => {
