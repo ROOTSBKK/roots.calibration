@@ -95,6 +95,8 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
     </div>
   </div>
 
+  <datalist id="coffee-list"></datalist>
+
   <div class="wrap" id="page-form">
 
     <div class="card">
@@ -107,7 +109,7 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
     <div class="card" style="border-top:3px solid var(--amber)">
       <div class="card-title" style="color:var(--amber)">☕ House Blend</div>
       <div class="row">
-        <div class="col" style="flex:1.4"><div class="lbl">Coffee</div><select id="f-coffeea"></select></div>
+        <div class="col" style="flex:1.4"><div class="lbl">Coffee</div><input type="text" id="f-coffeea" list="coffee-list" placeholder="พิมพ์ชื่อกาแฟ"></div>
         <div class="col"><div class="lbl">Coffee Lot</div><input type="text" id="f-coffeelota" placeholder="24/7"></div>
         <div class="col"><div class="lbl">Milk Lot</div><input type="text" id="f-milklota"></div>
       </div>
@@ -173,7 +175,7 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
     <div class="card" style="border-top:3px solid var(--blue)">
       <div class="card-title" style="color:var(--blue)">☕ Single Origin (SO)</div>
       <div class="row">
-        <div class="col" style="flex:1.4"><div class="lbl">Coffee</div><select id="f-coffeeb"></select></div>
+        <div class="col" style="flex:1.4"><div class="lbl">Coffee</div><input type="text" id="f-coffeeb" list="coffee-list" placeholder="พิมพ์ชื่อกาแฟ"></div>
         <div class="col"><div class="lbl">Coffee Lot</div><input type="text" id="f-coffeelotb" placeholder="24/7"></div>
         <div class="col"><div class="lbl">Milk Lot</div><input type="text" id="f-milklotb"></div>
       </div>
@@ -374,12 +376,12 @@ function setupForm() {
   const today = new Date();
   document.getElementById('f-date').value = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
 
-  // Coffee dropdowns — House Blend section defaults to "House Blend",
-  // SO section starts blank (varies daily, force an explicit pick).
-  const coffeeOptsHtml = COFFEE_OPTIONS.map(c => `<option value="${c}">${c}</option>`).join('');
-  document.getElementById('f-coffeea').innerHTML = coffeeOptsHtml;
+  // Coffee fields — autocomplete text inputs (shared datalist), not a
+  // rigid dropdown. House Blend section defaults to "House Blend"; SO
+  // section starts blank since it varies daily.
+  document.getElementById('coffee-list').innerHTML = COFFEE_OPTIONS.map(c => `<option value="${c}">`).join('');
   document.getElementById('f-coffeea').value = 'House Blend';
-  document.getElementById('f-coffeeb').innerHTML = '<option value="">— เลือกกาแฟ —</option>' + coffeeOptsHtml;
+  document.getElementById('f-coffeeb').value = '';
 
   ['a','b'].forEach(suf => {
     ['1','2','3'].forEach(n => {
