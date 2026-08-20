@@ -254,13 +254,17 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
 
   <div class="wrap" id="page-overview" style="display:none">
     <div class="card">
-      <div class="row" style="margin-bottom:0;align-items:center">
-        <div class="col-block" style="margin-bottom:0">
-          <div class="lbl">EXT% รายวัน — ย้อนหลัง</div>
+      <div class="row">
+        <div class="col"><div class="lbl">EXT% รายวัน — ย้อนหลัง</div>
           <select id="ext-days-range" onchange="loadExtChart()">
             <option value="7">7 วัน</option>
             <option value="14">14 วัน</option>
             <option value="30">30 วัน</option>
+          </select>
+        </div>
+        <div class="col"><div class="lbl">ดูสาขา</div>
+          <select id="ov-branch-filter" onchange="loadExtChart();loadOverviewList()">
+            <option value="">ทุกสาขา</option>
           </select>
         </div>
       </div>
@@ -269,16 +273,6 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
     <div class="card">
       <div id="ext-chart" style="overflow-x:auto;-webkit-overflow-scrolling:touch">
         <div style="color:var(--text3);font-size:13px">กำลังโหลด...</div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="row" style="margin-bottom:0;align-items:center">
-        <div class="col"><div class="lbl">ดูสาขา</div>
-          <select id="ov-branch-filter" onchange="loadOverviewList()">
-            <option value="">ทุกสาขา</option>
-          </select>
-        </div>
       </div>
     </div>
 
@@ -446,28 +440,28 @@ async function loadExtChart() {
   chartEl.innerHTML = '<div style="color:var(--text3);font-size:13px">กำลังโหลด...</div>';
   try {
     const days = +document.getElementById('ext-days-range').value || 7;
-    const isArea = AREA_STAFF.includes(window._currentStaff.name);
-    const branchesToShow = isArea ? ALL_BRANCHES : [window._currentStaff.branch];
+    const branchFilter = document.getElementById('ov-branch-filter').value; // '' = ทุกสาขา
 
-    // Build the list of dates to show, newest first
+    // Oldest first so the chart reads left-to-right chronologically.
     const today = new Date();
     const dateList = [];
-    for (let i = 0; i < days; i++) {
+    for (let i = days-1; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       dateList.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
     }
 
     const snap = await window._fsgetDocs(window._fscollection(window._db, 'shared'));
-    // key: date|branch -> [ext, ext, ...]
+    // key: date|slot -> [ext, ext, ...]
     const grid = {};
     snap.forEach(d => {
       const data = d.data();
       if (data.key && data.key.startsWith('ps:')) {
         try {
           const e = JSON.parse(data.value);
-          if (e.ext && e.date && dateList.includes(e.date) && branchesToShow.includes(e.branch)) {
-            const k = e.date + '|' + e.branch;
+          if (e.ext && e.date && dateList.includes(e.date) && (!branchFilter || e.branch === branchFilter)) {
+            const slot = e.slot === 'SO' ? 'SO' : 'House Blend';
+            const k = e.date + '|' + slot;
             if (!grid[k]) grid[k] = [];
             grid[k].push(e.ext);
           }
@@ -475,28 +469,42 @@ async function loadExtChart() {
       }
     });
 
-    const COL_W = 78;
-    const headerCells = branchesToShow.map(b => `<div style="min-width:${COL_W}px;max-width:${COL_W}px;padding:8px 4px;text-align:center;border-left:1px solid var(--bg3);font-size:10.5px;font-weight:700;color:var(--text2)">${b}</div>`).join('');
-    const bodyRows = dateList.map(dt => {
-      const shortDate = dt.slice(5).split('-').reverse().join('/'); // MM-DD -> DD/MM
-      const cells = branchesToShow.map(b => {
-        const vals = grid[dt+'|'+b];
-        const avg = vals && vals.length ? vals.reduce((s,v)=>s+v,0)/vals.length : null;
-        return `<div style="min-width:${COL_W}px;max-width:${COL_W}px;padding:8px 4px;text-align:center;border-left:1px solid var(--bg3);font-size:12.5px;font-weight:${avg?'700':'400'};color:${avg?'var(--amber)':'var(--text3)'}">${avg?avg.toFixed(1):'—'}</div>`;
-      }).join('');
-      return `<div style="display:flex;border-top:1px solid var(--bg3)">
-        <div style="min-width:56px;max-width:56px;flex-shrink:0;padding:8px 6px;font-size:11px;color:var(--text3);font-weight:700">${shortDate}</div>
-        <div style="display:flex">${cells}</div>
+    const avgOf = vals => vals && vals.length ? vals.reduce((s,v)=>s+v,0)/vals.length : null;
+    const results = dateList.map(dt => ({
+      date: dt,
+      hb: avgOf(grid[dt+'|House Blend']),
+      so: avgOf(grid[dt+'|SO']),
+    }));
+    const maxVal = Math.max(1, ...results.flatMap(r => [r.hb, r.so]).filter(v => v !== null));
+    const CHART_H = 130;
+
+    const bars = results.map(r => {
+      const shortDate = r.date.slice(5).split('-').reverse().join('/');
+      const hbH = r.hb ? Math.max(6, Math.round(r.hb/maxVal*CHART_H)) : 0;
+      const soH = r.so ? Math.max(6, Math.round(r.so/maxVal*CHART_H)) : 0;
+      return `<div style="display:flex;flex-direction:column;align-items:center;min-width:60px;flex-shrink:0">
+        <div style="display:flex;gap:4px;align-items:flex-end;height:${CHART_H+16}px">
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end">
+            ${r.hb?`<div style="font-size:9.5px;font-weight:700;color:var(--amber);margin-bottom:2px">${r.hb.toFixed(1)}</div>`:''}
+            <div style="width:16px;height:${hbH}px;background:var(--amber);border-radius:4px 4px 0 0"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end">
+            ${r.so?`<div style="font-size:9.5px;font-weight:700;color:var(--blue);margin-bottom:2px">${r.so.toFixed(1)}</div>`:''}
+            <div style="width:16px;height:${soH}px;background:var(--blue);border-radius:4px 4px 0 0"></div>
+          </div>
+        </div>
+        <div style="font-size:10.5px;color:var(--text3);font-weight:600;margin-top:4px">${shortDate}</div>
       </div>`;
     }).join('');
 
     chartEl.innerHTML = `
-      <div style="display:flex;border-bottom:2px solid var(--bg3);background:var(--bg2)">
-        <div style="min-width:56px;max-width:56px;flex-shrink:0;padding:6px"></div>
-        <div style="display:flex">${headerCells}</div>
+      <div style="display:flex;gap:12px;align-items:flex-end;overflow-x:auto;padding-bottom:4px;border-bottom:2px solid var(--bg3);-webkit-overflow-scrolling:touch">${bars}</div>
+      <div style="display:flex;gap:16px;font-size:11px;color:var(--text2);margin-top:10px;justify-content:center">
+        <span><span style="display:inline-block;width:10px;height:10px;background:var(--amber);border-radius:2px;margin-right:4px;vertical-align:middle"></span>House Blend</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:var(--blue);border-radius:2px;margin-right:4px;vertical-align:middle"></span>SO</span>
       </div>
-      ${bodyRows}
     `;
+
   } catch(e) {
     chartEl.innerHTML = '<div style="color:var(--text3);font-size:13px">โหลดไม่สำเร็จ</div>';
   }
