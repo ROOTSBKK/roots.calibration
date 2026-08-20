@@ -98,7 +98,7 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
       <div class="row">
         <div class="col" style="flex:1.4"><div class="lbl">Coffee</div><input type="text" id="f-coffee" placeholder="เช่น House Blend"></div>
         <div class="col"><div class="lbl">Coffee Lot</div><input type="text" id="f-coffeelot" placeholder="24/7"></div>
-        <div class="col"><div class="lbl">Milk Lot</div><input type="text" id="f-milklot" placeholder="ถ้ามี"></div>
+        <div class="col"><div class="lbl">Milk Lot</div><input type="text" id="f-milklot"></div>
       </div>
       <div class="row" style="margin-bottom:0">
         <div class="col"><div class="lbl">Water Temp (°C)</div><input type="number" id="f-temp" value="93" step="0.5"></div>
@@ -152,8 +152,10 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
         <span style="color:var(--text3);font-weight:700">/</span>
         <input type="text" id="f-flavor3" placeholder="..............">
       </div>
-      <div class="lbl">ชื่อคนชิม</div>
-      <input type="text" id="f-taster" placeholder="ชื่อผู้บันทึก">
+      <div class="row" style="margin-bottom:0">
+        <div class="col"><div class="lbl">Shot by</div><input type="text" id="f-shotby" placeholder="คนตั้งช็อต"></div>
+        <div class="col"><div class="lbl">ชื่อคนชิม</div><input type="text" id="f-taster" placeholder="ชื่อผู้บันทึก"></div>
+      </div>
     </div>
 
     <button class="btn btn-primary" onclick="saveEntry()">💾 บันทึก</button>
@@ -323,6 +325,7 @@ async function saveEntry() {
     flavor1: document.getElementById('f-flavor1').value.trim(),
     flavor2: document.getElementById('f-flavor2').value.trim(),
     flavor3: document.getElementById('f-flavor3').value.trim(),
+    shotBy: document.getElementById('f-shotby').value.trim(),
     taster: document.getElementById('f-taster').value.trim() || window._currentStaff.name,
     created: Date.now()
   };
@@ -352,6 +355,7 @@ function resetForm() {
   document.getElementById('f-flavor1').value = '';
   document.getElementById('f-flavor2').value = '';
   document.getElementById('f-flavor3').value = '';
+  document.getElementById('f-shotby').value = '';
 }
 
 async function loadRecentEntries() {
@@ -377,7 +381,7 @@ async function loadRecentEntries() {
       <div class="entry-card">
         <div class="entry-top"><span>${e.coffee}</span><span style="color:var(--amber)">${e.ext?e.ext+'% EXT':''}</span></div>
         <div class="entry-meta">${e.date} · ${e.branch} · Dose ${e.dose1||'—'}g → Yield ${e.yield1||'—'}g · TDS ${e.tds||'—'}%</div>
-        <div class="entry-meta">${[e.flavor1,e.flavor2,e.flavor3].filter(Boolean).join(' / ')||''}${(e.flavor1||e.flavor2||e.flavor3)?' · ':''}ชิมโดย ${e.taster}</div>
+        <div class="entry-meta">${[e.flavor1,e.flavor2,e.flavor3].filter(Boolean).join(' / ')||''}${(e.flavor1||e.flavor2||e.flavor3)?' · ':''}${e.shotBy?'Shot by '+e.shotBy+' · ':''}ชิมโดย ${e.taster}</div>
       </div>
     `).join('');
   } catch(e) {
