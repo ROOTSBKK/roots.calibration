@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Roots BKK — Parameter Summary</title>
+<style>
+:root{
+  --bg:#F8F7F4; --bg2:#EFEDE8; --bg3:#E4E1DA;
+  --text:#18181A; --text2:#56544F; --text3:#908D86;
+  --blue:#1A5FA8; --bbg:#E7F0FB; --bborder:#7AAEE0;
+  --green:#1F6B35; --gbg:#E8F3EC; --gborder:#7DC49A;
+  --amber:#9A5F0A; --abg:#FDF3E3; --aborder:#E5B86A;
+  --red:#B8352A; --rbg:#FAEAE8; --rborder:#E8806E;
+  --r2:8px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text)}
+.hdr{background:#18181A;color:#F8F7F4;padding:16px 18px;position:sticky;top:0;z-index:10}
+.hdr-title{font-size:16px;font-weight:700}
+.hdr-sub{font-size:12px;color:#D9D6CE;margin-top:2px}
+.wrap{max-width:520px;margin:0 auto;padding:14px}
+.card{background:#fff;border:1px solid var(--bg3);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.card-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px;text-transform:uppercase;letter-spacing:.03em}
+.lbl{font-size:11px;color:var(--text3);font-weight:700;margin-bottom:4px}
+input[type=text],input[type=number],input[type=date],select{
+  width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-radius:6px;
+  font-size:14px;background:#fff;color:var(--text);font-family:inherit
+}
+input:focus,select:focus{outline:none;border-color:var(--bborder)}
+.row{display:flex;gap:8px;margin-bottom:10px}
+.col{flex:1;min-width:0}
+.col-block{margin-bottom:10px}
+.pull-cols{display:flex;gap:8px}
+.pull-col{flex:1;background:var(--bg2);border-radius:8px;padding:8px}
+.pull-col-title{font-size:11px;font-weight:700;color:var(--blue);text-align:center;margin-bottom:6px}
+.pull-col input{margin-bottom:6px;font-size:13px;padding:7px 6px;text-align:center}
+.ratio-line{font-size:11px;color:var(--text3);text-align:center;margin-top:2px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:7px 13px;border-radius:20px;border:1.5px solid var(--bg3);background:#fff;font-size:13px;cursor:pointer;user-select:none}
+.chip.sel{background:var(--gbg);border-color:var(--gborder);color:var(--green);font-weight:700}
+.btn{width:100%;padding:13px;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-secondary{background:var(--bg2);color:var(--text2)}
+.ext-box{background:var(--abg);border:1px solid var(--aborder);border-radius:8px;padding:10px 12px;text-align:center;margin-top:8px}
+.ext-val{font-size:22px;font-weight:800;color:var(--amber)}
+.ext-lbl{font-size:11px;color:var(--amber)}
+#login-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#18181A;color:#fff;padding:20px;text-align:center}
+#login-title{font-size:20px;font-weight:700;margin-bottom:6px}
+#login-sub{font-size:13px;color:#D9D6CE;margin-bottom:24px}
+#google-btn{display:flex;align-items:center;gap:10px;background:#fff;color:#18181A;border:none;border-radius:8px;padding:12px 22px;font-size:14px;font-weight:600;cursor:pointer}
+#login-status{margin-top:12px;font-size:12px;color:#D9D6CE;min-height:16px}
+.entry-card{background:#fff;border:1px solid var(--bg3);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:12.5px}
+.entry-top{display:flex;justify-content:space-between;font-weight:700;margin-bottom:4px}
+.entry-meta{color:var(--text3);font-size:11.5px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:#18181A;color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:999}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#app-content{display:none}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div id="login-title">☕ Parameter Summary</div>
+  <div id="login-sub">Roots BKK — บันทึกพารามิเตอร์รายวัน</div>
+  <button id="google-btn" onclick="doLogin()">
+    <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+    Login with Google
+  </button>
+  <div id="login-status"></div>
+</div>
+
+<div id="mode-chooser" style="display:none;min-height:100vh;flex-direction:column;align-items:center;justify-content:center;background:#18181A;color:#fff;padding:20px;text-align:center">
+  <div style="font-size:12px;letter-spacing:2px;color:#D9D6CE;font-weight:700;margin-bottom:6px">ROOTS BKK</div>
+  <div style="font-size:19px;font-weight:700;margin-bottom:4px" id="chooser-hello"></div>
+  <div style="font-size:13px;color:#D9D6CE;margin-bottom:26px">เลือกเครื่องมือที่จะใช้</div>
+  <button onclick="chooseMode('calibration')" style="width:260px;padding:16px;margin-bottom:12px;border:none;border-radius:10px;background:#2A2A2E;color:#fff;font-size:15px;font-weight:700;cursor:pointer">
+    🎯 Palate Calibration Test<br><span style="font-size:11px;font-weight:400;color:#D9D6CE">ชิม + ให้คะแนน + เทียบทีม</span>
+  </button>
+  <button onclick="chooseMode('summary')" style="width:260px;padding:16px;border:none;border-radius:10px;background:#fff;color:#18181A;font-size:15px;font-weight:700;cursor:pointer">
+    ☕ Parameter Summary<br><span style="font-size:11px;font-weight:400;color:#56544F">กรอกพารามิเตอร์เก็บข้อมูล</span>
+  </button>
+</div>
+
+<div id="app-content">
+  <div class="hdr">
+    <div class="hdr-title">☕ Parameter Summary</div>
+    <div class="hdr-sub" id="hdr-user"></div>
+  </div>
+
+  <div class="wrap">
+
+    <div class="card">
+      <div class="row">
+        <div class="col"><div class="lbl">วันที่</div><input type="date" id="f-date"></div>
+        <div class="col"><div class="lbl">สาขา</div><select id="f-branch" onchange="updateTasterDefault()"></select></div>
+      </div>
+      <div class="col-block"><div class="lbl">Coffee (ชื่อกาแฟ)</div><input type="text" id="f-coffee" placeholder="เช่น House Blend"></div>
+      <div class="row">
+        <div class="col"><div class="lbl">Coffee Lot</div><input type="text" id="f-coffeelot" placeholder="เช่น 24/7"></div>
+        <div class="col"><div class="lbl">Milk Lot</div><input type="text" id="f-milklot" placeholder="ถ้ามี"></div>
+      </div>
+      <div class="row">
+        <div class="col"><div class="lbl">Water Temp (°C)</div><input type="number" id="f-temp" value="93" step="0.5"></div>
+        <div class="col"><div class="lbl">Water Flow (g/s)</div><input type="number" id="f-flow" value="9" step="0.5"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Dose / Time / Yield (สูงสุด 3 ครั้ง)</div>
+      <div class="pull-cols">
+        <div class="pull-col">
+          <div class="pull-col-title">ครั้งที่ 1</div>
+          <input type="number" id="f-dose1" placeholder="Dose" step="0.5" oninput="calcExt()">
+          <input type="number" id="f-time1" placeholder="Time (s)" step="1">
+          <input type="number" id="f-yield1" placeholder="Yield" step="0.5" oninput="calcExt()">
+          <div class="ratio-line" id="ratio1">1 : —</div>
+        </div>
+        <div class="pull-col">
+          <div class="pull-col-title">ครั้งที่ 2</div>
+          <input type="number" id="f-dose2" placeholder="Dose" step="0.5">
+          <input type="number" id="f-time2" placeholder="Time (s)" step="1">
+          <input type="number" id="f-yield2" placeholder="Yield" step="0.5">
+          <div class="ratio-line" id="ratio2">1 : —</div>
+        </div>
+        <div class="pull-col">
+          <div class="pull-col-title">ครั้งที่ 3</div>
+          <input type="number" id="f-dose3" placeholder="Dose" step="0.5">
+          <input type="number" id="f-time3" placeholder="Time (s)" step="1">
+          <input type="number" id="f-yield3" placeholder="Yield" step="0.5">
+          <div class="ratio-line" id="ratio3">1 : —</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">TDS → EXT%</div>
+      <div class="lbl">TDS (%) <span style="font-weight:400;color:var(--text3)">— อ้างอิง Dose/Yield ครั้งที่ 1</span></div>
+      <input type="number" id="f-tds" placeholder="เช่น 9.5" step="0.1" oninput="calcExt()">
+      <div class="ext-box">
+        <div class="ext-val" id="ext-val">—</div>
+        <div class="ext-lbl">EXT% (คำนวณอัตโนมัติ)</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Flavor (เลือกได้หลายอัน ไม่บังคับ)</div>
+      <div class="chips" id="flavor-chips">
+        <button type="button" class="chip" data-v="Fruity" onclick="toggleChip(this)">🍍 Fruity</button>
+        <button type="button" class="chip" data-v="Floral" onclick="toggleChip(this)">🌸 Floral</button>
+        <button type="button" class="chip" data-v="Nutty/Chocolate" onclick="toggleChip(this)">🌰 Nutty/Chocolate</button>
+        <button type="button" class="chip" data-v="Sugary" onclick="toggleChip(this)">🍯 Sugary</button>
+        <button type="button" class="chip" data-v="Spice/Herbal" onclick="toggleChip(this)">🌿 Spice/Herbal</button>
+        <button type="button" class="chip" data-v="Roasted/Earthy" onclick="toggleChip(this)">🔥 Roasted/Earthy</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="lbl">ชื่อคนชิม</div>
+      <input type="text" id="f-taster" placeholder="ชื่อผู้บันทึก">
+    </div>
+
+    <button class="btn btn-primary" onclick="saveEntry()">💾 บันทึก</button>
+
+    <div style="margin:20px 0 10px;font-size:13px;font-weight:700;color:var(--text2)">📋 รายการล่าสุด</div>
+    <div id="entries-list"><div style="color:var(--text3);font-size:13px">กำลังโหลด...</div></div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+import { getFirestore, initializeFirestore, doc, getDoc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+const cfg = {
+  apiKey:"AIzaSyASqWQL08s1np9HEm-0_WIv0tQ9r3WmzZE",
+  authDomain:"roots-calibration.firebaseapp.com",
+  projectId:"roots-calibration",
+  storageBucket:"roots-calibration.firebasestorage.app",
+  messagingSenderId:"37839398079",
+  appId:"1:37839398079:web:48da9c8dfc29cf05e7920a"
+};
+const fbApp = initializeApp(cfg);
+const auth = getAuth(fbApp);
+const db = initializeFirestore(fbApp, { experimentalAutoDetectLongPolling: true });
+
+window._auth = auth;
+window._db = db;
+window._fsdoc = doc; window._fsgetDoc = getDoc; window._fssetDoc = setDoc;
+window._fscollection = collection; window._fsgetDocs = getDocs;
+
+window.doLogin = async function(){
+  const status = document.getElementById('login-status');
+  status.textContent = 'กำลัง login...';
+  try {
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    const email = result.user.email.toLowerCase();
+    const staffDoc = await getDoc(doc(db, 'staff', email));
+    if (!staffDoc.exists()) {
+      status.textContent = 'ไม่พบ Gmail นี้ในระบบ กรุณาติดต่อ Boss';
+      await signOut(auth);
+      return;
+    }
+    window._currentStaff = staffDoc.data();
+    initApp();
+  } catch(e) {
+    console.error(e);
+    status.textContent = 'Login ไม่สำเร็จ: ' + e.message;
+  }
+};
+
+onAuthStateChanged(auth, async (user) => {
+  if (user && !window._currentStaff) {
+    try {
+      const staffDoc = await getDoc(doc(db, 'staff', user.email.toLowerCase()));
+      if (staffDoc.exists()) {
+        window._currentStaff = staffDoc.data();
+        initApp();
+      }
+    } catch(e) {}
+  }
+});
+
+function initApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('mode-chooser').style.display = 'flex';
+  document.getElementById('chooser-hello').textContent = `สวัสดี ${window._currentStaff.name}`;
+}
+window.chooseMode = function(mode){
+  if (mode === 'calibration') {
+    window.location.href = 'index.html';
+    return;
+  }
+  document.getElementById('mode-chooser').style.display = 'none';
+  _initAppReal();
+};
+function _initAppReal() {
+  document.getElementById('app-content').style.display = 'block';
+  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch}`;
+  window.setupForm();
+}
+</script>
+
+<script>
+const ALL_BRANCHES = ['Thonglor','Lasalle','Saladang','Emquartier','Ari','Bitec','Sathorn','Ratchathewi','Praditmanutham','Event'];
+const AREA_STAFF = ['Lhing','Eve','Boss','Nu','Ball'];
+let flavorTags = [];
+
+function setupForm() {
+  const branchSel = document.getElementById('f-branch');
+  const isArea = AREA_STAFF.includes(window._currentStaff.name);
+  if (isArea) {
+    branchSel.innerHTML = ALL_BRANCHES.map(b => `<option value="${b}">${b}</option>`).join('');
+  } else {
+    branchSel.innerHTML = `<option value="${window._currentStaff.branch}">${window._currentStaff.branch}</option>`;
+    branchSel.disabled = true;
+  }
+  const today = new Date();
+  document.getElementById('f-date').value = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  updateTasterDefault();
+  loadRecentEntries();
+}
+
+function updateTasterDefault() {
+  document.getElementById('f-taster').value = window._currentStaff.name;
+}
+
+function toggleChip(btn) {
+  const v = btn.dataset.v;
+  btn.classList.toggle('sel');
+  if (flavorTags.includes(v)) flavorTags = flavorTags.filter(t => t !== v);
+  else flavorTags.push(v);
+}
+
+function calcRatio(doseId, yieldId, ratioId) {
+  const dose = +document.getElementById(doseId).value;
+  const yieldW = +document.getElementById(yieldId).value;
+  const el = document.getElementById(ratioId);
+  el.textContent = (dose && yieldW) ? `1 : ${(yieldW/dose).toFixed(1)}` : '1 : —';
+}
+['1','2','3'].forEach(n => {
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('f-dose'+n).addEventListener('input', () => calcRatio('f-dose'+n,'f-yield'+n,'ratio'+n));
+    document.getElementById('f-yield'+n).addEventListener('input', () => calcRatio('f-dose'+n,'f-yield'+n,'ratio'+n));
+  });
+});
+
+function calcExt() {
+  const dose1 = +document.getElementById('f-dose1').value;
+  const yield1 = +document.getElementById('f-yield1').value;
+  const tds = +document.getElementById('f-tds').value;
+  const el = document.getElementById('ext-val');
+  if (dose1 && yield1 && tds) {
+    el.textContent = (tds * yield1 / dose1).toFixed(1) + '%';
+  } else {
+    el.textContent = '—';
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+async function saveEntry() {
+  const branch = document.getElementById('f-branch').value;
+  const coffee = document.getElementById('f-coffee').value.trim();
+  if (!coffee) { showToast('กรุณาใส่ชื่อกาแฟ'); return; }
+
+  const dose1 = +document.getElementById('f-dose1').value || 0;
+  const yield1 = +document.getElementById('f-yield1').value || 0;
+  const tds = +document.getElementById('f-tds').value || 0;
+  const ext = (dose1 && yield1 && tds) ? +(tds * yield1 / dose1).toFixed(1) : 0;
+
+  const entry = {
+    id: 'ps:' + Date.now() + ':' + Math.random().toString(36).slice(2,7),
+    date: document.getElementById('f-date').value,
+    branch,
+    coffee,
+    coffeeLot: document.getElementById('f-coffeelot').value.trim(),
+    milkLot: document.getElementById('f-milklot').value.trim(),
+    waterTemp: +document.getElementById('f-temp').value || 0,
+    waterFlow: +document.getElementById('f-flow').value || 0,
+    dose1, time1: +document.getElementById('f-time1').value || 0, yield1,
+    dose2: +document.getElementById('f-dose2').value || 0, time2: +document.getElementById('f-time2').value || 0, yield2: +document.getElementById('f-yield2').value || 0,
+    dose3: +document.getElementById('f-dose3').value || 0, time3: +document.getElementById('f-time3').value || 0, yield3: +document.getElementById('f-yield3').value || 0,
+    tds, ext,
+    flavor: [...flavorTags],
+    taster: document.getElementById('f-taster').value.trim() || window._currentStaff.name,
+    created: Date.now()
+  };
+
+  try {
+    await window._fssetDoc(window._fsdoc(window._db, 'shared', entry.id), { key: entry.id, branch, value: JSON.stringify(entry) });
+    showToast('บันทึกแล้ว ✓');
+    resetForm();
+    loadRecentEntries();
+  } catch(e) {
+    showToast('Error: ' + e.message);
+  }
+}
+
+function resetForm() {
+  document.getElementById('f-coffee').value = '';
+  document.getElementById('f-coffeelot').value = '';
+  document.getElementById('f-milklot').value = '';
+  ['1','2','3'].forEach(n => {
+    document.getElementById('f-dose'+n).value = '';
+    document.getElementById('f-time'+n).value = '';
+    document.getElementById('f-yield'+n).value = '';
+    document.getElementById('ratio'+n).textContent = '1 : —';
+  });
+  document.getElementById('f-tds').value = '';
+  document.getElementById('ext-val').textContent = '—';
+  flavorTags = [];
+  document.querySelectorAll('#flavor-chips .chip').forEach(c => c.classList.remove('sel'));
+}
+
+async function loadRecentEntries() {
+  const listEl = document.getElementById('entries-list');
+  listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">กำลังโหลด...</div>';
+  try {
+    const branch = document.getElementById('f-branch').value;
+    const snap = await window._fsgetDocs(window._fscollection(window._db, 'shared'));
+    let entries = [];
+    snap.forEach(d => {
+      const data = d.data();
+      if (data.key && data.key.startsWith('ps:') && data.branch === branch) {
+        try { entries.push(JSON.parse(data.value)); } catch(e) {}
+      }
+    });
+    entries.sort((a,b) => b.created - a.created);
+    entries = entries.slice(0, 10);
+    if (!entries.length) {
+      listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">ยังไม่มีข้อมูล</div>';
+      return;
+    }
+    listEl.innerHTML = entries.map(e => `
+      <div class="entry-card">
+        <div class="entry-top"><span>${e.coffee}</span><span style="color:var(--amber)">${e.ext?e.ext+'% EXT':''}</span></div>
+        <div class="entry-meta">${e.date} · ${e.branch} · Dose ${e.dose1||'—'}g → Yield ${e.yield1||'—'}g · TDS ${e.tds||'—'}%</div>
+        <div class="entry-meta">${e.flavor&&e.flavor.length?e.flavor.join(', ')+' · ':''}ชิมโดย ${e.taster}</div>
+      </div>
+    `).join('');
+  } catch(e) {
+    listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">โหลดไม่สำเร็จ</div>';
+  }
+}
+
+window.setupForm = setupForm;
+window.updateTasterDefault = updateTasterDefault;
+window.toggleChip = toggleChip;
+window.calcExt = calcExt;
+window.saveEntry = saveEntry;
+window.loadRecentEntries = loadRecentEntries;
+
+// Wire ratio calc immediately too (in case DOMContentLoaded already fired)
+['1','2','3'].forEach(n => {
+  const doseEl = document.getElementById('f-dose'+n);
+  const yieldEl = document.getElementById('f-yield'+n);
+  if (doseEl && yieldEl) {
+    doseEl.addEventListener('input', () => calcRatio('f-dose'+n,'f-yield'+n,'ratio'+n));
+    yieldEl.addEventListener('input', () => calcRatio('f-dose'+n,'f-yield'+n,'ratio'+n));
+  }
+});
+
+document.getElementById('f-branch') && document.getElementById('f-branch').addEventListener('change', loadRecentEntries);
+</script>
+
+</body>
+</html>

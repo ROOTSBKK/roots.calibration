@@ -146,6 +146,18 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
   <div class="login-status" id="login-status">กำลังโหลด...</div>
 </div>
 
+<div id="mode-chooser" style="display:none;min-height:100vh;flex-direction:column;align-items:center;justify-content:center;background:#18181A;color:#fff;padding:20px;text-align:center">
+  <div style="font-size:12px;letter-spacing:2px;color:#D9D6CE;font-weight:700;margin-bottom:6px">ROOTS BKK</div>
+  <div style="font-size:19px;font-weight:700;margin-bottom:4px" id="chooser-hello"></div>
+  <div style="font-size:13px;color:#D9D6CE;margin-bottom:26px">เลือกเครื่องมือที่จะใช้</div>
+  <button onclick="chooseMode('calibration')" style="width:260px;padding:16px;margin-bottom:12px;border:none;border-radius:10px;background:#fff;color:#18181A;font-size:15px;font-weight:700;cursor:pointer">
+    🎯 Palate Calibration Test<br><span style="font-size:11px;font-weight:400;color:#56544F">ชิม + ให้คะแนน + เทียบทีม</span>
+  </button>
+  <button onclick="chooseMode('summary')" style="width:260px;padding:16px;border:none;border-radius:10px;background:#2A2A2E;color:#fff;font-size:15px;font-weight:700;cursor:pointer">
+    ☕ Parameter Summary<br><span style="font-size:11px;font-weight:400;color:#D9D6CE">กรอกพารามิเตอร์เก็บข้อมูล</span>
+  </button>
+</div>
+
 
 
 <div class="hdr">
@@ -1981,7 +1993,25 @@ async function lookupStaff(email){
   return s2.exists()?s2.data():null;
 }
 
+// initApp is now a wrapper that shows the tool-chooser first — the real
+// app init only runs once "Palate Calibration Test" is picked (or if the
+// user already chose it in this browser session before).
 function initApp(user){
+  window._pendingUser = user;
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('mode-chooser').style.display = 'flex';
+  document.getElementById('chooser-hello').textContent = `สวัสดี ${user.name}`;
+}
+window.chooseMode = function(mode){
+  if (mode === 'summary') {
+    window.location.href = 'param-summary.html';
+    return;
+  }
+  document.getElementById('mode-chooser').style.display = 'none';
+  _initAppReal(window._pendingUser);
+};
+
+function _initAppReal(user){
   window._currentUser=user;
   document.getElementById('login-screen').classList.add('hidden');
   const hdr=document.getElementById('hdr-date');
