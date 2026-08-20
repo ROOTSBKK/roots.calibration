@@ -98,73 +98,145 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
   <div class="wrap" id="page-form">
 
     <div class="card">
-      <div class="row">
-        <div class="col"><div class="lbl">วันที่</div><input type="date" id="f-date"></div>
-        <div class="col"><div class="lbl">สาขา</div><select id="f-branch" onchange="updateTasterDefault()"></select></div>
-      </div>
-      <div class="row">
-        <div class="col" style="flex:1.4"><div class="lbl">Coffee</div><input type="text" id="f-coffee" placeholder="เช่น House Blend"></div>
-        <div class="col"><div class="lbl">Coffee Lot</div><input type="text" id="f-coffeelot" placeholder="24/7"></div>
-        <div class="col"><div class="lbl">Milk Lot</div><input type="text" id="f-milklot"></div>
-      </div>
       <div class="row" style="margin-bottom:0">
-        <div class="col"><div class="lbl">Water Temp (°C)</div><input type="number" id="f-temp" value="93" step="0.5"></div>
-        <div class="col"><div class="lbl">Water Flow (g/s)</div><input type="number" id="f-flow" value="9" step="0.5"></div>
+        <div class="col"><div class="lbl">วันที่</div><input type="date" id="f-date"></div>
+        <div class="col"><div class="lbl">สาขา</div><select id="f-branch" onchange="updateTasterDefault();populateShotBy()"></select></div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-title">Dose / Time / Yield (สูงสุด 3 ครั้ง)</div>
+    <div class="card" style="border-top:3px solid var(--amber)">
+      <div class="card-title" style="color:var(--amber)">☕ House Blend</div>
+      <div class="row">
+        <div class="col" style="flex:1.4"><div class="lbl">Coffee</div><select id="f-coffeea"></select></div>
+        <div class="col"><div class="lbl">Coffee Lot</div><input type="text" id="f-coffeelota" placeholder="24/7"></div>
+        <div class="col"><div class="lbl">Milk Lot</div><input type="text" id="f-milklota"></div>
+      </div>
+      <div class="row" style="margin-bottom:0">
+        <div class="col"><div class="lbl">Process</div><input type="text" id="f-processa" placeholder="Washed/Natural..."></div>
+        <div class="col"><div class="lbl">Water Temp (°C)</div><input type="number" id="f-tempa" value="93" step="0.5"></div>
+        <div class="col"><div class="lbl">Water Flow (g/s)</div><input type="number" id="f-flowa" value="9" step="0.5"></div>
+      </div>
+    </div>
+
+    <div class="card" style="border-top:3px solid var(--amber)">
+      <div class="card-title" style="color:var(--amber)">Dose / Time / Yield — House Blend (สูงสุด 3 ครั้ง)</div>
       <div class="pull-cols">
         <div class="pull-col">
           <div class="pull-col-title">Dose1</div>
-          <input type="number" id="f-dose1" placeholder="Dose" step="0.5" oninput="calcExt()">
-          <input type="number" id="f-time1" placeholder="Time (s)" step="1">
-          <input type="number" id="f-yield1" placeholder="Yield" step="0.5" oninput="calcExt()">
-          <div class="ratio-line" id="ratio1">1 : —</div>
+          <input type="number" id="f-dose1a" placeholder="Dose" step="0.5" oninput="calcExt('a')">
+          <input type="number" id="f-time1a" placeholder="Time (s)" step="1">
+          <input type="number" id="f-yield1a" placeholder="Yield" step="0.5" oninput="calcExt('a')">
+          <div class="ratio-line" id="ratio1a">1 : —</div>
         </div>
         <div class="pull-col">
           <div class="pull-col-title">Dose2</div>
-          <input type="number" id="f-dose2" placeholder="Dose" step="0.5">
-          <input type="number" id="f-time2" placeholder="Time (s)" step="1">
-          <input type="number" id="f-yield2" placeholder="Yield" step="0.5">
-          <div class="ratio-line" id="ratio2">1 : —</div>
+          <input type="number" id="f-dose2a" placeholder="Dose" step="0.5">
+          <input type="number" id="f-time2a" placeholder="Time (s)" step="1">
+          <input type="number" id="f-yield2a" placeholder="Yield" step="0.5">
+          <div class="ratio-line" id="ratio2a">1 : —</div>
         </div>
         <div class="pull-col">
           <div class="pull-col-title">Dose3</div>
-          <input type="number" id="f-dose3" placeholder="Dose" step="0.5">
-          <input type="number" id="f-time3" placeholder="Time (s)" step="1">
-          <input type="number" id="f-yield3" placeholder="Yield" step="0.5">
-          <div class="ratio-line" id="ratio3">1 : —</div>
+          <input type="number" id="f-dose3a" placeholder="Dose" step="0.5">
+          <input type="number" id="f-time3a" placeholder="Time (s)" step="1">
+          <input type="number" id="f-yield3a" placeholder="Yield" step="0.5">
+          <div class="ratio-line" id="ratio3a">1 : —</div>
         </div>
       </div>
       <div class="row" style="margin-top:10px;margin-bottom:0;align-items:flex-end">
         <div class="col">
           <div class="lbl">TDS (%) <span style="font-weight:400;color:var(--text3)">— อ้างอิง ครั้งที่ 1</span></div>
-          <input type="number" id="f-tds" placeholder="เช่น 9.5" step="0.1" oninput="calcExt()">
+          <input type="number" id="f-tdsa" placeholder="เช่น 9.5" step="0.1" oninput="calcExt('a')">
         </div>
         <div class="col" style="text-align:center;background:var(--abg);border:1px solid var(--aborder);border-radius:6px;padding:6px">
-          <div class="ext-val" id="ext-val" style="font-size:18px">—</div>
+          <div class="ext-val" id="ext-vala" style="font-size:18px">—</div>
           <div class="ext-lbl" style="font-size:10px">EXT% (คำนวณอัตโนมัติ)</div>
         </div>
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" style="border-top:3px solid var(--amber)">
       <div class="lbl">Flavor / Texture / Aftertaste (กรอกเอง ไม่บังคับ)</div>
       <div style="display:flex;align-items:center;gap:4px;margin-bottom:10px">
-        <input type="text" id="f-flavor1" placeholder="..............">
+        <input type="text" id="f-flavor1a" placeholder="..............">
         <span style="color:var(--text3);font-weight:700">/</span>
-        <input type="text" id="f-flavor2" placeholder="..............">
+        <input type="text" id="f-flavor2a" placeholder="..............">
         <span style="color:var(--text3);font-weight:700">/</span>
-        <input type="text" id="f-flavor3" placeholder="..............">
+        <input type="text" id="f-flavor3a" placeholder="..............">
       </div>
       <div class="row" style="margin-bottom:0">
-        <div class="col"><div class="lbl">Shot by</div><input type="text" id="f-shotby" placeholder="คนตั้งช็อต"></div>
-        <div class="col"><div class="lbl">ชื่อคนชิม</div><input type="text" id="f-taster" placeholder="ชื่อผู้บันทึก"></div>
+        <div class="col"><div class="lbl">Shot by</div><select id="f-shotbya"></select></div>
+        <div class="col"><div class="lbl">ชื่อคนชิม</div><input type="text" id="f-tastera" placeholder="ชื่อผู้บันทึก"></div>
       </div>
     </div>
 
+    <div class="card" style="border-top:3px solid var(--blue)">
+      <div class="card-title" style="color:var(--blue)">☕ Single Origin (SO)</div>
+      <div class="row">
+        <div class="col" style="flex:1.4"><div class="lbl">Coffee</div><select id="f-coffeeb"></select></div>
+        <div class="col"><div class="lbl">Coffee Lot</div><input type="text" id="f-coffeelotb" placeholder="24/7"></div>
+        <div class="col"><div class="lbl">Milk Lot</div><input type="text" id="f-milklotb"></div>
+      </div>
+      <div class="row" style="margin-bottom:0">
+        <div class="col"><div class="lbl">Process</div><input type="text" id="f-processb" placeholder="Washed/Natural..."></div>
+        <div class="col"><div class="lbl">Water Temp (°C)</div><input type="number" id="f-tempb" value="93" step="0.5"></div>
+        <div class="col"><div class="lbl">Water Flow (g/s)</div><input type="number" id="f-flowb" value="9" step="0.5"></div>
+      </div>
+    </div>
+
+    <div class="card" style="border-top:3px solid var(--blue)">
+      <div class="card-title" style="color:var(--blue)">Dose / Time / Yield — SO (สูงสุด 3 ครั้ง)</div>
+      <div class="pull-cols">
+        <div class="pull-col">
+          <div class="pull-col-title">Dose1</div>
+          <input type="number" id="f-dose1b" placeholder="Dose" step="0.5" oninput="calcExt('b')">
+          <input type="number" id="f-time1b" placeholder="Time (s)" step="1">
+          <input type="number" id="f-yield1b" placeholder="Yield" step="0.5" oninput="calcExt('b')">
+          <div class="ratio-line" id="ratio1b">1 : —</div>
+        </div>
+        <div class="pull-col">
+          <div class="pull-col-title">Dose2</div>
+          <input type="number" id="f-dose2b" placeholder="Dose" step="0.5">
+          <input type="number" id="f-time2b" placeholder="Time (s)" step="1">
+          <input type="number" id="f-yield2b" placeholder="Yield" step="0.5">
+          <div class="ratio-line" id="ratio2b">1 : —</div>
+        </div>
+        <div class="pull-col">
+          <div class="pull-col-title">Dose3</div>
+          <input type="number" id="f-dose3b" placeholder="Dose" step="0.5">
+          <input type="number" id="f-time3b" placeholder="Time (s)" step="1">
+          <input type="number" id="f-yield3b" placeholder="Yield" step="0.5">
+          <div class="ratio-line" id="ratio3b">1 : —</div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;margin-bottom:0;align-items:flex-end">
+        <div class="col">
+          <div class="lbl">TDS (%) <span style="font-weight:400;color:var(--text3)">— อ้างอิง ครั้งที่ 1</span></div>
+          <input type="number" id="f-tdsb" placeholder="เช่น 9.5" step="0.1" oninput="calcExt('b')">
+        </div>
+        <div class="col" style="text-align:center;background:var(--bbg);border:1px solid var(--bborder);border-radius:6px;padding:6px">
+          <div class="ext-val" id="ext-valb" style="font-size:18px;color:var(--blue)">—</div>
+          <div class="ext-lbl" style="font-size:10px;color:var(--blue)">EXT% (คำนวณอัตโนมัติ)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="border-top:3px solid var(--blue)">
+      <div class="lbl">Flavor / Texture / Aftertaste (กรอกเอง ไม่บังคับ)</div>
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:10px">
+        <input type="text" id="f-flavor1b" placeholder="..............">
+        <span style="color:var(--text3);font-weight:700">/</span>
+        <input type="text" id="f-flavor2b" placeholder="..............">
+        <span style="color:var(--text3);font-weight:700">/</span>
+        <input type="text" id="f-flavor3b" placeholder="..............">
+      </div>
+      <div class="row" style="margin-bottom:0">
+        <div class="col"><div class="lbl">Shot by</div><select id="f-shotbyb"></select></div>
+        <div class="col"><div class="lbl">ชื่อคนชิม</div><input type="text" id="f-tasterb" placeholder="ชื่อผู้บันทึก"></div>
+      </div>
+    </div>
+
+    <div style="font-size:11px;color:var(--text3);margin-bottom:8px;text-align:center">บันทึกได้ทีละอัน หรือครบทั้ง 2 พร้อมกัน — เว้นชื่อกาแฟไว้ถ้าวันนั้นไม่มี</div>
     <button class="btn btn-primary" onclick="saveEntry()">💾 บันทึก</button>
 
     <div style="margin:20px 0 10px;font-size:13px;font-weight:700;color:var(--text2)">📋 รายการล่าสุด</div>
@@ -274,6 +346,20 @@ function _initAppReal() {
 <script>
 const ALL_BRANCHES = ['Thonglor','Lasalle','Saladang','Emquartier','Ari','Bitec','Sathorn','Ratchathewi','Praditmanutham','Event'];
 const AREA_STAFF = ['Lhing','Eve','Boss','Nu','Ball'];
+const STAFF_DATA = {
+  'Thonglor':  ['Pond','Lek','May','Mali','Eve','Jah','Caesar','HB','Bank','Pairwa',...AREA_STAFF],
+  'Lasalle':   ['MM','Mild','Noey','Dew',...AREA_STAFF],
+  'Saladang':  ['Nut','Meen','Toey','Evee','Prim',...AREA_STAFF],
+  'Emquartier':['Jean','Weena','Bank','Next',...AREA_STAFF],
+  'Ari':       ['UT','Preaw','Kwang','Pack','Frung',...AREA_STAFF],
+  'Bitec':     ['Milk','Eveee',...AREA_STAFF],
+  'Sathorn':   ['Por','Give','Saito','RB','Wawaii','Pang','Hot',...AREA_STAFF],
+  'Ratchathewi':['Chatploy','Golf','Gel','Gade','Champ','Pim','Bow',...AREA_STAFF],
+  'Praditmanutham':['Meak','Keng','Phurinut','Gorpor',...AREA_STAFF],
+  'Event':     ['Siriwat','Ohm','Biw','Pond','Ploy',...AREA_STAFF],
+  'Area':      ['Lhing','Eve','Boss','Nu','Ball']
+};
+const COFFEE_OPTIONS = ['House Blend','Nui and Aoy','Tor','Jaroon','Sanchai','Kaleb','Ake','Manop','Beansprie','Sri','Sopa','Nawin','Nawin and Tina','Chang Pao','Chatree'];
 
 
 function setupForm() {
@@ -287,7 +373,27 @@ function setupForm() {
   }
   const today = new Date();
   document.getElementById('f-date').value = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+
+  // Coffee dropdowns — House Blend section defaults to "House Blend",
+  // SO section starts blank (varies daily, force an explicit pick).
+  const coffeeOptsHtml = COFFEE_OPTIONS.map(c => `<option value="${c}">${c}</option>`).join('');
+  document.getElementById('f-coffeea').innerHTML = coffeeOptsHtml;
+  document.getElementById('f-coffeea').value = 'House Blend';
+  document.getElementById('f-coffeeb').innerHTML = '<option value="">— เลือกกาแฟ —</option>' + coffeeOptsHtml;
+
+  ['a','b'].forEach(suf => {
+    ['1','2','3'].forEach(n => {
+      const doseEl = document.getElementById('f-dose'+n+suf);
+      const yieldEl = document.getElementById('f-yield'+n+suf);
+      if (doseEl && yieldEl) {
+        doseEl.addEventListener('input', () => calcRatio('f-dose'+n+suf,'f-yield'+n+suf,'ratio'+n+suf));
+        yieldEl.addEventListener('input', () => calcRatio('f-dose'+n+suf,'f-yield'+n+suf,'ratio'+n+suf));
+      }
+    });
+  });
+
   updateTasterDefault();
+  populateShotBy();
   loadRecentEntries();
 
   document.getElementById('nav-tabs').style.display = 'block';
@@ -381,37 +487,58 @@ async function loadOverviewList() {
       return;
     }
     window._overviewCache = entries;
-    listEl.innerHTML = entries.map((e,i) => `
-      <div class="entry-card" onclick="toggleOverviewDetail(${i})" style="cursor:pointer">
-        <div class="entry-top"><span>${e.branch} · ${e.coffee}</span><span style="color:var(--amber)">${e.ext?e.ext+'% EXT':''}</span></div>
-        <div class="entry-meta">${e.date} · ${e.taster} · แตะดูรายละเอียด ▾</div>
-        <div id="ov-detail-${i}" style="display:none;margin-top:8px;padding-top:8px;border-top:1px dashed var(--bg3);font-size:12px;color:var(--text2);line-height:1.9">
-          <b>Coffee Lot:</b> ${e.coffeeLot||'—'} &nbsp; <b>Milk Lot:</b> ${e.milkLot||'—'}<br>
-          <b>Water Temp:</b> ${e.waterTemp||'—'}°C &nbsp; <b>Water Flow:</b> ${e.waterFlow||'—'}g/s<br>
-          <b>Dose1:</b> ${e.dose1||'—'}g / ${e.time1||'—'}s / ${e.yield1||'—'}g<br>
-          ${e.dose2?`<b>Dose2:</b> ${e.dose2}g / ${e.time2||'—'}s / ${e.yield2||'—'}g<br>`:''}
-          ${e.dose3?`<b>Dose3:</b> ${e.dose3}g / ${e.time3||'—'}s / ${e.yield3||'—'}g<br>`:''}
-          <b>TDS:</b> ${e.tds||'—'}% &nbsp; <b>EXT%:</b> ${e.ext||'—'}%<br>
-          ${(e.flavor1||e.flavor2||e.flavor3)?`<b>Flavor/Texture/Aftertaste:</b> ${[e.flavor1,e.flavor2,e.flavor3].filter(Boolean).join(' / ')}<br>`:''}
-          ${e.shotBy?`<b>Shot by:</b> ${e.shotBy}<br>`:''}
-          <b>ชิมโดย:</b> ${e.taster}
+    listEl.innerHTML = entries.map((e,i) => {
+      const ratio1 = (e.dose1 && e.yield1) ? (e.yield1/e.dose1).toFixed(1) : '—';
+      const notes = [e.flavor1,e.flavor2,e.flavor3].filter(Boolean).join(' / ');
+      return `
+      <div style="background:#fff;border-radius:12px;overflow:hidden;margin-bottom:14px;border:1px solid var(--bg3)">
+        <div style="background:var(--bg2);padding:12px 16px;display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div style="font-size:10px;letter-spacing:2px;color:var(--text3);font-weight:700">ROOTS ${e.slot?'· '+e.slot.toUpperCase():''}</div>
+            <div style="font-size:14px;color:var(--text2);font-weight:700;margin-top:2px">${e.branch}</div>
+          </div>
+          <div style="text-align:right;font-size:12px;color:var(--text2);font-weight:600">${e.date}</div>
+        </div>
+        <div style="padding:12px 16px;border-bottom:1px solid var(--bg3)">
+          <div style="font-size:15px"><b>${e.coffee}</b>${e.coffeeLot?` <span style="color:var(--text3);font-weight:600">· Lot ${e.coffeeLot}</span>`:''}</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:4px">${e.process?e.process+' · ':''}${e.milkLot?'Milk Lot '+e.milkLot+' · ':''}Temp ${e.waterTemp||'—'}°C · Flow ${e.waterFlow||'—'}g/s</div>
+        </div>
+        <div style="padding:12px 16px;border-bottom:1px solid var(--bg3)">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;text-align:center;gap:4px">
+            <div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase">Dose1</div><div style="font-size:20px;font-weight:800">${e.dose1||'—'}</div></div>
+            <div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase">Time</div><div style="font-size:20px;font-weight:800">${e.time1||'—'}</div></div>
+            <div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase">Yield</div><div style="font-size:20px;font-weight:800">${e.yield1||'—'}</div></div>
+          </div>
+          <div style="text-align:center;font-size:11px;color:var(--text3);margin-top:4px">Ratio 1:${ratio1}${e.dose2?` · Dose2 ${e.dose2}/${e.time2||'—'}/${e.yield2||'—'}`:''}${e.dose3?` · Dose3 ${e.dose3}/${e.time3||'—'}/${e.yield3||'—'}`:''}</div>
+        </div>
+        <div style="padding:10px 16px;border-bottom:1px solid var(--bg3);display:flex;justify-content:space-around;text-align:center">
+          <div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase">TDS%</div><div style="font-size:17px;font-weight:800;color:var(--amber)">${e.tds||'—'}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase">EXT%</div><div style="font-size:17px;font-weight:800;color:var(--amber)">${e.ext||'—'}</div></div>
+        </div>
+        <div style="padding:12px 16px;${notes?'background:var(--bg2);':''}">
+          ${notes?`<div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:4px">📝 Flavor / Texture / Aftertaste</div><div style="font-size:13px;font-weight:600;margin-bottom:10px">${notes}</div>`:''}
+          <div style="font-size:12px;color:var(--text2)">${e.shotBy?'Shot by <b>'+e.shotBy+'</b> · ':''}ชิมโดย <b>${e.taster}</b></div>
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
   } catch(e) {
     listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">โหลดไม่สำเร็จ</div>';
   }
 }
 
-function toggleOverviewDetail(i) {
-  const el = document.getElementById('ov-detail-'+i);
-  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-}
-
 function updateTasterDefault() {
-  document.getElementById('f-taster').value = window._currentStaff.name;
+  document.getElementById('f-tastera').value = window._currentStaff.name;
+  document.getElementById('f-tasterb').value = window._currentStaff.name;
 }
 
+function populateShotBy() {
+  const branch = document.getElementById('f-branch').value;
+  const names = STAFF_DATA[branch] || [];
+  const optsHtml = '<option value="">— เลือกชื่อ —</option>' + names.map(n => `<option value="${n}">${n}</option>`).join('');
+  document.getElementById('f-shotbya').innerHTML = optsHtml;
+  document.getElementById('f-shotbyb').innerHTML = optsHtml;
+}
 
 function calcRatio(doseId, yieldId, ratioId) {
   const dose = +document.getElementById(doseId).value;
@@ -419,18 +546,12 @@ function calcRatio(doseId, yieldId, ratioId) {
   const el = document.getElementById(ratioId);
   el.textContent = (dose && yieldW) ? `1 : ${(yieldW/dose).toFixed(1)}` : '1 : —';
 }
-['1','2','3'].forEach(n => {
-  document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('f-dose'+n).addEventListener('input', () => calcRatio('f-dose'+n,'f-yield'+n,'ratio'+n));
-    document.getElementById('f-yield'+n).addEventListener('input', () => calcRatio('f-dose'+n,'f-yield'+n,'ratio'+n));
-  });
-});
 
-function calcExt() {
-  const dose1 = +document.getElementById('f-dose1').value;
-  const yield1 = +document.getElementById('f-yield1').value;
-  const tds = +document.getElementById('f-tds').value;
-  const el = document.getElementById('ext-val');
+function calcExt(suffix) {
+  const dose1 = +document.getElementById('f-dose1'+suffix).value;
+  const yield1 = +document.getElementById('f-yield1'+suffix).value;
+  const tds = +document.getElementById('f-tds'+suffix).value;
+  const el = document.getElementById('ext-val'+suffix);
   if (dose1 && yield1 && tds) {
     el.textContent = (tds * yield1 / dose1).toFixed(1) + '%';
   } else {
@@ -444,40 +565,50 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 
-async function saveEntry() {
-  const branch = document.getElementById('f-branch').value;
-  const coffee = document.getElementById('f-coffee').value.trim();
-  if (!coffee) { showToast('กรุณาใส่ชื่อกาแฟ'); return; }
-
-  const dose1 = +document.getElementById('f-dose1').value || 0;
-  const yield1 = +document.getElementById('f-yield1').value || 0;
-  const tds = +document.getElementById('f-tds').value || 0;
+function buildEntry(suffix, branch, label) {
+  const coffee = document.getElementById('f-coffee'+suffix).value.trim();
+  if (!coffee) return null; // this section wasn't filled in — skip it
+  const dose1 = +document.getElementById('f-dose1'+suffix).value || 0;
+  const yield1 = +document.getElementById('f-yield1'+suffix).value || 0;
+  const tds = +document.getElementById('f-tds'+suffix).value || 0;
   const ext = (dose1 && yield1 && tds) ? +(tds * yield1 / dose1).toFixed(1) : 0;
-
-  const entry = {
-    id: 'ps:' + Date.now() + ':' + Math.random().toString(36).slice(2,7),
+  return {
+    id: 'ps:' + Date.now() + ':' + Math.random().toString(36).slice(2,7) + suffix,
     date: document.getElementById('f-date').value,
     branch,
+    slot: label,
     coffee,
-    coffeeLot: document.getElementById('f-coffeelot').value.trim(),
-    milkLot: document.getElementById('f-milklot').value.trim(),
-    waterTemp: +document.getElementById('f-temp').value || 0,
-    waterFlow: +document.getElementById('f-flow').value || 0,
-    dose1, time1: +document.getElementById('f-time1').value || 0, yield1,
-    dose2: +document.getElementById('f-dose2').value || 0, time2: +document.getElementById('f-time2').value || 0, yield2: +document.getElementById('f-yield2').value || 0,
-    dose3: +document.getElementById('f-dose3').value || 0, time3: +document.getElementById('f-time3').value || 0, yield3: +document.getElementById('f-yield3').value || 0,
+    coffeeLot: document.getElementById('f-coffeelot'+suffix).value.trim(),
+    milkLot: document.getElementById('f-milklot'+suffix).value.trim(),
+    process: document.getElementById('f-process'+suffix).value.trim(),
+    waterTemp: +document.getElementById('f-temp'+suffix).value || 0,
+    waterFlow: +document.getElementById('f-flow'+suffix).value || 0,
+    dose1, time1: +document.getElementById('f-time1'+suffix).value || 0, yield1,
+    dose2: +document.getElementById('f-dose2'+suffix).value || 0, time2: +document.getElementById('f-time2'+suffix).value || 0, yield2: +document.getElementById('f-yield2'+suffix).value || 0,
+    dose3: +document.getElementById('f-dose3'+suffix).value || 0, time3: +document.getElementById('f-time3'+suffix).value || 0, yield3: +document.getElementById('f-yield3'+suffix).value || 0,
     tds, ext,
-    flavor1: document.getElementById('f-flavor1').value.trim(),
-    flavor2: document.getElementById('f-flavor2').value.trim(),
-    flavor3: document.getElementById('f-flavor3').value.trim(),
-    shotBy: document.getElementById('f-shotby').value.trim(),
-    taster: document.getElementById('f-taster').value.trim() || window._currentStaff.name,
+    flavor1: document.getElementById('f-flavor1'+suffix).value.trim(),
+    flavor2: document.getElementById('f-flavor2'+suffix).value.trim(),
+    flavor3: document.getElementById('f-flavor3'+suffix).value.trim(),
+    shotBy: document.getElementById('f-shotby'+suffix).value.trim(),
+    taster: document.getElementById('f-taster'+suffix).value.trim() || window._currentStaff.name,
     created: Date.now()
   };
+}
+
+async function saveEntry() {
+  const branch = document.getElementById('f-branch').value;
+  const entryA = buildEntry('a', branch, 'House Blend');
+  const entryB = buildEntry('b', branch, 'SO');
+
+  if (!entryA && !entryB) { showToast('กรุณาเลือกกาแฟอย่างน้อย 1 อัน (House Blend หรือ SO)'); return; }
 
   try {
-    await window._fssetDoc(window._fsdoc(window._db, 'shared', entry.id), { key: entry.id, branch, value: JSON.stringify(entry) });
-    showToast('บันทึกแล้ว ✓');
+    const toSave = [entryA, entryB].filter(Boolean);
+    for (const entry of toSave) {
+      await window._fssetDoc(window._fsdoc(window._db, 'shared', entry.id), { key: entry.id, branch, value: JSON.stringify(entry) });
+    }
+    showToast(`บันทึกแล้ว ✓ (${toSave.length} รายการ)`);
     resetForm();
     loadRecentEntries();
   } catch(e) {
@@ -486,23 +617,25 @@ async function saveEntry() {
 }
 
 function resetForm() {
-  document.getElementById('f-coffee').value = '';
-  document.getElementById('f-coffeelot').value = '';
-  document.getElementById('f-milklot').value = '';
-  ['1','2','3'].forEach(n => {
-    document.getElementById('f-dose'+n).value = '';
-    document.getElementById('f-time'+n).value = '';
-    document.getElementById('f-yield'+n).value = '';
-    document.getElementById('ratio'+n).textContent = '1 : —';
+  ['a','b'].forEach(suf => {
+    document.getElementById('f-coffee'+suf).value = suf==='a' ? 'House Blend' : '';
+    document.getElementById('f-coffeelot'+suf).value = '';
+    document.getElementById('f-milklot'+suf).value = '';
+    document.getElementById('f-process'+suf).value = '';
+    ['1','2','3'].forEach(n => {
+      document.getElementById('f-dose'+n+suf).value = '';
+      document.getElementById('f-time'+n+suf).value = '';
+      document.getElementById('f-yield'+n+suf).value = '';
+      document.getElementById('ratio'+n+suf).textContent = '1 : —';
+    });
+    document.getElementById('f-tds'+suf).value = '';
+    document.getElementById('ext-val'+suf).textContent = '—';
+    document.getElementById('f-flavor1'+suf).value = '';
+    document.getElementById('f-flavor2'+suf).value = '';
+    document.getElementById('f-flavor3'+suf).value = '';
+    document.getElementById('f-shotby'+suf).value = '';
   });
-  document.getElementById('f-tds').value = '';
-  document.getElementById('ext-val').textContent = '—';
-  document.getElementById('f-flavor1').value = '';
-  document.getElementById('f-flavor2').value = '';
-  document.getElementById('f-flavor3').value = '';
-  document.getElementById('f-shotby').value = '';
 }
-
 async function loadRecentEntries() {
   const listEl = document.getElementById('entries-list');
   listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">กำลังโหลด...</div>';
@@ -524,8 +657,8 @@ async function loadRecentEntries() {
     }
     listEl.innerHTML = entries.map(e => `
       <div class="entry-card">
-        <div class="entry-top"><span>${e.coffee}</span><span style="color:var(--amber)">${e.ext?e.ext+'% EXT':''}</span></div>
-        <div class="entry-meta">${e.date} · ${e.branch} · Dose ${e.dose1||'—'}g → Yield ${e.yield1||'—'}g · TDS ${e.tds||'—'}%</div>
+        <div class="entry-top"><span>${e.slot?'['+e.slot+'] ':''}${e.coffee}</span><span style="color:var(--amber)">${e.ext?e.ext+'% EXT':''}</span></div>
+        <div class="entry-meta">${e.date} · ${e.branch}${e.process?' · '+e.process:''} · Dose ${e.dose1||'—'}g → Yield ${e.yield1||'—'}g · TDS ${e.tds||'—'}%</div>
         <div class="entry-meta">${[e.flavor1,e.flavor2,e.flavor3].filter(Boolean).join(' / ')||''}${(e.flavor1||e.flavor2||e.flavor3)?' · ':''}${e.shotBy?'Shot by '+e.shotBy+' · ':''}ชิมโดย ${e.taster}</div>
       </div>
     `).join('');
@@ -536,23 +669,13 @@ async function loadRecentEntries() {
 
 window.setupForm = setupForm;
 window.updateTasterDefault = updateTasterDefault;
+window.populateShotBy = populateShotBy;
 window.calcExt = calcExt;
 window.saveEntry = saveEntry;
 window.loadRecentEntries = loadRecentEntries;
 window.showTrackPage = showTrackPage;
 window.loadExtChart = loadExtChart;
 window.loadOverviewList = loadOverviewList;
-window.toggleOverviewDetail = toggleOverviewDetail;
-
-// Wire ratio calc immediately too (in case DOMContentLoaded already fired)
-['1','2','3'].forEach(n => {
-  const doseEl = document.getElementById('f-dose'+n);
-  const yieldEl = document.getElementById('f-yield'+n);
-  if (doseEl && yieldEl) {
-    doseEl.addEventListener('input', () => calcRatio('f-dose'+n,'f-yield'+n,'ratio'+n));
-    yieldEl.addEventListener('input', () => calcRatio('f-dose'+n,'f-yield'+n,'ratio'+n));
-  }
-});
 
 document.getElementById('f-branch') && document.getElementById('f-branch').addEventListener('change', loadRecentEntries);
 </script>
