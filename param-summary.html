@@ -97,6 +97,10 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
 
   <div class="wrap" id="page-form">
 
+    <!-- ถ่ายรูป OCR feature — parked for now (needs Google Cloud billing,
+         not worth it yet). Hidden via display:none rather than an HTML
+         comment, since CSS var(--x) syntax breaks HTML comments. -->
+    <div style="display:none">
     <div class="card" style="border:2px dashed var(--bborder);background:var(--bbg)">
       <div class="card-title" style="color:var(--blue)">📷 ถ่ายรูปกระดาษ (เติมให้อัตโนมัติ — สีส้ม = ต้องตรวจก่อนบันทึก)</div>
       <div class="lbl">รูปนี้เป็นของ</div>
@@ -111,6 +115,7 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
         <div id="ocr-result-text" style="font-size:11.5px;color:var(--text2);white-space:pre-wrap;line-height:1.6;max-height:150px;overflow-y:auto"></div>
       </div>
       <div id="ocr-status" style="font-size:11px;color:var(--text3);margin-top:6px"></div>
+    </div>
     </div>
 
     <div class="card">
@@ -145,9 +150,9 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
       <div class="pull-cols">
         <div class="pull-col">
           <div class="pull-col-title">Dose1</div>
-          <input type="number" id="f-dose1a" placeholder="Dose" step="0.5" oninput="calcExt('a')">
+          <input type="number" id="f-dose1a" placeholder="Dose" step="0.5" oninput="calcExt('a');calcDose23('a')">
           <input type="number" id="f-time1a" placeholder="Time (s)" step="1">
-          <input type="number" id="f-yield1a" placeholder="Yield" step="0.5" oninput="calcExt('a')">
+          <input type="number" id="f-yield1a" placeholder="Yield" step="0.5" oninput="calcExt('a');calcDose23('a')">
           <div class="ratio-line" id="ratio1a">1 : —</div>
         </div>
         <div class="pull-col">
@@ -222,9 +227,9 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
       <div class="pull-cols">
         <div class="pull-col">
           <div class="pull-col-title">Dose1</div>
-          <input type="number" id="f-dose1b" placeholder="Dose" step="0.5" oninput="calcExt('b')">
+          <input type="number" id="f-dose1b" placeholder="Dose" step="0.5" oninput="calcExt('b');calcDose23('b')">
           <input type="number" id="f-time1b" placeholder="Time (s)" step="1">
-          <input type="number" id="f-yield1b" placeholder="Yield" step="0.5" oninput="calcExt('b')">
+          <input type="number" id="f-yield1b" placeholder="Yield" step="0.5" oninput="calcExt('b');calcDose23('b')">
           <div class="ratio-line" id="ratio1b">1 : —</div>
         </div>
         <div class="pull-col">
@@ -812,6 +817,27 @@ function calcExt(suffix) {
   }
 }
 
+// Dose2 = Dose1 × 1.11 (rounded up) with the same Yield/Dose ratio as
+// Dose1. Dose3 = same Dose as Dose1 — Time3/Yield3 stay manual.
+// Runs whenever Dose1 or Yield1 changes; only auto-fills Dose2/Yield2/Dose3
+// (never overwrites Time2/Time3/Yield3, which are always typed by hand).
+function calcDose23(suffix) {
+  const dose1 = +document.getElementById('f-dose1'+suffix).value;
+  const yield1 = +document.getElementById('f-yield1'+suffix).value;
+  if (!dose1) return;
+  const ratio = yield1 ? yield1 / dose1 : null;
+
+  const dose2 = Math.ceil(dose1 * 1.11 * 2) / 2; // round up to nearest 0.5g, matching the field's step
+  document.getElementById('f-dose2'+suffix).value = dose2;
+  if (ratio) {
+    document.getElementById('f-yield2'+suffix).value = Math.round(dose2 * ratio * 10) / 10;
+  }
+  calcRatio('f-dose2'+suffix, 'f-yield2'+suffix, 'ratio2'+suffix);
+
+  document.getElementById('f-dose3'+suffix).value = dose1;
+  calcRatio('f-dose3'+suffix, 'f-yield3'+suffix, 'ratio3'+suffix);
+}
+
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
@@ -1082,6 +1108,7 @@ window.showCoffeeSuggestions = showCoffeeSuggestions;
 window.pickCoffeeSuggestion = pickCoffeeSuggestion;
 window.handleOcrPhoto = handleOcrPhoto;
 window.calcExt = calcExt;
+window.calcDose23 = calcDose23;
 window.saveEntry = saveEntry;
 window.loadRecentEntries = loadRecentEntries;
 window.showTrackPage = showTrackPage;
