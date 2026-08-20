@@ -100,12 +100,17 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
   <div class="wrap" id="page-form">
 
     <div class="card" style="border:2px dashed var(--bborder);background:var(--bbg)">
-      <div class="card-title" style="color:var(--blue)">📷 ถ่ายรูปกระดาษ (ช่วยอ่าน ไม่ใช่บันทึกอัตโนมัติ)</div>
+      <div class="card-title" style="color:var(--blue)">📷 ถ่ายรูปกระดาษ (เติมให้อัตโนมัติ — สีส้ม = ต้องตรวจก่อนบันทึก)</div>
+      <div class="lbl">รูปนี้เป็นของ</div>
+      <select id="ocr-target-slot" style="margin-bottom:10px">
+        <option value="a">🏠 House Blend</option>
+        <option value="b">☕ SO</option>
+      </select>
       <input type="file" id="ocr-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleOcrPhoto(event)">
       <button type="button" onclick="document.getElementById('ocr-photo-input').click()" style="width:100%;padding:12px;border:none;border-radius:8px;background:var(--blue);color:#fff;font-weight:700;font-size:14px;cursor:pointer">📷 ถ่ายรูป / เลือกรูป</button>
       <div id="ocr-result-box" style="display:none;margin-top:10px;background:#fff;border:1px solid var(--bg3);border-radius:8px;padding:10px 12px">
-        <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-bottom:6px">ข้อความที่อ่านได้จากรูป — เทียบแล้วพิมพ์ลงช่องด้านล่างเอง</div>
-        <div id="ocr-result-text" style="font-size:12.5px;color:var(--text);white-space:pre-wrap;line-height:1.6;max-height:200px;overflow-y:auto"></div>
+        <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-bottom:6px">ข้อความดิบที่อ่านได้ (เผื่อเทียบเอง)</div>
+        <div id="ocr-result-text" style="font-size:11.5px;color:var(--text2);white-space:pre-wrap;line-height:1.6;max-height:150px;overflow-y:auto"></div>
       </div>
       <div id="ocr-status" style="font-size:11px;color:var(--text3);margin-top:6px"></div>
     </div>
@@ -450,13 +455,98 @@ async function handleOcrPhoto(event) {
     }
     resultText.textContent = text;
     resultBox.style.display = 'block';
-    statusEl.textContent = 'อ่านเสร็จแล้ว — เทียบข้อความด้านบนแล้วพิมพ์ลงช่องด้านล่างเอง (ระบบไม่เติมให้อัตโนมัติ กันอ่านผิดแล้วหลุดเข้าระบบ)';
+
+    const suffix = document.getElementById('ocr-target-slot').value;
+    const filledCount = parseAndFillFromOcr(text, suffix);
+    statusEl.innerHTML = filledCount > 0
+      ? `เติมให้ ${filledCount} ช่อง (พื้นหลังสีส้ม) — <b>กรุณาตรวจก่อนบันทึกทุกช่อง</b> ลายมือบางตัวอาจอ่านผิดได้`
+      : 'อ่านรูปได้ แต่จับคู่ช่องไม่สำเร็จ — เทียบข้อความด้านบนแล้วพิมพ์เองแทน';
   } catch(e) {
     statusEl.textContent = 'อ่านรูปไม่สำเร็จ: ' + e.message;
   }
 }
 
+// Best-effort regex matching against the fixed paper-card template — looks
+// for each known label and grabs the value near it. Every field this
+// touches gets a visible amber "needs review" highlight and is NEVER
+// trusted blindly; the person must check each one before saving.
+function ocrFill(id, value) {
+  if (value === undefined || value === null || value === '') return false;
+  const el = document.getElementById(id);
+  if (!el) return false;
+  el.value = value;
+  el.style.background = 'var(--abg)';
+  el.style.borderColor = 'var(--aborder)';
+  el.addEventListener('input', function clearFlag() {
+    el.style.background = '';
+    el.style.borderColor = '';
+    el.removeEventListener('input', clearFlag);
+  }, { once: true });
+  return true;
+}
 
+function parseAndFillFromOcr(text, suffix) {
+  let n = 0;
+  const m = (re) => { const r = text.match(re); return r ? r[1].trim() : null; };
+
+  const date = m(/Date\s*[:\s]*([0-9]{1,2}[\/\.][0-9]{1,2})/i);
+  if (date) {
+    // Convert "20/8" style to this year's ISO date for the shared date field
+    const parts = date.split(/[\/\.]/);
+    if (parts.length === 2) {
+      const yr = new Date().getFullYear();
+      const iso = `${yr}-${String(parts[1]).padStart(2,'0')}-${String(parts[0]).padStart(2,'0')}`;
+      if (ocrFill('f-date', iso)) n++;
+    }
+  }
+  if (ocrFill('f-time'+suffix, m(/Time\s*[:\s]*([0-9]{1,2}[:\.][0-9]{2})/i))) n++;
+  if (ocrFill('f-temp'+suffix, m(/Temp\.?\s*[:\s]*([0-9]{2,3})/i))) n++;
+  if (ocrFill('f-coffee'+suffix, m(/Coffee\s+([A-Za-z][A-Za-z &]*?)(?:\n|Lot)/i))) n++;
+  if (ocrFill('f-coffeelot'+suffix, m(/Lot\.?\s*[:\s]*([0-9\/]+)/i))) n++;
+  if (ocrFill('f-process'+suffix, m(/Process\s+([A-Za-z]+)/i))) n++;
+  if (ocrFill('f-milklot'+suffix, m(/Milk\s*lot\s*[:\s]*([0-9\/]+)/i))) n++;
+
+  const doseRow = text.match(/Dose\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)/i);
+  if (doseRow) {
+    if (ocrFill('f-dose1'+suffix, doseRow[1])) n++;
+    if (ocrFill('f-dose2'+suffix, doseRow[2])) n++;
+    if (ocrFill('f-dose3'+suffix, doseRow[3])) n++;
+  }
+  const yieldRow = text.match(/Yield\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)/i);
+  if (yieldRow) {
+    if (ocrFill('f-yield1'+suffix, yieldRow[1])) n++;
+    if (ocrFill('f-yield2'+suffix, yieldRow[2])) n++;
+    if (ocrFill('f-yield3'+suffix, yieldRow[3])) n++;
+  }
+  // Table's own "Time" row (extraction seconds) is the SECOND "Time" match
+  // in the text — the first is the header clock time already used above.
+  const allTimeMatches = [...text.matchAll(/Time\s+([0-9]+)/gi)];
+  if (allTimeMatches[1]) { if (ocrFill('f-time1'+suffix, allTimeMatches[1][1])) n++; }
+
+  if (ocrFill('f-tds'+suffix, m(/TDS\s*%?\s*([0-9]+\.?[0-9]*)/i))) n++;
+  const extVal = m(/EXT\s*%?\s*([0-9]+\.?[0-9]*)/i);
+  if (extVal) n++; // EXT is auto-calculated by calcExt(), not a direct field — just count it as read
+  if (ocrFill('f-flow'+suffix, m(/Flow\s*Rate\s*[:\s]*([0-9]+)/i))) n++;
+
+  const stepsBlock = m(/Steps\s*\n([\s\S]*?)(?:TDS|$)/i);
+  if (ocrFill('f-steps'+suffix, stepsBlock ? stepsBlock.replace(/\n/g,', ').trim() : null)) n++;
+
+  const notesBlock = m(/Notes\s*\n([\s\S]*?)(?:With Milk|Check by|$)/i);
+  if (notesBlock) {
+    const parts = notesBlock.split('/').map(s=>s.replace(/\n/g,' ').trim()).filter(Boolean);
+    if (parts[0] && ocrFill('f-flavor1'+suffix, parts[0])) n++;
+    if (parts[1] && ocrFill('f-flavor2'+suffix, parts[1])) n++;
+    if (parts[2] && ocrFill('f-flavor3'+suffix, parts[2])) n++;
+  }
+  const milkNotes = m(/With Milk\s*\n([\s\S]*?)(?:Check by|$)/i);
+  if (ocrFill('f-milknotes'+suffix, milkNotes ? milkNotes.replace(/\n/g,' ').trim() : null)) n++;
+
+  const checkBy = m(/Check by\s*[:\s]*([\s\S]*)$/i);
+  if (ocrFill('f-checkby'+suffix, checkBy ? checkBy.replace(/\n/g,' ').trim() : null)) n++;
+
+  calcExt(suffix);
+  return n;
+}
 
 function setupForm() {
   const branchSel = document.getElementById('f-branch');
@@ -901,6 +991,11 @@ async function saveEntry() {
 }
 
 function resetForm() {
+  // Clear any leftover "needs review" highlight from an OCR auto-fill
+  document.querySelectorAll('#page-form input, #page-form select').forEach(el => {
+    el.style.background = '';
+    el.style.borderColor = '';
+  });
   ['a','b'].forEach(suf => {
     document.getElementById('f-coffee'+suf).value = suf==='a' ? 'House Blend' : '';
     document.getElementById('f-coffeelot'+suf).value = '';
