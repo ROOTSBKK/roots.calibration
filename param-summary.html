@@ -88,7 +88,14 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
     <div class="hdr-sub" id="hdr-user"></div>
   </div>
 
-  <div class="wrap">
+  <div id="nav-tabs" style="display:none;background:#fff;border-bottom:1px solid var(--bg3);position:sticky;top:0;z-index:9">
+    <div class="wrap" style="display:flex;gap:6px;padding-top:8px;padding-bottom:8px">
+      <button class="nav-btn sel" id="nav-form" onclick="showTrackPage('form')" style="flex:1;padding:9px;border:none;border-radius:8px;background:var(--blue);color:#fff;font-weight:700;font-size:13px;cursor:pointer">📝 กรอกข้อมูล</button>
+      <button class="nav-btn" id="nav-overview" onclick="showTrackPage('overview')" style="flex:1;padding:9px;border:none;border-radius:8px;background:var(--bg2);color:var(--text2);font-weight:700;font-size:13px;cursor:pointer">📊 ภาพรวมทุกสาขา</button>
+    </div>
+  </div>
+
+  <div class="wrap" id="page-form">
 
     <div class="card">
       <div class="row">
@@ -163,6 +170,27 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
     <div style="margin:20px 0 10px;font-size:13px;font-weight:700;color:var(--text2)">📋 รายการล่าสุด</div>
     <div id="entries-list"><div style="color:var(--text3);font-size:13px">กำลังโหลด...</div></div>
 
+  </div>
+
+  <div class="wrap" id="page-overview" style="display:none">
+    <div class="card">
+      <div class="card-title">EXT% เฉลี่ยแต่ละสาขา</div>
+      <div id="ext-chart" style="display:flex;align-items:flex-end;gap:10px;overflow-x:auto;padding-bottom:4px;border-bottom:2px solid var(--bg3);min-height:180px">
+        <div style="color:var(--text3);font-size:13px">กำลังโหลด...</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="margin-bottom:0;align-items:center">
+        <div class="col"><div class="lbl">ดูสาขา</div>
+          <select id="ov-branch-filter" onchange="loadOverviewList()">
+            <option value="">ทุกสาขา</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="overview-list"><div style="color:var(--text3);font-size:13px">กำลังโหลด...</div></div>
   </div>
 </div>
 
@@ -261,6 +289,96 @@ function setupForm() {
   document.getElementById('f-date').value = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
   updateTasterDefault();
   loadRecentEntries();
+
+  document.getElementById('nav-tabs').style.display = 'block';
+  document.getElementById('ov-branch-filter').innerHTML = '<option value="">ทุกสาขา</option>' + ALL_BRANCHES.map(b => `<option value="${b}">${b}</option>`).join('');
+}
+
+function showTrackPage(page) {
+  const formBtn = document.getElementById('nav-form');
+  const ovBtn = document.getElementById('nav-overview');
+  document.getElementById('page-form').style.display = page==='form' ? 'block' : 'none';
+  document.getElementById('page-overview').style.display = page==='overview' ? 'block' : 'none';
+  formBtn.style.background = page==='form' ? 'var(--blue)' : 'var(--bg2)';
+  formBtn.style.color = page==='form' ? '#fff' : 'var(--text2)';
+  ovBtn.style.background = page==='overview' ? 'var(--blue)' : 'var(--bg2)';
+  ovBtn.style.color = page==='overview' ? '#fff' : 'var(--text2)';
+  if (page === 'overview') { loadExtChart(); loadOverviewList(); }
+}
+
+async function loadExtChart() {
+  const chartEl = document.getElementById('ext-chart');
+  chartEl.innerHTML = '<div style="color:var(--text3);font-size:13px">กำลังโหลด...</div>';
+  try {
+    const snap = await window._fsgetDocs(window._fscollection(window._db, 'shared'));
+    const byBranch = {};
+    snap.forEach(d => {
+      const data = d.data();
+      if (data.key && data.key.startsWith('ps:')) {
+        try {
+          const e = JSON.parse(data.value);
+          if (e.ext) { if (!byBranch[e.branch]) byBranch[e.branch] = []; byBranch[e.branch].push(e.ext); }
+        } catch(err) {}
+      }
+    });
+    const results = ALL_BRANCHES.map(b => {
+      const vals = byBranch[b] || [];
+      const avg = vals.length ? vals.reduce((s,v)=>s+v,0)/vals.length : null;
+      return { branch: b, avg, count: vals.length };
+    });
+    const maxAvg = Math.max(1, ...results.filter(r=>r.avg!==null).map(r=>r.avg));
+    const CHART_H = 130;
+    chartEl.innerHTML = results.map(r => {
+      if (r.avg === null) {
+        return `<div style="display:flex;flex-direction:column;align-items:center;min-width:58px;flex-shrink:0">
+          <div style="font-size:10px;color:var(--text3);font-style:italic;margin-bottom:4px">—</div>
+          <div style="width:28px;height:6px;background:var(--bg3);border-radius:3px;align-self:flex-end"></div>
+          <div style="width:28px;height:${CHART_H-6}px"></div>
+          <div style="font-size:11px;color:var(--text);font-weight:600;margin-top:6px;text-align:center">${r.branch}</div>
+        </div>`;
+      }
+      const barH = Math.max(6, Math.round(r.avg/maxAvg*CHART_H));
+      return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:58px;flex-shrink:0">
+        <div style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:4px">${r.avg.toFixed(1)}%</div>
+        <div style="width:28px;height:${barH}px;background:var(--amber);border-radius:5px 5px 0 0"></div>
+        <div style="font-size:11px;color:var(--text);font-weight:600;margin-top:6px;text-align:center">${r.branch}</div>
+        <div style="font-size:9.5px;color:var(--text3)">${r.count} รายการ</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    chartEl.innerHTML = '<div style="color:var(--text3);font-size:13px">โหลดไม่สำเร็จ</div>';
+  }
+}
+
+async function loadOverviewList() {
+  const listEl = document.getElementById('overview-list');
+  listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">กำลังโหลด...</div>';
+  try {
+    const branchFilter = document.getElementById('ov-branch-filter').value;
+    const snap = await window._fsgetDocs(window._fscollection(window._db, 'shared'));
+    let entries = [];
+    snap.forEach(d => {
+      const data = d.data();
+      if (data.key && data.key.startsWith('ps:') && (!branchFilter || data.branch === branchFilter)) {
+        try { entries.push(JSON.parse(data.value)); } catch(e) {}
+      }
+    });
+    entries.sort((a,b) => b.created - a.created);
+    entries = entries.slice(0, 30);
+    if (!entries.length) {
+      listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">ยังไม่มีข้อมูล</div>';
+      return;
+    }
+    listEl.innerHTML = entries.map(e => `
+      <div class="entry-card">
+        <div class="entry-top"><span>${e.branch} · ${e.coffee}</span><span style="color:var(--amber)">${e.ext?e.ext+'% EXT':''}</span></div>
+        <div class="entry-meta">${e.date} · Dose ${e.dose1||'—'}g → Yield ${e.yield1||'—'}g · TDS ${e.tds||'—'}%</div>
+        <div class="entry-meta">${e.shotBy?'Shot by '+e.shotBy+' · ':''}ชิมโดย ${e.taster}</div>
+      </div>
+    `).join('');
+  } catch(e) {
+    listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">โหลดไม่สำเร็จ</div>';
+  }
 }
 
 function updateTasterDefault() {
@@ -394,6 +512,9 @@ window.updateTasterDefault = updateTasterDefault;
 window.calcExt = calcExt;
 window.saveEntry = saveEntry;
 window.loadRecentEntries = loadRecentEntries;
+window.showTrackPage = showTrackPage;
+window.loadExtChart = loadExtChart;
+window.loadOverviewList = loadOverviewList;
 
 // Wire ratio calc immediately too (in case DOMContentLoaded already fired)
 ['1','2','3'].forEach(n => {
