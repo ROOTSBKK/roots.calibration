@@ -95,8 +95,6 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
     </div>
   </div>
 
-  <datalist id="coffee-list"></datalist>
-
   <div class="wrap" id="page-form">
 
     <div class="card" style="border:2px dashed var(--bborder);background:var(--bbg)">
@@ -127,7 +125,7 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
 
     <div class="card" style="margin-bottom:10px">
       <div class="row">
-        <div class="col" style="flex:1.4"><div class="lbl">Coffee</div><input type="text" id="f-coffeea" list="coffee-list" placeholder="พิมพ์ชื่อกาแฟ"></div>
+        <div class="col" style="flex:1.4;position:relative"><div class="lbl">Coffee</div><input type="text" id="f-coffeea" placeholder="พิมพ์ชื่อกาแฟ" autocomplete="off" oninput="showCoffeeSuggestions('a')" onfocus="showCoffeeSuggestions('a')"><div id="coffee-suggest-a" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--bg3);border-radius:6px;max-height:180px;overflow-y:auto;z-index:20;box-shadow:0 4px 10px rgba(0,0,0,.1)"></div></div>
         <div class="col"><div class="lbl">Coffee Lot</div><input type="text" id="f-coffeelota" placeholder="24/7"></div>
         <div class="col"><div class="lbl">Time</div><input type="text" id="f-timea" placeholder="7:15"></div>
       </div>
@@ -204,7 +202,7 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
 
     <div class="card" style="margin-bottom:10px">
       <div class="row">
-        <div class="col" style="flex:1.4"><div class="lbl">Coffee</div><input type="text" id="f-coffeeb" list="coffee-list" placeholder="พิมพ์ชื่อกาแฟ"></div>
+        <div class="col" style="flex:1.4;position:relative"><div class="lbl">Coffee</div><input type="text" id="f-coffeeb" placeholder="พิมพ์ชื่อกาแฟ" autocomplete="off" oninput="showCoffeeSuggestions('b')" onfocus="showCoffeeSuggestions('b')"><div id="coffee-suggest-b" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--bg3);border-radius:6px;max-height:180px;overflow-y:auto;z-index:20;box-shadow:0 4px 10px rgba(0,0,0,.1)"></div></div>
         <div class="col"><div class="lbl">Coffee Lot</div><input type="text" id="f-coffeelotb" placeholder="24/7"></div>
         <div class="col"><div class="lbl">Time</div><input type="text" id="f-timeb" placeholder="7:15"></div>
       </div>
@@ -408,6 +406,31 @@ const STAFF_DATA = {
 };
 const COFFEE_OPTIONS = ['House Blend','Nui and Aoy','Tor','Jaroon','Sanchai','Kaleb','Ake','Manop','Beansprie','Sri','Sopa','Nawin','Nawin and Tina','Chang Pao','Chatree'];
 
+// Custom coffee-name autocomplete — native <datalist> doesn't reliably
+// show suggestions on mobile Safari/Chrome, so this builds the dropdown
+// by hand with plain DOM, which works consistently everywhere.
+function showCoffeeSuggestions(suffix) {
+  const input = document.getElementById('f-coffee'+suffix);
+  const box = document.getElementById('coffee-suggest-'+suffix);
+  const q = input.value.trim().toLowerCase();
+  const matches = q ? COFFEE_OPTIONS.filter(c => c.toLowerCase().includes(q)) : COFFEE_OPTIONS;
+  if (!matches.length) { box.style.display = 'none'; return; }
+  box.innerHTML = matches.map(c => `<div onclick="pickCoffeeSuggestion('${suffix}','${c.replace(/'/g,"\\'")}')" style="padding:10px 12px;font-size:13.5px;border-bottom:1px solid var(--bg3);cursor:pointer">${c}</div>`).join('');
+  box.style.display = 'block';
+}
+function pickCoffeeSuggestion(suffix, name) {
+  document.getElementById('f-coffee'+suffix).value = name;
+  document.getElementById('coffee-suggest-'+suffix).style.display = 'none';
+}
+document.addEventListener('click', (e) => {
+  ['a','b'].forEach(suf => {
+    const input = document.getElementById('f-coffee'+suf);
+    const box = document.getElementById('coffee-suggest-'+suf);
+    if (box && input && !input.contains(e.target) && !box.contains(e.target)) box.style.display = 'none';
+  });
+});
+
+
 // ─── OCR (photo → text) via Google Cloud Vision API ───
 // GOOGLE_VISION_API_KEY must be set up in Google Cloud Console and
 // restricted to the rootsbkk.github.io referrer (see setup notes).
@@ -563,7 +586,7 @@ function setupForm() {
   // Coffee fields — autocomplete text inputs (shared datalist), not a
   // rigid dropdown. House Blend section defaults to "House Blend"; SO
   // section starts blank since it varies daily.
-  document.getElementById('coffee-list').innerHTML = COFFEE_OPTIONS.map(c => `<option value="${c}">`).join('');
+  // (Coffee suggestions are now built on-the-fly by showCoffeeSuggestions — no separate population step needed here.)
   document.getElementById('f-coffeea').value = 'House Blend';
   document.getElementById('f-coffeeb').value = '';
 
@@ -1055,6 +1078,8 @@ async function loadRecentEntries() {
 window.setupForm = setupForm;
 window.updateTasterDefault = updateTasterDefault;
 window.populateShotBy = populateShotBy;
+window.showCoffeeSuggestions = showCoffeeSuggestions;
+window.pickCoffeeSuggestion = pickCoffeeSuggestion;
 window.handleOcrPhoto = handleOcrPhoto;
 window.calcExt = calcExt;
 window.saveEntry = saveEntry;
