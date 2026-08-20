@@ -15,7 +15,7 @@
   --r2:8px;
 }
 *{box-sizing:border-box}
-body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text)}
+body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg) url('roots-bg-tile.png') repeat;background-size:300px;color:var(--text)}
 .hdr{background:#18181A;color:#F8F7F4;padding:16px 18px;position:sticky;top:0;z-index:10}
 .hdr-title{font-size:16px;font-weight:700}
 .hdr-sub{font-size:12px;color:#D9D6CE;margin-top:2px}
@@ -95,12 +95,12 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
         <div class="col"><div class="lbl">วันที่</div><input type="date" id="f-date"></div>
         <div class="col"><div class="lbl">สาขา</div><select id="f-branch" onchange="updateTasterDefault()"></select></div>
       </div>
-      <div class="col-block"><div class="lbl">Coffee (ชื่อกาแฟ)</div><input type="text" id="f-coffee" placeholder="เช่น House Blend"></div>
       <div class="row">
-        <div class="col"><div class="lbl">Coffee Lot</div><input type="text" id="f-coffeelot" placeholder="เช่น 24/7"></div>
+        <div class="col" style="flex:1.4"><div class="lbl">Coffee</div><input type="text" id="f-coffee" placeholder="เช่น House Blend"></div>
+        <div class="col"><div class="lbl">Coffee Lot</div><input type="text" id="f-coffeelot" placeholder="24/7"></div>
         <div class="col"><div class="lbl">Milk Lot</div><input type="text" id="f-milklot" placeholder="ถ้ามี"></div>
       </div>
-      <div class="row">
+      <div class="row" style="margin-bottom:0">
         <div class="col"><div class="lbl">Water Temp (°C)</div><input type="number" id="f-temp" value="93" step="0.5"></div>
         <div class="col"><div class="lbl">Water Flow (g/s)</div><input type="number" id="f-flow" value="9" step="0.5"></div>
       </div>
@@ -131,31 +131,27 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
           <div class="ratio-line" id="ratio3">1 : —</div>
         </div>
       </div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">TDS → EXT%</div>
-      <div class="lbl">TDS (%) <span style="font-weight:400;color:var(--text3)">— อ้างอิง Dose/Yield ครั้งที่ 1</span></div>
-      <input type="number" id="f-tds" placeholder="เช่น 9.5" step="0.1" oninput="calcExt()">
-      <div class="ext-box">
-        <div class="ext-val" id="ext-val">—</div>
-        <div class="ext-lbl">EXT% (คำนวณอัตโนมัติ)</div>
+      <div class="row" style="margin-top:10px;margin-bottom:0;align-items:flex-end">
+        <div class="col">
+          <div class="lbl">TDS (%) <span style="font-weight:400;color:var(--text3)">— อ้างอิง ครั้งที่ 1</span></div>
+          <input type="number" id="f-tds" placeholder="เช่น 9.5" step="0.1" oninput="calcExt()">
+        </div>
+        <div class="col" style="text-align:center;background:var(--abg);border:1px solid var(--aborder);border-radius:6px;padding:6px">
+          <div class="ext-val" id="ext-val" style="font-size:18px">—</div>
+          <div class="ext-lbl" style="font-size:10px">EXT% (คำนวณอัตโนมัติ)</div>
+        </div>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-title">Flavor (เลือกได้หลายอัน ไม่บังคับ)</div>
-      <div class="chips" id="flavor-chips">
-        <button type="button" class="chip" data-v="Fruity" onclick="toggleChip(this)">🍍 Fruity</button>
-        <button type="button" class="chip" data-v="Floral" onclick="toggleChip(this)">🌸 Floral</button>
-        <button type="button" class="chip" data-v="Nutty/Chocolate" onclick="toggleChip(this)">🌰 Nutty/Chocolate</button>
-        <button type="button" class="chip" data-v="Sugary" onclick="toggleChip(this)">🍯 Sugary</button>
-        <button type="button" class="chip" data-v="Spice/Herbal" onclick="toggleChip(this)">🌿 Spice/Herbal</button>
-        <button type="button" class="chip" data-v="Roasted/Earthy" onclick="toggleChip(this)">🔥 Roasted/Earthy</button>
+      <div class="lbl">Flavor / Texture / Aftertaste (กรอกเอง ไม่บังคับ)</div>
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:10px">
+        <input type="text" id="f-flavor1" placeholder="..............">
+        <span style="color:var(--text3);font-weight:700">/</span>
+        <input type="text" id="f-flavor2" placeholder="..............">
+        <span style="color:var(--text3);font-weight:700">/</span>
+        <input type="text" id="f-flavor3" placeholder="..............">
       </div>
-    </div>
-
-    <div class="card">
       <div class="lbl">ชื่อคนชิม</div>
       <input type="text" id="f-taster" placeholder="ชื่อผู้บันทึก">
     </div>
@@ -248,7 +244,7 @@ function _initAppReal() {
 <script>
 const ALL_BRANCHES = ['Thonglor','Lasalle','Saladang','Emquartier','Ari','Bitec','Sathorn','Ratchathewi','Praditmanutham','Event'];
 const AREA_STAFF = ['Lhing','Eve','Boss','Nu','Ball'];
-let flavorTags = [];
+
 
 function setupForm() {
   const branchSel = document.getElementById('f-branch');
@@ -269,12 +265,6 @@ function updateTasterDefault() {
   document.getElementById('f-taster').value = window._currentStaff.name;
 }
 
-function toggleChip(btn) {
-  const v = btn.dataset.v;
-  btn.classList.toggle('sel');
-  if (flavorTags.includes(v)) flavorTags = flavorTags.filter(t => t !== v);
-  else flavorTags.push(v);
-}
 
 function calcRatio(doseId, yieldId, ratioId) {
   const dose = +document.getElementById(doseId).value;
@@ -330,7 +320,9 @@ async function saveEntry() {
     dose2: +document.getElementById('f-dose2').value || 0, time2: +document.getElementById('f-time2').value || 0, yield2: +document.getElementById('f-yield2').value || 0,
     dose3: +document.getElementById('f-dose3').value || 0, time3: +document.getElementById('f-time3').value || 0, yield3: +document.getElementById('f-yield3').value || 0,
     tds, ext,
-    flavor: [...flavorTags],
+    flavor1: document.getElementById('f-flavor1').value.trim(),
+    flavor2: document.getElementById('f-flavor2').value.trim(),
+    flavor3: document.getElementById('f-flavor3').value.trim(),
     taster: document.getElementById('f-taster').value.trim() || window._currentStaff.name,
     created: Date.now()
   };
@@ -357,8 +349,9 @@ function resetForm() {
   });
   document.getElementById('f-tds').value = '';
   document.getElementById('ext-val').textContent = '—';
-  flavorTags = [];
-  document.querySelectorAll('#flavor-chips .chip').forEach(c => c.classList.remove('sel'));
+  document.getElementById('f-flavor1').value = '';
+  document.getElementById('f-flavor2').value = '';
+  document.getElementById('f-flavor3').value = '';
 }
 
 async function loadRecentEntries() {
@@ -384,7 +377,7 @@ async function loadRecentEntries() {
       <div class="entry-card">
         <div class="entry-top"><span>${e.coffee}</span><span style="color:var(--amber)">${e.ext?e.ext+'% EXT':''}</span></div>
         <div class="entry-meta">${e.date} · ${e.branch} · Dose ${e.dose1||'—'}g → Yield ${e.yield1||'—'}g · TDS ${e.tds||'—'}%</div>
-        <div class="entry-meta">${e.flavor&&e.flavor.length?e.flavor.join(', ')+' · ':''}ชิมโดย ${e.taster}</div>
+        <div class="entry-meta">${[e.flavor1,e.flavor2,e.flavor3].filter(Boolean).join(' / ')||''}${(e.flavor1||e.flavor2||e.flavor3)?' · ':''}ชิมโดย ${e.taster}</div>
       </div>
     `).join('');
   } catch(e) {
@@ -394,7 +387,6 @@ async function loadRecentEntries() {
 
 window.setupForm = setupForm;
 window.updateTasterDefault = updateTasterDefault;
-window.toggleChip = toggleChip;
 window.calcExt = calcExt;
 window.saveEntry = saveEntry;
 window.loadRecentEntries = loadRecentEntries;
