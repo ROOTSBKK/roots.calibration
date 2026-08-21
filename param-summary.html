@@ -865,6 +865,11 @@ function buildEntry(suffix, branch, label) {
   if (!coffee) return null; // this section wasn't filled in — skip it
   const dose1 = +document.getElementById('f-dose1'+suffix).value || 0;
   const yield1 = +document.getElementById('f-yield1'+suffix).value || 0;
+  // Coffee defaults to "House Blend" on its own, so a filled name alone
+  // doesn't prove this section was actually used — require at least
+  // Dose1 or Yield1 too, or this would let a completely untouched section
+  // save as an empty-looking entry.
+  if (!dose1 && !yield1) return null;
   const tds = +document.getElementById('f-tds'+suffix).value || 0;
   const ext = (dose1 && yield1 && tds) ? +(tds * yield1 / dose1).toFixed(1) : 0;
   return {
@@ -1038,7 +1043,7 @@ async function saveEntry() {
   const entryA = buildEntry('a', branch, 'House Blend');
   const entryB = buildEntry('b', branch, 'SO');
 
-  if (!entryA && !entryB) { showToast('กรุณาเลือกกาแฟอย่างน้อย 1 อัน (House Blend หรือ SO)'); return; }
+  if (!entryA && !entryB) { showToast('กรุณากรอก Dose หรือ Yield อย่างน้อย 1 ช่อง (House Blend หรือ SO) ก่อนบันทึก'); return; }
 
   try {
     const toSave = [entryA, entryB].filter(Boolean);
