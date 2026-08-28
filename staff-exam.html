@@ -414,15 +414,29 @@ async function loadAdminStaffList() {
     const snap = await window._fsgetDocs(window._fscollection(window._db, 'staff'));
     let staffList = [];
     snap.forEach(d => staffList.push({ email: d.id, ...d.data() }));
-    staffList.sort((a,b) => (a.branch||'').localeCompare(b.branch||'') || (a.name||'').localeCompare(b.name||''));
 
-    listEl.innerHTML = staffList.map(s => `
+    // Some staff have duplicate documents (e.g. same person saved under two
+    // differently-cased emails). Group by name+branch so each real person
+    // shows as ONE row, but keep every matching email so a role change
+    // applies to all of them — otherwise whichever email they actually log
+    // in with might still show the old role.
+    const groups = {};
+    staffList.forEach(s => {
+      const key = (s.name||'') + '|' + (s.branch||'');
+      if (!groups[key]) groups[key] = { name: s.name, branch: s.branch, emails: [], role: null };
+      groups[key].emails.push(s.email);
+      if (s.role) groups[key].role = s.role; // prefer whichever duplicate already has a role set
+    });
+    let merged = Object.values(groups);
+    merged.sort((a,b) => (a.branch||'').localeCompare(b.branch||'') || (a.name||'').localeCompare(b.name||''));
+
+    listEl.innerHTML = merged.map((s, i) => `
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid var(--bg3)">
         <div style="font-size:13px">
           <b>${s.name}</b>
           <div style="font-size:11px;color:var(--text3)">${s.branch||''}</div>
         </div>
-        <select style="width:auto;min-width:150px" onchange="saveStaffRole('${s.email}', this.value, this)">
+        <select style="width:auto;min-width:150px" onchange="saveStaffRoleGroup(${JSON.stringify(s.emails)}, this.value, this)">
           <option value="professional" ${(!s.role || s.role==='professional')?'selected':''}>Professional</option>
           <option value="trainer" ${s.role==='trainer'?'selected':''}>Trainer</option>
         </select>
@@ -441,6 +455,27 @@ async function saveStaffRole(email, role, selectEl) {
     showToast(`อัปเดต Role แล้ว ✓`);
     // If editing our own role, refresh the exam-level restriction immediately
     if (email === window._currentStaffEmail) {
+      window._currentStaff.role = role;
+      applyRoleRestriction();
+    }
+  } catch(e) {
+    showToast('บันทึกไม่สำเร็จ: ' + e.message);
+  }
+}
+
+// Same as saveStaffRole, but applies to every duplicate email doc for the
+// same person at once — needed because some staff have 2+ documents in
+// Firestore (e.g. differently-cased emails) and we don't know in advance
+// which one they'll actually log in with.
+async function saveStaffRoleGroup(emails, role, selectEl) {
+  try {
+    for (const email of emails) {
+      const existing = await window._fsgetDoc(window._fsdoc(window._db, 'staff', email));
+      const data = existing.exists() ? existing.data() : {};
+      await window._fssetDoc(window._fsdoc(window._db, 'staff', email), { ...data, role });
+    }
+    showToast(`อัปเดต Role แล้ว ✓`);
+    if (emails.includes(window._currentStaffEmail)) {
       window._currentStaff.role = role;
       applyRoleRestriction();
     }
@@ -507,6 +542,7 @@ window.hideScoresPage = hideScoresPage;
 window.showAdminPage = showAdminPage;
 window.hideAdminPage = hideAdminPage;
 window.saveStaffRole = saveStaffRole;
+window.saveStaffRoleGroup = saveStaffRoleGroup;
 window.startExam = startExam;
 window.selectAnswer = selectAnswer;
 window.cancelExam = cancelExam;
