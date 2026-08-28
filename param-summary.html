@@ -77,8 +77,13 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
   <button onclick="chooseMode('summary')" style="width:260px;padding:16px;margin-bottom:12px;border:none;border-radius:10px;background:#fff;color:#18181A;font-size:15px;font-weight:700;cursor:pointer">
     ☕ Parameter Summary<br><span style="font-size:11px;font-weight:400;color:#56544F">กรอกพารามิเตอร์เก็บข้อมูล</span>
   </button>
-  <button onclick="chooseMode('calibration')" style="width:260px;padding:16px;border:none;border-radius:10px;background:#2A2A2E;color:#fff;font-size:15px;font-weight:700;cursor:pointer">
+  <button onclick="chooseMode('calibration')" style="width:260px;padding:16px;margin-bottom:12px;border:none;border-radius:10px;background:#2A2A2E;color:#fff;font-size:15px;font-weight:700;cursor:pointer">
     🎯 Palate Calibration Test<br><span style="font-size:11px;font-weight:400;color:#D9D6CE">ชิม + ให้คะแนน + เทียบทีม</span>
+  </button>
+  <!-- ข้อสอบพนักงาน — ปิดไว้ก่อน (Closed beta) ยังไม่เปิดให้พนักงานทั่วไปเห็นปุ่มนี้
+       เข้าทดสอบได้โดยตรงผ่าน staff-exam.html เอง ไม่ต้องผ่านปุ่มนี้ -->
+  <button onclick="chooseMode('exam')" style="display:none;width:260px;padding:16px;border:none;border-radius:10px;background:#2A2A2E;color:#fff;font-size:15px;font-weight:700;cursor:pointer">
+    📝 ข้อสอบพนักงาน<br><span style="font-size:11px;font-weight:400;color:#D9D6CE">Coffee Knowledge</span>
   </button>
 </div>
 
@@ -379,6 +384,10 @@ function initApp() {
 window.chooseMode = function(mode){
   if (mode === 'calibration') {
     window.location.href = 'index.html';
+    return;
+  }
+  if (mode === 'exam') {
+    window.location.href = 'staff-exam.html';
     return;
   }
   document.getElementById('mode-chooser').style.display = 'none';

@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Roots BKK — ข้อสอบพนักงาน</title>
+<style>
+:root{
+  --bg:#F8F7F4; --bg2:#EFEDE8; --bg3:#E4E1DA;
+  --text:#18181A; --text2:#56544F; --text3:#908D86;
+  --blue:#1A5FA8; --bbg:#E7F0FB; --bborder:#7AAEE0;
+  --green:#1F6B35; --gbg:#E8F3EC; --gborder:#7DC49A;
+  --amber:#9A5F0A; --abg:#FDF3E3; --aborder:#E5B86A;
+  --red:#B8352A; --rbg:#FAEAE8; --rborder:#E8806E;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text)}
+.hdr{background:#18181A;color:#F8F7F4;padding:16px 18px;position:sticky;top:0;z-index:10}
+.hdr-title{font-size:16px;font-weight:700}
+.hdr-sub{font-size:12px;color:#D9D6CE;margin-top:2px}
+.wrap{max-width:560px;margin:0 auto;padding:14px}
+.card{background:#fff;border:1px solid var(--bg3);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.card-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px;text-transform:uppercase;letter-spacing:.03em}
+.lbl{font-size:11px;color:var(--text3);font-weight:700;margin-bottom:4px}
+select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-radius:6px;font-size:14px;background:#fff;color:var(--text);font-family:inherit}
+.btn{width:100%;padding:13px;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-secondary{background:var(--bg2);color:var(--text2)}
+#login-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(rgba(24,24,26,.82),rgba(24,24,26,.82)),#2A2A2E;color:#fff;padding:20px;text-align:center}
+#login-title{font-size:20px;font-weight:700;margin-bottom:6px}
+#login-sub{font-size:13px;color:#D9D6CE;margin-bottom:24px}
+#google-btn{display:flex;align-items:center;gap:10px;background:#fff;color:#18181A;border:none;border-radius:8px;padding:12px 22px;font-size:14px;font-weight:600;cursor:pointer}
+#login-status{margin-top:12px;font-size:12px;color:#D9D6CE;min-height:16px}
+#app-content{display:none}
+.q-card{background:#fff;border:1px solid var(--bg3);border-radius:12px;padding:16px;margin-bottom:14px}
+.q-num{font-size:11px;color:var(--text3);font-weight:700;margin-bottom:6px}
+.q-text{font-size:15px;font-weight:600;margin-bottom:12px;line-height:1.5}
+.q-opt{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1.5px solid var(--bg3);border-radius:8px;margin-bottom:8px;cursor:pointer;font-size:14px}
+.q-opt.selected{background:var(--bbg);border-color:var(--bborder)}
+.q-opt.correct{background:var(--gbg);border-color:var(--gborder)}
+.q-opt.wrong{background:var(--rbg);border-color:var(--rborder)}
+.q-opt input{margin:0}
+.score-box{text-align:center;padding:24px 16px;background:#fff;border-radius:12px;margin-bottom:14px}
+.score-num{font-size:44px;font-weight:800}
+.entry-card{background:#fff;border:1px solid var(--bg3);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:12.5px}
+.entry-top{display:flex;justify-content:space-between;font-weight:700;margin-bottom:4px}
+.entry-meta{color:var(--text3);font-size:11.5px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:#18181A;color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:999}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.progress-bar{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:14px}
+.progress-fill{height:100%;background:var(--blue)}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div id="login-title">📝 ข้อสอบพนักงาน</div>
+  <div id="login-sub">Roots BKK — Coffee Knowledge</div>
+  <button id="google-btn" onclick="doLogin()">
+    <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+    Login with Google
+  </button>
+  <div id="login-status"></div>
+</div>
+
+<div id="app-content">
+  <div class="hdr">
+    <div class="hdr-title">📝 ข้อสอบพนักงาน — Coffee Knowledge</div>
+    <div class="hdr-sub" id="hdr-user"></div>
+    <div style="margin-top:6px"><a href="param-summary.html" style="color:#D9D6CE;font-size:11px;text-decoration:underline">← กลับไปเลือกเครื่องมืออื่น</a></div>
+  </div>
+
+  <div class="wrap" id="page-setup">
+    <div class="card">
+      <div class="card-title">เริ่มทำข้อสอบ</div>
+      <div id="role-note" style="font-size:11.5px;color:var(--text3);margin-bottom:10px"></div>
+      <div class="lbl">ระดับ</div>
+      <select id="exam-level" style="margin-bottom:14px">
+        <option value="professional">Professional Barista (67 ข้อ)</option>
+        <option value="trainer">Trainer Barista (92 ข้อ)</option>
+      </select>
+      <button class="btn btn-primary" onclick="startExam()">📝 เริ่มทำข้อสอบ</button>
+    </div>
+
+    <div id="admin-link-card" style="display:none" class="card">
+      <button class="btn btn-secondary" onclick="showAdminPage()">⚙️ จัดการ Role พนักงาน</button>
+      <button class="btn btn-secondary" style="margin-top:8px" onclick="showScoresPage()">📊 คะแนนทุกคน (ล่าสุด)</button>
+    </div>
+
+    <div style="margin:20px 0 10px;font-size:13px;font-weight:700;color:var(--text2)">📋 ประวัติการสอบของฉัน</div>
+    <div id="history-list"><div style="color:var(--text3);font-size:13px">กำลังโหลด...</div></div>
+  </div>
+
+  <div class="wrap" id="page-admin" style="display:none">
+    <div class="card">
+      <div class="card-title">⚙️ จัดการ Role พนักงาน</div>
+      <div style="font-size:11.5px;color:var(--text3);margin-bottom:10px">Professional สอบได้แค่ชุด Professional · Trainer เลือกได้ทั้ง 2 ชุด</div>
+      <div id="admin-staff-list"><div style="color:var(--text3);font-size:13px">กำลังโหลด...</div></div>
+    </div>
+    <button class="btn btn-secondary" onclick="hideAdminPage()">← กลับ</button>
+  </div>
+
+  <div class="wrap" id="page-scores" style="display:none">
+    <div class="card">
+      <div class="card-title">📊 คะแนนล่าสุดของทุกคน</div>
+      <div style="font-size:11.5px;color:var(--text3);margin-bottom:10px">แสดงเฉพาะครั้งล่าสุดที่แต่ละคนสอบ (ต่อ 1 ระดับ)</div>
+      <div id="scores-list"><div style="color:var(--text3);font-size:13px">กำลังโหลด...</div></div>
+    </div>
+    <button class="btn btn-secondary" onclick="hideScoresPage()">← กลับ</button>
+  </div>
+
+  <div class="wrap" id="page-quiz" style="display:none">
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    <div id="quiz-questions"></div>
+    <button class="btn btn-primary" onclick="submitExam()">✅ ส่งคำตอบ</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="cancelExam()">✕ ยกเลิก</button>
+  </div>
+
+  <div class="wrap" id="page-result" style="display:none">
+    <div class="score-box">
+      <div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-bottom:6px" id="result-label"></div>
+      <div class="score-num" id="result-score"></div>
+      <div style="font-size:13px;color:var(--text3);margin-top:4px" id="result-detail"></div>
+    </div>
+    <div id="result-review"></div>
+    <button class="btn btn-primary" onclick="backToSetup()">← กลับหน้าหลัก</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+import { getFirestore, initializeFirestore, doc, getDoc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+const cfg = {
+  apiKey:"AIzaSyASqWQL08s1np9HEm-0_WIv0tQ9r3WmzZE",
+  authDomain:"roots-calibration.firebaseapp.com",
+  projectId:"roots-calibration",
+  storageBucket:"roots-calibration.firebasestorage.app",
+  messagingSenderId:"37839398079",
+  appId:"1:37839398079:web:48da9c8dfc29cf05e7920a"
+};
+const fbApp = initializeApp(cfg);
+const auth = getAuth(fbApp);
+const db = initializeFirestore(fbApp, { experimentalAutoDetectLongPolling: true });
+
+window._auth = auth;
+window._db = db;
+window._fsdoc = doc; window._fsgetDoc = getDoc; window._fssetDoc = setDoc;
+window._fscollection = collection; window._fsgetDocs = getDocs;
+
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const useRedirect = isStandalone && !isIOS;
+
+window.doLogin = async function(){
+  const status = document.getElementById('login-status');
+  status.textContent = 'กำลัง login...';
+  try {
+    const provider = new GoogleAuthProvider();
+    if (useRedirect) { await signInWithRedirect(auth, provider); return; }
+    const result = await signInWithPopup(auth, provider);
+    await afterLogin(result.user);
+  } catch(e) {
+    console.error(e);
+    status.textContent = 'Login ไม่สำเร็จ: ' + e.message;
+  }
+};
+
+async function afterLogin(user) {
+  const email = user.email.toLowerCase();
+  const staffDoc = await getDoc(doc(db, 'staff', email));
+  if (!staffDoc.exists()) {
+    document.getElementById('login-status').textContent = 'ไม่พบ Gmail นี้ในระบบ กรุณาติดต่อ Boss';
+    await signOut(auth);
+    return;
+  }
+  window._currentStaff = staffDoc.data();
+  window._currentStaffEmail = email;
+  initApp();
+}
+
+onAuthStateChanged(auth, async (user) => {
+  if (user && !window._currentStaff) {
+    try { await afterLogin(user); } catch(e) {}
+  }
+});
+
+function initApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-content').style.display = 'block';
+  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch}`;
+  window.applyRoleRestriction();
+  window.loadHistory();
+}
+</script>
+
+<script>
+// Role-based access: staff with role 'professional' (or no role set — safest
+// default) can only take the Professional exam. role 'trainer' unlocks both.
+function applyRoleRestriction() {
+  const role = window._currentStaff.role || 'professional';
+  const levelSelect = document.getElementById('exam-level');
+  const roleNote = document.getElementById('role-note');
+  const trainerOpt = levelSelect.querySelector('option[value="trainer"]');
+
+  if (role === 'trainer') {
+    trainerOpt.disabled = false;
+    roleNote.textContent = `Role ของคุณ: Trainer Barista — เลือกสอบได้ทั้ง 2 ระดับ`;
+  } else {
+    trainerOpt.disabled = true;
+    levelSelect.value = 'professional';
+    roleNote.textContent = `Role ของคุณ: Professional Barista — สอบได้เฉพาะชุด Professional`;
+  }
+
+  if (AREA_STAFF.includes(window._currentStaff.name)) {
+    document.getElementById('admin-link-card').style.display = 'block';
+  }
+}
+window.applyRoleRestriction = applyRoleRestriction;
+</script>
+
+<script>
+// ═══ Question banks — generated from the finalized Coffee Knowledge exam sets ═══
+const QUESTION_BANK = {
+  professional: [{"section": "หมวด 1: พันธุ์กาแฟ (Coffee Varietals)", "q": "กาแฟ 2 สายพันธุ์หลักที่ปลูกเชิงพาณิชย์ทั่วโลกคืออะไร?", "opts": ["Arabica และ Liberica", "Arabica และ Robusta", "Bourbon และ Typica (สองพันธุ์ที่ปลูกมากที่สุด)", "Geisha และ Robusta"], "correct": 1}, {"section": "หมวด 1: พันธุ์กาแฟ (Coffee Varietals)", "q": "กาแฟ Arabica เทียบกับ Robusta มีปริมาณคาเฟอีนอย่างไร?", "opts": ["ขึ้นอยู่กับ Process เท่านั้น ไม่เกี่ยวกับสายพันธุ์", "Arabica มีคาเฟอีนมากกว่าประมาณ 2 เท่า", "เท่ากันโดยเฉลี่ย", "Arabica มีคาเฟอีนน้อยกว่า"], "correct": 3}, {"section": "หมวด 1: พันธุ์กาแฟ (Coffee Varietals)", "q": "Robusta ทนต่อโรคและแมลงได้ดีกว่า Arabica เพราะอะไร?", "opts": ["มีเปลือกหนากว่า Arabica ป้องกันแมลงเจาะได้ดีกว่า", "เป็นพันธุ์ที่ผ่านการคัดเลือกให้ต้านทานโรคโดยเฉพาะ", "ปลูกในที่สูงกว่าซึ่งมีศัตรูพืชน้อยกว่า", "มีปริมาณคาเฟอีนสูงกว่า (สารป้องกันตามธรรมชาติ)"], "correct": 3}, {"section": "หมวด 1: พันธุ์กาแฟ (Coffee Varietals)", "q": "สายพันธุ์ \"Geisha\" (Gesha) มีชื่อเสียงเรื่องอะไร?", "opts": ["กลิ่นดอกไม้/ผลไม้ที่โดดเด่นและราคาสูง", "ราคาถูกและปลูกได้ทุกพื้นที่", "ให้ผลผลิตต่อไร่สูงที่สุดในบรรดาสายพันธุ์ Arabica", "ทนทานต่อโรคราสนิมได้ดีที่สุด"], "correct": 0}, {"section": "หมวด 1: พันธุ์กาแฟ (Coffee Varietals)", "q": "\"Catimor\" เป็นลูกผสมระหว่างสายพันธุ์ใด?", "opts": ["Typica x Geisha", "Bourbon x Caturra (ลูกผสมภายในสายพันธุ์ Arabica)", "Arabica x Robusta", "Liberica x Excelsa"], "correct": 2}, {"section": "หมวด 1: พันธุ์กาแฟ (Coffee Varietals)", "q": "พันธุ์ Catuai พัฒนาขึ้นเพื่อวัตถุประสงค์หลักใด?", "opts": ["เพิ่มปริมาณคาเฟอีนให้สูงเทียบเท่า Robusta", "ให้กลิ่นดอกไม้โดดเด่นเทียบเท่า Geisha", "ลดระยะเวลาการเจริญเติบโตให้เก็บเกี่ยวได้เร็วที่สุดในบรรดาสายพันธุ์ Arabica", "ต้นทนลมและติดผลดกในพื้นที่ปลูกหนาแน่น"], "correct": 3}, {"section": "หมวด 2: กระบวนการแปรรูป (Processing)", "q": "Washed Process มีขั้นตอนหลักคืออะไร?", "opts": ["หมักในถังปิดสนิทไร้ออกซิเจนก่อนตาก", "แช่เมล็ดในน้ำผึ้งเจือจางก่อนตาก", "ตากทั้งผลจนแห้งก่อนกะเทาะเปลือก", "ล้างเมือก/เนื้อออกด้วยน้ำก่อนตากเมล็ดเปล่า"], "correct": 3}, {"section": "หมวด 2: กระบวนการแปรรูป (Processing)", "q": "Natural Process (Dry Process) มีขั้นตอนหลักคืออะไร?", "opts": ["ล้างเมือกออกให้สะอาดก่อนตาก", "กะเทาะเปลือกออกก่อนแล้วค่อยตากเมล็ดเปล่า", "หมักในน้ำ 48-72 ชั่วโมงก่อนตาก", "ตากทั้งผลเชอร์รี่จนแห้งก่อนกะเทาะเปลือก"], "correct": 3}, {"section": "หมวด 2: กระบวนการแปรรูป (Processing)", "q": "Honey Process อยู่ตรงกลางระหว่างกระบวนการใด?", "opts": ["Anaerobic กับ Carbonic Maceration", "Light Roast กับ Dark Roast", "Wet Mill กับ Dry Mill", "Washed กับ Natural"], "correct": 3}, {"section": "หมวด 2: กระบวนการแปรรูป (Processing)", "q": "Anaerobic Fermentation คือการหมักในสภาวะแบบใด?", "opts": ["มีออกซิเจนสูงกว่าปกติเพื่อเร่งการหมัก", "อุณหภูมิเยือกแข็งตลอดกระบวนการ", "ไร้ออกซิเจน (ในถังปิดสนิท)", "แช่ในน้ำเกลือเข้มข้น"], "correct": 2}, {"section": "หมวด 2: กระบวนการแปรรูป (Processing)", "q": "\"Black Honey\" ต่างจาก \"Yellow Honey\" ตรงไหน?", "opts": ["Black Honey คือ Process ที่ไม่ล้างเมือกออกเลย ส่วน Yellow ล้างออกหมด", "เป็นแค่ชื่อทางการตลาด ไม่มีความต่างในกระบวนการจริง", "ปริมาณเมือกที่เหลือติดเมล็ดตอนตาก (Black = เหลือเยอะกว่า/ตากนานกว่า)", "Black Honey ใช้เมล็ด Robusta ส่วน Yellow ใช้ Arabica"], "correct": 2}, {"section": "หมวด 2: กระบวนการแปรรูป (Processing)", "q": "ทำไม Process ถึงมีผลต่อรสชาติกาแฟมาก?", "opts": ["Process มีผลแค่กับความชื้นของเมล็ด ไม่กระทบรสชาติโดยตรง", "น้ำตาล/สารประกอบจากเนื้อผลซึมเข้าเมล็ดต่างกันตามวิธีแปรรูป", "Process ต่างกันทำให้ปริมาณคาเฟอีนเปลี่ยนไปอย่างมีนัยสำคัญ", "เป็นเพียงความเชื่อทางการตลาด ไม่มีหลักฐานทางวิทยาศาสตร์รองรับ"], "correct": 1}, {"section": "หมวด 2: กระบวนการแปรรูป (Processing)", "q": "Experimental Process (เช่น Anaerobic, Carbonic Maceration) นิยมใช้เพื่อจุดประสงค์ใด?", "opts": ["เพิ่มปริมาณคาเฟอีนในเมล็ด", "ทำให้เก็บรักษาเมล็ดดิบได้นานขึ้นก่อนคั่ว", "สร้างรสชาติที่โดดเด่น/แตกต่างจากกาแฟทั่วไป", "ลดต้นทุนการแปรรูปให้ถูกลง"], "correct": 2}, {"section": "หมวด 2: กระบวนการแปรรูป (Processing)", "q": "Carbonic Maceration ที่ยืมมาจากวงการไวน์ มีหลักการอย่างไร?", "opts": ["เติมก๊าซคาร์บอนไดออกไซด์ลงในน้ำล้างเมือก", "แช่เมล็ดกาแฟในไวน์แดงก่อนตาก", "หมักผลเชอร์รี่ทั้งลูกในสภาพแวดล้อมที่อัด CO2", "ตากเมล็ดในถังไม้โอ๊คแบบเดียวกับการบ่มไวน์"], "correct": 2}, {"section": "หมวด 2: กระบวนการแปรรูป (Processing)", "q": "Mucilage (เมือก) ที่ห่อหุ้มเมล็ดกาแฟมีบทบาทอย่างไรในกระบวนการแปรรูป?", "opts": ["เป็นชั้นที่พบเฉพาะในกาแฟ Robusta ไม่พบใน Arabica", "มีหน้าที่ป้องกันเมล็ดจากแสงแดดเท่านั้น ไม่เกี่ยวกับรสชาติ", "เป็นสารพิษที่ต้องกำจัดออกให้หมดในทุกกรณีเพื่อความปลอดภัย", "มีน้ำตาล/กรดที่ส่งผลต่อรสชาติ ยิ่งอยู่นานยิ่งมีผลมาก"], "correct": 3}, {"section": "หมวด 3: การคั่ว (Roasting)", "q": "Light Roast มักให้รสชาติแบบใด?", "opts": ["เปรี้ยวและมีรสผลไม้ชัดเจน", "ขม, มีกลิ่นไหม้เล็กน้อย", "หวานเข้มแบบคาราเมล/ช็อกโกแลต", "จืดและไม่มีเอกลักษณ์ชัดเจน"], "correct": 0}, {"section": "หมวด 3: การคั่ว (Roasting)", "q": "Dark Roast มักให้รสชาติแบบใด?", "opts": ["มีกลิ่นดอกไม้เด่นชัด", "หวานอ่อนคล้ายน้ำผึ้ง", "เปรี้ยวจัดคล้ายผลไม้ตระกูลส้ม", "ขม, มีกลิ่นไหม้/ควัน, Body หนัก"], "correct": 3}, {"section": "หมวด 3: การคั่ว (Roasting)", "q": "\"Second Crack\" เกิดขึ้นเมื่อคั่วถึงระดับใด?", "opts": ["เกิดขึ้นพร้อมกับ First Crack ในเวลาเดียวกัน", "หลัง First Crack เมื่อเข้าใกล้ Dark Roast", "เกิดเฉพาะกับเมล็ด Robusta เท่านั้น", "ก่อน First Crack เสมอ"], "correct": 1}, {"section": "หมวด 3: การคั่ว (Roasting)", "q": "ทำไมกาแฟ Specialty มักนิยมคั่วอ่อน-กลางมากกว่าคั่วเข้มจัด?", "opts": ["เพราะเมล็ด Specialty ทุกล็อตคั่วเข้มจัดไม่ได้ทางเทคนิค", "เพื่อรักษาเอกลักษณ์รสชาติเฉพาะตัวของเมล็ด (Origin Character) ไว้", "เพราะคั่วอ่อนใช้เวลาและพลังงานน้อยกว่า ต้นทุนถูกกว่า", "เพื่อให้เก็บรักษาได้นานขึ้นกว่าคั่วเข้ม"], "correct": 1}, {"section": "หมวด 3: การคั่ว (Roasting)", "q": "Degassing หลังคั่วเสร็จคืออะไร?", "opts": ["การเป่าลมร้อนไล่ความชื้นออกจากเมล็ดหลังคั่ว", "การปล่อยให้ก๊าซ CO2 ที่เกิดขึ้นระหว่างคั่วค่อยๆ ออกจากเมล็ด", "ขั้นตอนคัดแยกเมล็ดที่คั่วไม่สม่ำเสมอออก", "การนำเมล็ดไปแช่เย็นเพื่อหยุดปฏิกิริยาคั่ว"], "correct": 1}, {"section": "หมวด 4: การสกัด/ชง (Extraction & Brewing)", "q": "TDS (Total Dissolved Solids) ในกาแฟหมายถึงอะไร?", "opts": ["ปริมาณน้ำที่สูญเสียไประหว่างการชง", "อัตราส่วนระหว่าง Dose กับ Yield", "ปริมาณสารทั้งหมดที่ละลายอยู่ในกาแฟที่ชงแล้ว", "ปริมาณคาเฟอีนที่ละลายอยู่ในกาแฟโดยเฉพาะ"], "correct": 2}, {"section": "หมวด 4: การสกัด/ชง (Extraction & Brewing)", "q": "EXT% (Extraction Yield) คำนวณมาจากอะไร?", "opts": ["TDS% คูณกับเวลาที่ใช้สกัด", "ปริมาณ Yield หารด้วย TDS โดยตรง", "อุณหภูมิน้ำหารด้วยแรงดัน", "สัดส่วนของมวลกาแฟที่ถูกสกัดออกมาเทียบกับน้ำหนักผงกาแฟที่ใช้"], "correct": 3}, {"section": "หมวด 4: การสกัด/ชง (Extraction & Brewing)", "q": "Under-extraction (สกัดน้อยเกินไป) มักให้รสชาติแบบใด?", "opts": ["กลิ่นไหม้เด่นชัด", "หวานเกินไปจนเลี่ยน", "ขม, ฝาด, แห้งในปาก", "เปรี้ยวจัด, จืด, Body บาง"], "correct": 3}, {"section": "หมวด 4: การสกัด/ชง (Extraction & Brewing)", "q": "Over-extraction (สกัดมากเกินไป) มักให้รสชาติแบบใด?", "opts": ["เปรี้ยวจัดคล้ายมะนาว", "หอมหวานเป็นพิเศษคล้ายน้ำผึ้ง", "ขม, ฝาด, แห้งในปาก", "จืดชืดไม่มีรสชาติ"], "correct": 2}, {"section": "หมวด 4: การสกัด/ชง (Extraction & Brewing)", "q": "ถ้า Grind Size ละเอียดขึ้น (ไม่เปลี่ยนตัวแปรอื่น) เวลาสกัดจะเปลี่ยนอย่างไร?", "opts": ["เร็วขึ้น เพราะน้ำไหลผ่านง่ายขึ้น", "ไม่เปลี่ยนแปลง ขึ้นอยู่กับอุณหภูมิเท่านั้น", "เปลี่ยนแปลงเฉพาะกับเครื่อง Espresso ไม่มีผลกับ Pour-over", "ช้าลง (น้ำไหลผ่านยากขึ้น)"], "correct": 3}, {"section": "หมวด 4: การสกัด/ชง (Extraction & Brewing)", "q": "ทำไมอุณหภูมิน้ำจึงมีผลต่อการสกัด?", "opts": ["น้ำร้อนเกินไปสกัดสารขมออกมามากขึ้น น้ำเย็นเกินไปสกัดได้น้อย", "อุณหภูมิน้ำมีผลแค่กับรสชาติของน้ำเปล่า ไม่กระทบกาแฟ", "น้ำร้อนขึ้นทำให้ TDS ลดลงเสมอไม่ว่ากรณีใด", "มีผลแค่เรื่องความเร็วในการต้มน้ำเท่านั้น"], "correct": 0}, {"section": "หมวด 4: การสกัด/ชง (Extraction & Brewing)", "q": "Channeling ในการชง Espresso คืออะไร?", "opts": ["น้ำไหลผ่านเป็นช่องทางเฉพาะจุด แทนที่จะกระจายทั่วผงกาแฟ ทำให้สกัดไม่สม่ำเสมอ", "ขั้นตอนการเปลี่ยนหัวชงระหว่างสกัด", "การไหลของกาแฟที่สม่ำเสมอทั่วทั้งผงกาแฟ", "การเกิดฟอง Crema หนาผิดปกติ"], "correct": 0}, {"section": "หมวด 4: การสกัด/ชง (Extraction & Brewing)", "q": "ทำไมต้องรอให้กาแฟเย็นลงก่อนวัดค่า TDS ด้วยเครื่อง Refractometer?", "opts": ["เพื่อให้ตัวอย่างกาแฟมีปริมาตรคงที่ก่อนวัด", "อุณหภูมิสูงทำให้ค่าที่วัดได้คลาดเคลื่อนจากความเป็นจริง", "ไม่มีเหตุผลทางเทคนิค เป็นเพียงธรรมเนียมปฏิบัติ", "เพื่อป้องกันไม่ให้เครื่องวัดเกิดความเสียหายจากความร้อน"], "correct": 1}, {"section": "หมวด 4: การสกัด/ชง (Extraction & Brewing)", "q": "Pre-infusion (การอัดน้ำก่อนสกัดเต็มแรงดัน) มีประโยชน์อย่างไร?", "opts": ["ลดปริมาณคาเฟอีนที่จะถูกสกัดออกมา", "เพิ่มแรงดันของเครื่อง Espresso ให้สูงกว่า 9 บาร์", "เพิ่มอุณหภูมิน้ำให้สูงขึ้นก่อนสกัดจริง", "ทำให้ผงกาแฟชุ่มน้ำสม่ำเสมอก่อนเริ่มสกัดจริง ลด Channeling"], "correct": 3}, {"section": "หมวด 5: ถิ่นกำเนิด/ภูมิศาสตร์ (Origin & Terroir)", "q": "\"Coffee Belt\" หมายถึงบริเวณใดของโลก?", "opts": ["เฉพาะทวีปแอฟริกาและอเมริกาใต้เท่านั้น", "บริเวณที่มีความสูงเกิน 2,000 เมตรทั่วโลก", "เขตอบอุ่นระหว่างละติจูด 40-60 องศา", "แถบรอบเส้นศูนย์สูตร ระหว่างเส้นทรอปิกออฟแคนเซอร์และแคปริคอร์น"], "correct": 3}, {"section": "หมวด 5: ถิ่นกำเนิด/ภูมิศาสตร์ (Origin & Terroir)", "q": "ทำไมความสูง (Altitude) ของแหล่งปลูกถึงส่งผลต่อรสชาติกาแฟ?", "opts": ["ที่สูงมีแสงแดดแรงกว่าทำให้เชอร์รี่สุกเร็วขึ้น", "อากาศเย็นทำให้เชอร์รี่สุกช้าลง สะสมน้ำตาล/รสชาติได้มากขึ้น", "ที่สูงมีแร่ธาตุในดินมากกว่าที่ราบเสมอ", "เป็นความเชื่อที่ไม่มีหลักฐานทางวิทยาศาสตร์รองรับ"], "correct": 1}, {"section": "หมวด 5: ถิ่นกำเนิด/ภูมิศาสตร์ (Origin & Terroir)", "q": "กาแฟจากเอธิโอเปียมักมีเอกลักษณ์รสชาติแบบใด?", "opts": ["รสชาติเรียบง่ายไม่มีความซับซ้อน", "รสชาติเหมือนกันทุกล็อตเพราะเป็นถิ่นกำเนิดเดียวกัน", "กลิ่นดอกไม้และผลไม้เบอร์รี่ที่โดดเด่น", "ขมจัดและมี Body หนักแบบบราซิล"], "correct": 2}, {"section": "หมวด 5: ถิ่นกำเนิด/ภูมิศาสตร์ (Origin & Terroir)", "q": "ประเทศไทยปลูกกาแฟ Arabica คุณภาพดีส่วนใหญ่ที่ภูมิภาคใด?", "opts": ["ภาคกลาง", "ภาคเหนือ (ที่สูง)", "ภาคตะวันออกเฉียงเหนือ", "ภาคใต้ (พื้นที่ปลูก Robusta หลักของไทย)"], "correct": 1}, {"section": "หมวด 5: ถิ่นกำเนิด/ภูมิศาสตร์ (Origin & Terroir)", "q": "ทำไมกาแฟ Arabica ในไทยจึงปลูกเฉพาะพื้นที่สูงเป็นหลัก (800m ขึ้นไป)?", "opts": ["Arabica ต้องการอากาศเย็นกว่า Robusta ซึ่งพบได้บนที่สูง", "เพื่อหลีกเลี่ยงพื้นที่ที่ปลูก Robusta อยู่แล้วเท่านั้น", "ที่ราบในไทยไม่มีดินที่เหมาะสมต่อการปลูกกาแฟเลย", "เป็นข้อบังคับทางกฎหมายเพื่อควบคุมพื้นที่เกษตร"], "correct": 0}, {"section": "หมวด 5: ถิ่นกำเนิด/ภูมิศาสตร์ (Origin & Terroir)", "q": "Single Origin หมายถึงกาแฟแบบใด?", "opts": ["เป็นกาแฟที่ปลูกโดยเกษตรกรรายเดียวเท่านั้นทั่วประเทศ", "มาจากแหล่งปลูกเดียว/ประเทศเดียว ไม่ผสมกับแหล่งอื่น", "ปลูกจากต้นกาแฟต้นเดียวเท่านั้น", "ผ่านกระบวนการคั่วเพียงครั้งเดียวไม่คั่วซ้ำ"], "correct": 1}, {"section": "หมวด 6: การชิม/ประเมินรส (Sensory & Cupping)", "q": "\"Body\" ในการชิมกาแฟหมายถึงอะไร?", "opts": ["ความเข้มของกลิ่นที่ลอยขึ้นมาก่อนชิม", "ระดับความหวานที่รับรู้ได้", "ความรู้สึกหนัก-เบาของเนื้อสัมผัสในปาก", "ระยะเวลาที่รสชาติค้างอยู่หลังกลืน"], "correct": 2}, {"section": "หมวด 6: การชิม/ประเมินรส (Sensory & Cupping)", "q": "\"Acidity\" ในบริบทการชิมกาแฟ (ไม่ใช่ค่า pH ทางเคมี) หมายถึงอะไร?", "opts": ["ความเปรี้ยวจัดจนรบกวนการดื่มเสมอ", "ค่าความเป็นกรด-ด่างที่วัดได้ด้วยเครื่องมือเท่านั้น", "ความสดใส/มีชีวิตชีวาของรสชาติ มักให้ความรู้สึกแบบผลไม้", "ระดับที่บ่งบอกว่ากาแฟยังสดใหม่หรือไม่"], "correct": 2}, {"section": "หมวด 6: การชิม/ประเมินรส (Sensory & Cupping)", "q": "\"Aftertaste\" หมายถึงอะไร?", "opts": ["รสชาติที่หลงเหลืออยู่หลังกลืนกาแฟไปแล้ว", "กลิ่นที่ลอยขึ้นมาก่อนเริ่มชิม", "ความรู้สึกหลังผสมนมลงไปในกาแฟ", "รสชาติแรกที่สัมผัสทันทีที่จิบ"], "correct": 0}, {"section": "หมวด 6: การชิม/ประเมินรส (Sensory & Cupping)", "q": "Cupping Score ตามมาตรฐาน SCA กาแฟระดับ \"Specialty\" ต้องได้คะแนนขั้นต่ำเท่าไหร่?", "opts": ["75 คะแนน", "80 คะแนนขึ้นไป", "90 คะแนนขึ้นไป", "85 คะแนนขึ้นไป"], "correct": 1}, {"section": "หมวด 6: การชิม/ประเมินรส (Sensory & Cupping)", "q": "ขั้นตอน \"Slurping\" ในการ Cupping ทำไปเพื่ออะไร?", "opts": ["เพื่อทำให้กาแฟเย็นตัวลงเร็วขึ้นเท่านั้น", "กระจายกาแฟให้ทั่วปากและจมูกพร้อมกัน ช่วยรับรู้กลิ่น/รสได้ครบถ้วนขึ้น", "เพื่อแสดงความสุภาพตามธรรมเนียมการชิมสากล", "เพื่อวัดปริมาณ TDS ไปพร้อมกับการชิม"], "correct": 1}, {"section": "หมวด 6: การชิม/ประเมินรส (Sensory & Cupping)", "q": "\"Clean Cup\" ในการประเมินกาแฟหมายถึงอะไร?", "opts": ["แก้ว/ถ้วยที่ผ่านการล้างทำความสะอาดอย่างดี", "กาแฟที่ไม่ได้ผสมน้ำตาลหรือนมใดๆ", "กาแฟที่ผ่านการกรองจนใสไม่มีตะกอนเลย", "ไม่มีรสชาติ/กลิ่นแปลกปลอมที่ไม่พึงประสงค์ปนอยู่"], "correct": 3}, {"section": "หมวด 6: การชิม/ประเมินรส (Sensory & Cupping)", "q": "ทำไมการชิมแบบ Calibration (เทียบมาตรฐานกับทีม) จึงสำคัญ?", "opts": ["เป็นขั้นตอนที่จำเป็นเฉพาะกับ Q Grader เท่านั้น ไม่เกี่ยวกับบาริสต้าทั่วไป", "ช่วยให้ทุกคนในทีมประเมิน/สื่อสารรสชาติไปในทิศทางเดียวกัน ลดความคลาดเคลื่อนส่วนบุคคล", "ใช้เฉพาะตอนเตรียมตัวแข่งขันบาริสต้าเท่านั้น", "ไม่สำคัญมากนัก เพราะรสชาติเป็นเรื่องส่วนบุคคลอยู่แล้ว"], "correct": 1}, {"section": "หมวด 8: อุปกรณ์ชงกาแฟ (Brewing Equipment)", "q": "เครื่องบดแบบ Burr Grinder ดีกว่าแบบใบมีด (Blade Grinder) อย่างไร?", "opts": ["บดได้เร็วกว่าแบบใบมีดในทุกกรณี", "ราคาถูกกว่าเสมอในทุกระดับ", "ใช้พลังงานไฟฟ้าน้อยกว่าเสมอ", "บดได้ขนาดสม่ำเสมอกว่า ควบคุมความหยาบ-ละเอียดได้แม่นยำกว่า"], "correct": 3}, {"section": "หมวด 8: อุปกรณ์ชงกาแฟ (Brewing Equipment)", "q": "Moka Pot สกัดกาแฟด้วยหลักการใด?", "opts": ["แรงดันไอน้ำผลักน้ำร้อนผ่านผงกาแฟ", "หยดน้ำร้อนผ่านกระดาษกรองทีละหยด", "แช่กาแฟในน้ำเย็นเป็นเวลานานก่อนกรอง", "ใช้แรงดันจากมือกดลูกสูบโดยตรง"], "correct": 0}, {"section": "หมวด 8: อุปกรณ์ชงกาแฟ (Brewing Equipment)", "q": "Siphon (ไซฟ่อน) เป็นวิธีชงที่ใช้หลักการใด?", "opts": ["การแช่เย็นเป็นเวลานานคล้าย Cold Brew", "แรงโน้มถ่วงเพียงอย่างเดียวไม่มีแรงดันเกี่ยวข้อง", "ความร้อน/สุญญากาศดันน้ำขึ้น-ลงระหว่างภาชนะ 2 ใบ", "แรงดันไฟฟ้าควบคุมการไหลของน้ำ"], "correct": 2}, {"section": "หมวด 9: เคมี/สารประกอบในกาแฟ (Coffee Chemistry)", "q": "กรด Citric Acid ในกาแฟให้ความรู้สึกแบบใด?", "opts": ["หวานละมุนคล้ายน้ำผึ้ง", "เปรี้ยวสดใสคล้ายผลไม้ตระกูลส้ม", "ขมจัดคล้ายเปลือกไม้", "ฝาดคล้ายชาเข้มข้น"], "correct": 1}, {"section": "หมวด 9: เคมี/สารประกอบในกาแฟ (Coffee Chemistry)", "q": "กรด Malic Acid มักพบในกาแฟที่ให้รสชาติคล้ายผลไม้ชนิดใด?", "opts": ["กล้วยสุก", "แอปเปิล/ลูกแพร์", "ส้ม/เกรปฟรุต", "สับปะรด/มะม่วง"], "correct": 1}, {"section": "หมวด 9: เคมี/สารประกอบในกาแฟ (Coffee Chemistry)", "q": "Caffeine เป็นสารประเภทใดในทางเคมี?", "opts": ["น้ำตาลโมเลกุลเดี่ยวชนิดหนึ่ง", "เอนไซม์ที่ช่วยย่อยโปรตีน", "อัลคาลอยด์ (Alkaloid) ที่ออกฤทธิ์กระตุ้นระบบประสาท", "กรดไขมันอิ่มตัว"], "correct": 2}, {"section": "หมวด 9: เคมี/สารประกอบในกาแฟ (Coffee Chemistry)", "q": "Quinic Acid ที่เพิ่มขึ้นจากการคั่วเข้มมีผลต่อรสชาติอย่างไร?", "opts": ["ให้รสฝาด/เปรี้ยวแบบแหลมคมมากกว่ารสสดใส", "ให้ความหวานที่นุ่มนวลขึ้นแทนความเปรี้ยว", "ไม่มีผลต่อรสชาติที่รับรู้ได้เลย", "ทำให้กลิ่นหอมของกาแฟเพิ่มขึ้นอย่างชัดเจน"], "correct": 0}, {"section": "หมวด 10: มาตรฐาน/Certification (Standards & Certifications)", "q": "Q Grader คือตำแหน่ง/ใบรับรองเกี่ยวกับอะไร?", "opts": ["ผู้เชี่ยวชาญด้านการปลูกและดูแลไร่กาแฟโดยเฉพาะ", "ตำแหน่งผู้จัดการฝ่ายจัดซื้อของโรงคั่วขนาดใหญ่", "ผู้ผ่านการฝึกอบรมและสอบผ่านมาตรฐานการประเมิน/ให้คะแนนคุณภาพกาแฟ (Cupping) อย่างเป็นทางการ", "ผู้ผลิตเครื่องคั่วกาแฟที่ได้รับการรับรอง"], "correct": 2}, {"section": "หมวด 10: มาตรฐาน/Certification (Standards & Certifications)", "q": "SCA (Specialty Coffee Association) ทำหน้าที่หลักอะไรในวงการกาแฟ?", "opts": ["เป็นบริษัทขายกาแฟรายใหญ่ที่สุดในโลก", "ควบคุมราคากาแฟในตลาดโลกโดยตรง", "เป็นหน่วยงานรัฐบาลที่ดูแลการส่งออกกาแฟ", "กำหนดมาตรฐาน/เกณฑ์การประเมินคุณภาพกาแฟ Specialty ระดับสากล"], "correct": 3}, {"section": "หมวด 11: การเก็บรักษา/ความสดใหม่ (Storage & Freshness)", "q": "ทำไมควรเก็บเมล็ดกาแฟในภาชนะปิดสนิท ไม่โดนอากาศ?", "opts": ["เพื่อไม่ให้เมล็ดดูดซับ CO2 จากอากาศเพิ่มขึ้น", "เพื่อป้องกันแมลงเพียงอย่างเดียว ไม่เกี่ยวกับรสชาติ", "เพื่อควบคุมอุณหภูมิของเมล็ดให้คงที่เท่านั้น", "ออกซิเจนทำให้เมล็ดเสื่อมสภาพ (Oxidation) กลิ่น/รสชาติจางลงเร็วขึ้น"], "correct": 3}, {"section": "หมวด 11: การเก็บรักษา/ความสดใหม่ (Storage & Freshness)", "q": "เมล็ดกาแฟที่คั่วแล้วควรบริโภคให้หมดภายในระยะเวลาประมาณเท่าไหร่เพื่อรสชาติที่ดีที่สุด?", "opts": ["1-2 วันเท่านั้น", "2-4 สัปดาห์", "1 ปีขึ้นไปหากเก็บในที่แห้ง", "3-4 เดือน"], "correct": 1}, {"section": "หมวด 11: การเก็บรักษา/ความสดใหม่ (Storage & Freshness)", "q": "แสงแดด/แสงจ้ามีผลต่อเมล็ดกาแฟที่เก็บไว้อย่างไร?", "opts": ["ช่วยฆ่าเชื้อราที่อาจเกิดขึ้นในเมล็ด", "ไม่มีผลใดๆ ตราบใดที่ภาชนะปิดสนิท", "ทำให้เมล็ดคั่วเข้มขึ้นเองแม้จะคั่วเสร็จแล้ว", "เร่งการเสื่อมสภาพของน้ำมันในเมล็ด ทำให้รสชาติเปลี่ยนเร็วขึ้น"], "correct": 3}, {"section": "หมวด 11: การเก็บรักษา/ความสดใหม่ (Storage & Freshness)", "q": "กาแฟที่บดแล้ว (Ground Coffee) เสื่อมสภาพเร็วกว่าเมล็ดเต็ม (Whole Bean) เพราะอะไร?", "opts": ["เพราะบดแล้วน้ำหนักเบาลง ดูดความชื้นง่ายกว่า", "พื้นที่ผิวสัมผัสอากาศมากขึ้น ทำให้ออกซิเดชันเร็วขึ้นมาก", "ไม่มีความต่างจริง ทั้งสองแบบเสื่อมสภาพเร็วเท่ากัน", "เพราะการบดทำให้อุณหภูมิของเมล็ดสูงขึ้นถาวร"], "correct": 1}, {"section": "หมวด 11: การเก็บรักษา/ความสดใหม่ (Storage & Freshness)", "q": "ความชื้นในอากาศมีผลต่อเมล็ดกาแฟที่เก็บไว้อย่างไร?", "opts": ["ไม่มีผลใดๆ ตราบใดที่เก็บในที่มืด", "ช่วยรักษาความหอมของเมล็ดให้อยู่ได้นานขึ้น", "ทำให้ปริมาณคาเฟอีนในเมล็ดเพิ่มขึ้น", "ทำให้เมล็ดดูดความชื้น เสี่ยงขึ้นราและรสชาติเปลี่ยน"], "correct": 3}, {"section": "หมวด 12: คาเฟอีน/สุขภาพ (Caffeine & Health)", "q": "คาเฟอีนออกฤทธิ์ต่อร่างกายอย่างไรโดยหลัก?", "opts": ["กระตุ้นระบบประสาทส่วนกลาง ลดความรู้สึกง่วง/เพิ่มความตื่นตัว", "ลดอัตราการเต้นของหัวใจให้ช้าลง", "ทำให้ร่างกายรู้สึกง่วงและผ่อนคลายมากขึ้น", "ไม่มีผลต่อระบบประสาทโดยตรง มีผลแค่กระเพาะอาหาร"], "correct": 0}, {"section": "หมวด 12: คาเฟอีน/สุขภาพ (Caffeine & Health)", "q": "กาแฟ Decaf (ไม่มีคาเฟอีน) หมายความว่าอย่างไรจริงๆ?", "opts": ["ใช้เมล็ด Robusta แทน Arabica เพราะมีคาเฟอีนต่ำกว่า", "ผ่านการคั่วเข้มจัดจนคาเฟอีนสลายไปหมด", "ไม่มีคาเฟอีนเลย 0% อย่างแน่นอน", "ผ่านกระบวนการสกัดคาเฟอีนออกไปเป็นส่วนใหญ่ (มักเหลืออยู่เล็กน้อย ~97% ขึ้นไปถูกสกัดออก)"], "correct": 3}, {"section": "หมวด 12: คาเฟอีน/สุขภาพ (Caffeine & Health)", "q": "ทำไมบางคนถึงไวต่อคาเฟอีนมากกว่าคนอื่น (ใจสั่น/นอนไม่หลับง่าย)?", "opts": ["เป็นเพราะเลือกดื่มกาแฟผิดสายพันธุ์", "เป็นเพียงความรู้สึกส่วนบุคคล ไม่มีพื้นฐานทางชีววิทยา", "เกิดจากการคั่วเข้มเกินไปเท่านั้น ไม่เกี่ยวกับตัวบุคคล", "ความแตกต่างทางพันธุกรรมในการเผาผลาญคาเฟอีนของแต่ละบุคคล"], "correct": 3}, {"section": "หมวด 12: คาเฟอีน/สุขภาพ (Caffeine & Health)", "q": "คาเฟอีนอยู่ในร่างกายและออกฤทธิ์ได้นานโดยประมาณเท่าไหร่ (Half-life)?", "opts": ["10-15 นาที", "10-12 ชั่วโมง", "24 ชั่วโมงเต็ม", "ประมาณ 3-5 ชั่วโมง"], "correct": 3}, {"section": "หมวด 12: คาเฟอีน/สุขภาพ (Caffeine & Health)", "q": "กาแฟมีสารต้านอนุมูลอิสระ (Antioxidants) หรือไม่?", "opts": ["ไม่มีเลยไม่ว่าจะคั่วระดับใด", "มี เช่น กลุ่ม Chlorogenic Acid ซึ่งเป็นสารต้านอนุมูลอิสระที่พบมากในกาแฟ", "มีเฉพาะในกาแฟ Decaf เท่านั้น", "มีเฉพาะในเมล็ดดิบที่ยังไม่ผ่านการคั่ว"], "correct": 1}, {"section": "เพิ่มเติม: พันธุกรรม / เคมี / สูตร Dose", "q": "Coffea arabica มีจำนวนโครโมโซมเท่าไหร่?", "opts": ["66 โครโมโซม (Hexaploid)", "22 โครโมโซม (Diploid)", "44 โครโมโซม (Tetraploid)", "33 โครโมโซม (Triploid)"], "correct": 2}, {"section": "เพิ่มเติม: พันธุกรรม / เคมี / สูตร Dose", "q": "ประเทศใดผลิตกาแฟมากที่สุดในโลก (ปี 2025/26)?", "opts": ["โคลอมเบีย", "เอธิโอเปีย", "บราซิล", "เวียดนาม"], "correct": 2}, {"section": "เพิ่มเติม: พันธุกรรม / เคมี / สูตร Dose", "q": "ข้อใดคือชุดปัจจัยหลัก 5 อย่างที่ควบคุมการสกัด Espresso?", "opts": ["Dose, Yield, Grind Size, Water Temperature, Coffee Origin", "Dose, Yield, Time, Water Temperature, Pressure", "Dose, Yield, Time, Roast Level, Pressure", "Dose, Grind Size, Water Temperature, Time, Roast Level"], "correct": 1}, {"section": "เพิ่มเติม: พันธุกรรม / เคมี / สูตร Dose", "q": "Dose2 ใช้ปริมาณกาแฟมากกว่า Dose1 กี่เท่า?", "opts": ["1.05 เท่า", "1.30 เท่า", "1.11 เท่า", "1.20 เท่า"], "correct": 2}, {"section": "เพิ่มเติม: พันธุกรรม / เคมี / สูตร Dose", "q": "Yield ของ Dose2 คิดเป็น Ratio เท่าไหร่? (Roots standard)", "opts": ["1 : 2.2", "1 : 2.5", "1 : 1.8", "1 : 2.0"], "correct": 0}, {"section": "เพิ่มเติม: พันธุกรรม / เคมี / สูตร Dose", "q": "Ratio ของ Dose1 และ Dose2 ตามมาตรฐาน Roots คือเท่าไหร่ตามลำดับ?", "opts": ["Dose1 = 1:2.2, Dose2 = 1:2.0", "Dose1 = 1:1.8, Dose2 = 1:2.0", "Dose1 = 1:2.0, Dose2 = 1:2.2", "Dose1 = 1:2.0, Dose2 = 1:2.5"], "correct": 2}],
+  trainer: [{"section": "หมวด 1: พันธุ์กาแฟ (Coffee Varietals)", "q": "กาแฟ Arabica เทียบกับ Robusta มีปริมาณคาเฟอีนอย่างไร?", "opts": ["Arabica มีคาเฟอีนมากกว่าประมาณ 2 เท่า", "เท่ากันโดยเฉลี่ย", "Arabica มีคาเฟอีนน้อยกว่า", "ขึ้นอยู่กับ Process เท่านั้น ไม่เกี่ยวกับสายพันธุ์"], "correct": 2}, {"section": "หมวด 1: พันธุ์กาแฟ (Coffee Varietals)", "q": "Robusta ทนต่อโรคและแมลงได้ดีกว่า Arabica เพราะอะไร?", "opts": ["ปลูกในที่สูงกว่าซึ่งมีศัตรูพืชน้อยกว่า", "มีเปลือกหนากว่า Arabica ป้องกันแมลงเจาะได้ดีกว่า", "เป็นพันธุ์ที่ผ่านการคัดเลือกให้ต้านทานโรคโดยเฉพาะ", "มีปริมาณคาเฟอีนสูงกว่า (สารป้องกันตามธรรมชาติ)"], "correct": 3}, {"section": "หมวด 1: พันธุ์กาแฟ (Coffee Varietals)", "q": "สายพันธุ์ \"Geisha\" (Gesha) มีชื่อเสียงเรื่องอะไร?", "opts": ["กลิ่นดอกไม้/ผลไม้ที่โดดเด่นและราคาสูง", "ราคาถูกและปลูกได้ทุกพื้นที่", "ให้ผลผลิตต่อไร่สูงที่สุดในบรรดาสายพันธุ์ Arabica", "ทนทานต่อโรคราสนิมได้ดีที่สุด"], "correct": 0}, {"section": "หมวด 1: พันธุ์กาแฟ (Coffee Varietals)", "q": "\"Catimor\" เป็นลูกผสมระหว่างสายพันธุ์ใด?", "opts": ["Liberica x Excelsa", "Arabica x Robusta", "Bourbon x Caturra (ลูกผสมภายในสายพันธุ์ Arabica)", "Typica x Geisha"], "correct": 1}, {"section": "หมวด 1: พันธุ์กาแฟ (Coffee Varietals)", "q": "สายพันธุ์ Bourbon และ Typica ถือเป็นอะไรในวงการกาแฟ?", "opts": ["พันธุ์ลูกผสมที่พัฒนาขึ้นล่าสุดเพื่อเพิ่มผลผลิต", "พันธุ์ลูกผสมระหว่าง Arabica กับ Robusta", "พันธุ์ดั้งเดิม (Heirloom) ที่เป็นต้นตระกูลของหลายสายพันธุ์", "พันธุ์ที่ใช้เฉพาะในอุตสาหกรรม Instant Coffee เท่านั้น"], "correct": 2}, {"section": "หมวด 1: พันธุ์กาแฟ (Coffee Varietals)", "q": "Caturra เป็นกลายพันธุ์ (mutation) ตามธรรมชาติของสายพันธุ์ใด?", "opts": ["Bourbon", "Robusta", "Catimor", "Typica (กลายพันธุ์ต้นเตี้ยของ Typica)"], "correct": 0}, {"section": "หมวด 1: พันธุ์กาแฟ (Coffee Varietals)", "q": "พันธุ์ Catuai พัฒนาขึ้นเพื่อวัตถุประสงค์หลักใด?", "opts": ["ลดระยะเวลาการเจริญเติบโตให้เก็บเกี่ยวได้เร็วที่สุดในบรรดาสายพันธุ์ Arabica", "ให้กลิ่นดอกไม้โดดเด่นเทียบเท่า Geisha", "เพิ่มปริมาณคาเฟอีนให้สูงเทียบเท่า Robusta", "ต้นทนลมและติดผลดกในพื้นที่ปลูกหนาแน่น"], "correct": 3}, {"section": "หมวด 2: กระบวนการแปรรูป (Processing)", "q": "Washed Process มีขั้นตอนหลักคืออะไร?", "opts": ["ล้างเมือก/เนื้อออกด้วยน้ำก่อนตากเมล็ดเปล่า", "ตากทั้งผลจนแห้งก่อนกะเทาะเปลือก", "หมักในถังปิดสนิทไร้ออกซิเจนก่อนตาก", "แช่เมล็ดในน้ำผึ้งเจือจางก่อนตาก"], "correct": 0}, {"section": "หมวด 2: กระบวนการแปรรูป (Processing)", "q": "Natural Process (Dry Process) มีขั้นตอนหลักคืออะไร?", "opts": ["กะเทาะเปลือกออกก่อนแล้วค่อยตากเมล็ดเปล่า", "หมักในน้ำ 48-72 ชั่วโมงก่อนตาก", "ตากทั้งผลเชอร์รี่จนแห้งก่อนกะเทาะเปลือก", "ล้างเมือกออกให้สะอาดก่อนตาก"], "correct": 2}, {"section": "หมวด 2: กระบวนการแปรรูป (Processing)", "q": "Honey Process อยู่ตรงกลางระหว่างกระบวนการใด?", "opts": ["Wet Mill กับ Dry Mill", "Light Roast กับ Dark Roast", "Anaerobic กับ Carbonic Maceration", "Washed กับ Natural"], "correct": 3}, {"section": "หมวด 2: กระบวนการแปรรูป (Processing)", "q": "Anaerobic Fermentation คือการหมักในสภาวะแบบใด?", "opts": ["ไร้ออกซิเจน (ในถังปิดสนิท)", "มีออกซิเจนสูงกว่าปกติเพื่อเร่งการหมัก", "แช่ในน้ำเกลือเข้มข้น", "อุณหภูมิเยือกแข็งตลอดกระบวนการ"], "correct": 0}, {"section": "หมวด 2: กระบวนการแปรรูป (Processing)", "q": "\"Black Honey\" ต่างจาก \"Yellow Honey\" ตรงไหน?", "opts": ["Black Honey ใช้เมล็ด Robusta ส่วน Yellow ใช้ Arabica", "เป็นแค่ชื่อทางการตลาด ไม่มีความต่างในกระบวนการจริง", "ปริมาณเมือกที่เหลือติดเมล็ดตอนตาก (Black = เหลือเยอะกว่า/ตากนานกว่า)", "Black Honey คือ Process ที่ไม่ล้างเมือกออกเลย ส่วน Yellow ล้างออกหมด"], "correct": 2}, {"section": "หมวด 2: กระบวนการแปรรูป (Processing)", "q": "ทำไม Process ถึงมีผลต่อรสชาติกาแฟมาก?", "opts": ["เป็นเพียงความเชื่อทางการตลาด ไม่มีหลักฐานทางวิทยาศาสตร์รองรับ", "Process มีผลแค่กับความชื้นของเมล็ด ไม่กระทบรสชาติโดยตรง", "Process ต่างกันทำให้ปริมาณคาเฟอีนเปลี่ยนไปอย่างมีนัยสำคัญ", "น้ำตาล/สารประกอบจากเนื้อผลซึมเข้าเมล็ดต่างกันตามวิธีแปรรูป"], "correct": 3}, {"section": "หมวด 2: กระบวนการแปรรูป (Processing)", "q": "Parchment coffee หมายถึงเมล็ดกาแฟในขั้นตอนใด?", "opts": ["เมล็ดที่ยังมีเปลือกกระดาษหุ้มอยู่ ก่อนกะเทาะขั้นสุดท้าย", "เมล็ดดิบที่เพิ่งเก็บเกี่ยวยังไม่ผ่าน Process ใดๆ", "เมล็ดที่ผ่านการคั่วแล้วแต่ยังไม่บด", "เมล็ดที่ผ่าน Natural Process โดยเฉพาะเท่านั้น"], "correct": 0}, {"section": "หมวด 2: กระบวนการแปรรูป (Processing)", "q": "Experimental Process (เช่น Anaerobic, Carbonic Maceration) นิยมใช้เพื่อจุดประสงค์ใด?", "opts": ["สร้างรสชาติที่โดดเด่น/แตกต่างจากกาแฟทั่วไป", "ลดต้นทุนการแปรรูปให้ถูกลง", "ทำให้เก็บรักษาเมล็ดดิบได้นานขึ้นก่อนคั่ว", "เพิ่มปริมาณคาเฟอีนในเมล็ด"], "correct": 0}, {"section": "หมวด 2: กระบวนการแปรรูป (Processing)", "q": "Carbonic Maceration ที่ยืมมาจากวงการไวน์ มีหลักการอย่างไร?", "opts": ["ตากเมล็ดในถังไม้โอ๊คแบบเดียวกับการบ่มไวน์", "แช่เมล็ดกาแฟในไวน์แดงก่อนตาก", "หมักผลเชอร์รี่ทั้งลูกในสภาพแวดล้อมที่อัด CO2", "เติมก๊าซคาร์บอนไดออกไซด์ลงในน้ำล้างเมือก"], "correct": 2}, {"section": "หมวด 3: การคั่ว (Roasting)", "q": "\"First Crack\" ในกระบวนการคั่วหมายถึงอะไร?", "opts": ["ขั้นตอนที่เครื่องคั่วเริ่มปล่อยควันครั้งแรก", "เสียงแตกที่เกิดจากแรงดันไอน้ำภายในเมล็ดขณะคั่ว บ่งบอกจุดเริ่ม Light Roast", "จุดที่เมล็ดเปลี่ยนจากสีเขียวเป็นสีเหลืองก่อนเริ่มคั่ว", "จุดสิ้นสุดของ Light Roast เข้าสู่ช่วง Medium Roast โดยตรง"], "correct": 1}, {"section": "หมวด 3: การคั่ว (Roasting)", "q": "Degassing หลังคั่วเสร็จคืออะไร?", "opts": ["ขั้นตอนคัดแยกเมล็ดที่คั่วไม่สม่ำเสมอออก", "การเป่าลมร้อนไล่ความชื้นออกจากเมล็ดหลังคั่ว", "การนำเมล็ดไปแช่เย็นเพื่อหยุดปฏิกิริยาคั่ว", "การปล่อยให้ก๊าซ CO2 ที่เกิดขึ้นระหว่างคั่วค่อยๆ ออกจากเมล็ด"], "correct": 3}, {"section": "หมวด 3: การคั่ว (Roasting)", "q": "เมล็ดที่คั่วเสร็จใหม่ๆ (ไม่ถึง 24 ชม.) มักมีปัญหาอะไรตอนชง Espresso?", "opts": ["น้ำมันในเมล็ดยังไม่แยกตัวออกมาที่ผิวเมล็ด", "มี CO2 มากเกินไป ทำให้สกัดไม่สม่ำเสมอ/Crema เยอะผิดปกติ", "เมล็ดยังร้อนเกินไป ทำให้น้ำระเหยเร็วผิดปกติ", "โครงสร้างเซลล์ของเมล็ดยังไม่แข็งตัวสมบูรณ์พอจะบด"], "correct": 1}, {"section": "หมวด 4: การสกัด/ชง (Extraction & Brewing)", "q": "TDS (Total Dissolved Solids) ในกาแฟหมายถึงอะไร?", "opts": ["ปริมาณคาเฟอีนที่ละลายอยู่ในกาแฟโดยเฉพาะ", "ปริมาณสารทั้งหมดที่ละลายอยู่ในกาแฟที่ชงแล้ว", "ปริมาณน้ำที่สูญเสียไประหว่างการชง", "อัตราส่วนระหว่าง Dose กับ Yield"], "correct": 1}, {"section": "หมวด 4: การสกัด/ชง (Extraction & Brewing)", "q": "EXT% (Extraction Yield) คำนวณมาจากอะไร?", "opts": ["สัดส่วนของมวลกาแฟที่ถูกสกัดออกมาเทียบกับน้ำหนักผงกาแฟที่ใช้", "ปริมาณ Yield หารด้วย TDS โดยตรง", "อุณหภูมิน้ำหารด้วยแรงดัน", "TDS% คูณกับเวลาที่ใช้สกัด"], "correct": 0}, {"section": "หมวด 4: การสกัด/ชง (Extraction & Brewing)", "q": "Under-extraction (สกัดน้อยเกินไป) มักให้รสชาติแบบใด?", "opts": ["ขม, ฝาด, แห้งในปาก", "กลิ่นไหม้เด่นชัด", "หวานเกินไปจนเลี่ยน", "เปรี้ยวจัด, จืด, Body บาง"], "correct": 3}, {"section": "หมวด 4: การสกัด/ชง (Extraction & Brewing)", "q": "Over-extraction (สกัดมากเกินไป) มักให้รสชาติแบบใด?", "opts": ["ขม, ฝาด, แห้งในปาก", "จืดชืดไม่มีรสชาติ", "หอมหวานเป็นพิเศษคล้ายน้ำผึ้ง", "เปรี้ยวจัดคล้ายมะนาว"], "correct": 0}, {"section": "หมวด 4: การสกัด/ชง (Extraction & Brewing)", "q": "ทำไมอุณหภูมิน้ำจึงมีผลต่อการสกัด?", "opts": ["น้ำร้อนขึ้นทำให้ TDS ลดลงเสมอไม่ว่ากรณีใด", "อุณหภูมิน้ำมีผลแค่กับรสชาติของน้ำเปล่า ไม่กระทบกาแฟ", "มีผลแค่เรื่องความเร็วในการต้มน้ำเท่านั้น", "น้ำร้อนเกินไปสกัดสารขมออกมามากขึ้น น้ำเย็นเกินไปสกัดได้น้อย"], "correct": 3}, {"section": "หมวด 4: การสกัด/ชง (Extraction & Brewing)", "q": "Channeling ในการชง Espresso คืออะไร?", "opts": ["ขั้นตอนการเปลี่ยนหัวชงระหว่างสกัด", "น้ำไหลผ่านเป็นช่องทางเฉพาะจุด แทนที่จะกระจายทั่วผงกาแฟ ทำให้สกัดไม่สม่ำเสมอ", "การเกิดฟอง Crema หนาผิดปกติ", "การไหลของกาแฟที่สม่ำเสมอทั่วทั้งผงกาแฟ"], "correct": 1}, {"section": "หมวด 4: การสกัด/ชง (Extraction & Brewing)", "q": "น้ำที่มีแร่ธาตุ (Mineral Content) ต่ำเกินไปมีผลต่อการชงอย่างไร?", "opts": ["ทำให้ TDS สูงขึ้นผิดปกติ", "ทำให้กาแฟขมขึ้นเสมอไม่ว่ากรณีใด", "ไม่มีผลใดๆ เพราะแร่ธาตุไม่เกี่ยวกับการสกัด", "สกัดรสชาติออกมาได้ไม่เต็มที่ (Flat taste)"], "correct": 3}, {"section": "หมวด 4: การสกัด/ชง (Extraction & Brewing)", "q": "Reverse Osmosis (RO) Water ที่ใช้ในร้านกาแฟบางแห่งมีจุดประสงค์อะไร?", "opts": ["เพิ่มอุณหภูมิน้ำให้คงที่ตลอดวัน", "เพิ่มคลอรีนเพื่อฆ่าเชื้อในน้ำ", "ทำให้น้ำมีฤทธิ์เป็นด่างมากขึ้นเพื่อลดความขม", "กรองแร่ธาตุ/สิ่งเจือปนออก แล้วเติมแร่ธาตุที่เหมาะสมกลับเข้าไปควบคุมคุณภาพน้ำ"], "correct": 3}, {"section": "หมวด 5: ถิ่นกำเนิด/ภูมิศาสตร์ (Origin & Terroir)", "q": "\"Coffee Belt\" หมายถึงบริเวณใดของโลก?", "opts": ["เขตอบอุ่นระหว่างละติจูด 40-60 องศา", "แถบรอบเส้นศูนย์สูตร ระหว่างเส้นทรอปิกออฟแคนเซอร์และแคปริคอร์น", "บริเวณที่มีความสูงเกิน 2,000 เมตรทั่วโลก", "เฉพาะทวีปแอฟริกาและอเมริกาใต้เท่านั้น"], "correct": 1}, {"section": "หมวด 5: ถิ่นกำเนิด/ภูมิศาสตร์ (Origin & Terroir)", "q": "ทำไมความสูง (Altitude) ของแหล่งปลูกถึงส่งผลต่อรสชาติกาแฟ?", "opts": ["ที่สูงมีแสงแดดแรงกว่าทำให้เชอร์รี่สุกเร็วขึ้น", "ที่สูงมีแร่ธาตุในดินมากกว่าที่ราบเสมอ", "เป็นความเชื่อที่ไม่มีหลักฐานทางวิทยาศาสตร์รองรับ", "อากาศเย็นทำให้เชอร์รี่สุกช้าลง สะสมน้ำตาล/รสชาติได้มากขึ้น"], "correct": 3}, {"section": "หมวด 5: ถิ่นกำเนิด/ภูมิศาสตร์ (Origin & Terroir)", "q": "ประเทศใดถือเป็นถิ่นกำเนิดดั้งเดิมของกาแฟ Arabica?", "opts": ["เวียดนาม", "เอธิโอเปีย", "เยเมน (ประเทศแรกที่ปลูกเชิงพาณิชย์)", "บราซิล"], "correct": 1}, {"section": "หมวด 5: ถิ่นกำเนิด/ภูมิศาสตร์ (Origin & Terroir)", "q": "Terroir ในบริบทของกาแฟหมายถึงอะไร?", "opts": ["เทคนิคการคั่วเฉพาะถิ่นของแต่ละประเทศ", "ปัจจัยแวดล้อม (ดิน, อากาศ, ความสูง) ที่ส่งผลต่อรสชาติเฉพาะตัวของพื้นที่ปลูก", "ชื่อโรงคั่วที่มีชื่อเสียงในฝรั่งเศส", "ชื่อเรียกรวมของสายพันธุ์กาแฟทั้งหมด"], "correct": 1}, {"section": "หมวด 5: ถิ่นกำเนิด/ภูมิศาสตร์ (Origin & Terroir)", "q": "กาแฟจากเอธิโอเปียมักมีเอกลักษณ์รสชาติแบบใด?", "opts": ["รสชาติเรียบง่ายไม่มีความซับซ้อน", "กลิ่นดอกไม้และผลไม้เบอร์รี่ที่โดดเด่น", "รสชาติเหมือนกันทุกล็อตเพราะเป็นถิ่นกำเนิดเดียวกัน", "ขมจัดและมี Body หนักแบบบราซิล"], "correct": 1}, {"section": "หมวด 5: ถิ่นกำเนิด/ภูมิศาสตร์ (Origin & Terroir)", "q": "ประเทศไทยปลูกกาแฟ Arabica คุณภาพดีส่วนใหญ่ที่ภูมิภาคใด?", "opts": ["ภาคเหนือ (ที่สูง)", "ภาคตะวันออกเฉียงเหนือ", "ภาคกลาง", "ภาคใต้ (พื้นที่ปลูก Robusta หลักของไทย)"], "correct": 0}, {"section": "หมวด 5: ถิ่นกำเนิด/ภูมิศาสตร์ (Origin & Terroir)", "q": "ทำไมกาแฟ Arabica ในไทยจึงปลูกเฉพาะพื้นที่สูงเป็นหลัก (800m ขึ้นไป)?", "opts": ["เป็นข้อบังคับทางกฎหมายเพื่อควบคุมพื้นที่เกษตร", "ที่ราบในไทยไม่มีดินที่เหมาะสมต่อการปลูกกาแฟเลย", "Arabica ต้องการอากาศเย็นกว่า Robusta ซึ่งพบได้บนที่สูง", "เพื่อหลีกเลี่ยงพื้นที่ที่ปลูก Robusta อยู่แล้วเท่านั้น"], "correct": 2}, {"section": "หมวด 5: ถิ่นกำเนิด/ภูมิศาสตร์ (Origin & Terroir)", "q": "Single Origin หมายถึงกาแฟแบบใด?", "opts": ["มาจากแหล่งปลูกเดียว/ประเทศเดียว ไม่ผสมกับแหล่งอื่น", "ปลูกจากต้นกาแฟต้นเดียวเท่านั้น", "เป็นกาแฟที่ปลูกโดยเกษตรกรรายเดียวเท่านั้นทั่วประเทศ", "ผ่านกระบวนการคั่วเพียงครั้งเดียวไม่คั่วซ้ำ"], "correct": 0}, {"section": "หมวด 5: ถิ่นกำเนิด/ภูมิศาสตร์ (Origin & Terroir)", "q": "Micro-lot หมายถึงอะไร?", "opts": ["กาแฟที่ปลูกในกระถางขนาดเล็กแทนการปลูกในไร่", "ปริมาณกาแฟล็อตเล็กมากจากแปลง/กระบวนการเฉพาะ มักมีคุณภาพ/เอกลักษณ์โดดเด่น", "กาแฟราคาถูกที่ผลิตในปริมาณมากเพื่อลดต้นทุน", "เมล็ดกาแฟที่มีขนาดเล็กกว่ามาตรฐาน"], "correct": 1}, {"section": "หมวด 6: การชิม/ประเมินรส (Sensory & Cupping)", "q": "\"Body\" ในการชิมกาแฟหมายถึงอะไร?", "opts": ["ระยะเวลาที่รสชาติค้างอยู่หลังกลืน", "ระดับความหวานที่รับรู้ได้", "ความเข้มของกลิ่นที่ลอยขึ้นมาก่อนชิม", "ความรู้สึกหนัก-เบาของเนื้อสัมผัสในปาก"], "correct": 3}, {"section": "หมวด 6: การชิม/ประเมินรส (Sensory & Cupping)", "q": "\"Acidity\" ในบริบทการชิมกาแฟ (ไม่ใช่ค่า pH ทางเคมี) หมายถึงอะไร?", "opts": ["ความเปรี้ยวจัดจนรบกวนการดื่มเสมอ", "ความสดใส/มีชีวิตชีวาของรสชาติ มักให้ความรู้สึกแบบผลไม้", "ระดับที่บ่งบอกว่ากาแฟยังสดใหม่หรือไม่", "ค่าความเป็นกรด-ด่างที่วัดได้ด้วยเครื่องมือเท่านั้น"], "correct": 1}, {"section": "หมวด 6: การชิม/ประเมินรส (Sensory & Cupping)", "q": "\"Aftertaste\" หมายถึงอะไร?", "opts": ["ความรู้สึกหลังผสมนมลงไปในกาแฟ", "รสชาติที่หลงเหลืออยู่หลังกลืนกาแฟไปแล้ว", "รสชาติแรกที่สัมผัสทันทีที่จิบ", "กลิ่นที่ลอยขึ้นมาก่อนเริ่มชิม"], "correct": 1}, {"section": "หมวด 6: การชิม/ประเมินรส (Sensory & Cupping)", "q": "Cupping Score ตามมาตรฐาน SCA กาแฟระดับ \"Specialty\" ต้องได้คะแนนขั้นต่ำเท่าไหร่?", "opts": ["80 คะแนนขึ้นไป", "85 คะแนนขึ้นไป", "75 คะแนน", "90 คะแนนขึ้นไป"], "correct": 0}, {"section": "หมวด 6: การชิม/ประเมินรส (Sensory & Cupping)", "q": "ขั้นตอน \"Slurping\" ในการ Cupping ทำไปเพื่ออะไร?", "opts": ["เพื่อวัดปริมาณ TDS ไปพร้อมกับการชิม", "กระจายกาแฟให้ทั่วปากและจมูกพร้อมกัน ช่วยรับรู้กลิ่น/รสได้ครบถ้วนขึ้น", "เพื่อแสดงความสุภาพตามธรรมเนียมการชิมสากล", "เพื่อทำให้กาแฟเย็นตัวลงเร็วขึ้นเท่านั้น"], "correct": 1}, {"section": "หมวด 6: การชิม/ประเมินรส (Sensory & Cupping)", "q": "\"Balance\" ในการประเมินกาแฟหมายถึงอะไร?", "opts": ["น้ำหนักของถ้วยที่ใช้ Cupping", "ความกลมกลืนกันระหว่าง Acidity, Sweetness, Body และ Flavor", "สัดส่วนที่เหมาะสมระหว่างกาแฟกับน้ำที่ใช้ชง", "จำนวนรสชาติที่แตกต่างกันที่พบในกาแฟตัวเดียว"], "correct": 1}, {"section": "หมวด 6: การชิม/ประเมินรส (Sensory & Cupping)", "q": "Defect แบบ \"Sour/Fermented\" ในการชิมกาแฟ มักเกิดจากอะไร?", "opts": ["ใช้น้ำร้อนเกินมาตรฐานในการชง", "บดกาแฟหยาบเกินไปทำให้สกัดไม่พอ", "กระบวนการหมัก/แปรรูปที่ควบคุมไม่ดี เกิดการหมักเสียเกินควร", "คั่วเข้มเกินไปจนเกิดกลิ่นไหม้"], "correct": 2}, {"section": "หมวด 6: การชิม/ประเมินรส (Sensory & Cupping)", "q": "\"Clean Cup\" ในการประเมินกาแฟหมายถึงอะไร?", "opts": ["กาแฟที่ไม่ได้ผสมน้ำตาลหรือนมใดๆ", "แก้ว/ถ้วยที่ผ่านการล้างทำความสะอาดอย่างดี", "กาแฟที่ผ่านการกรองจนใสไม่มีตะกอนเลย", "ไม่มีรสชาติ/กลิ่นแปลกปลอมที่ไม่พึงประสงค์ปนอยู่"], "correct": 3}, {"section": "หมวด 6: การชิม/ประเมินรส (Sensory & Cupping)", "q": "ทำไมการชิมแบบ Calibration (เทียบมาตรฐานกับทีม) จึงสำคัญ?", "opts": ["เป็นขั้นตอนที่จำเป็นเฉพาะกับ Q Grader เท่านั้น ไม่เกี่ยวกับบาริสต้าทั่วไป", "ใช้เฉพาะตอนเตรียมตัวแข่งขันบาริสต้าเท่านั้น", "ช่วยให้ทุกคนในทีมประเมิน/สื่อสารรสชาติไปในทิศทางเดียวกัน ลดความคลาดเคลื่อนส่วนบุคคล", "ไม่สำคัญมากนัก เพราะรสชาติเป็นเรื่องส่วนบุคคลอยู่แล้ว"], "correct": 2}, {"section": "หมวด 7: นม/เครื่องดื่มนมผสม (Milk & Milk-based Drinks)", "q": "ทำไมนมที่มีโปรตีนสูงจึงตีฟองได้ดีกว่านมโปรตีนต่ำ?", "opts": ["โปรตีนช่วยกักเก็บฟองอากาศให้คงตัว", "ไม่มีความเกี่ยวข้องกัน ฟองนมขึ้นอยู่กับไขมันเท่านั้น", "โปรตีนทำให้นมมีความหนืดสูงขึ้นเท่านั้น ไม่เกี่ยวกับฟอง", "โปรตีนทำให้นมมีอุณหภูมิเดือดต่ำลง ตีฟองง่ายขึ้น"], "correct": 0}, {"section": "หมวด 7: นม/เครื่องดื่มนมผสม (Milk & Milk-based Drinks)", "q": "Microfoam ที่ใช้ทำ Latte Art คือฟองนมแบบใด?", "opts": ["ฟองหยาบขนาดใหญ่ที่ลอยอยู่ด้านบนแก้ว", "นมเย็นที่ยังไม่ผ่านความร้อนจากหัวสตีม", "นมที่ไม่ผ่านการตีฟองใดๆ เลย", "ฟองละเอียดเนียนสม่ำเสมอ เนื้อสัมผัสคล้ายเนื้อสี"], "correct": 3}, {"section": "หมวด 7: นม/เครื่องดื่มนมผสม (Milk & Milk-based Drinks)", "q": "ทำไมไม่ควรตีฟองนมด้วยอุณหภูมิที่ร้อนเกินไป (เกิน 65-70°C)?", "opts": ["โปรตีนในนมจะถูกทำลาย ทำให้ตีฟองไม่ขึ้นและรสชาติเปลี่ยน (นมไหม้)", "ทำให้กาแฟที่ผสมลงไปเย็นตัวเร็วขึ้นผิดปกติ", "ทำให้ฟองนมมีสีขาวขึ้นมากเกินไป", "ไม่มีผลใดๆ ต่อคุณภาพฟองนม"], "correct": 0}, {"section": "หมวด 7: นม/เครื่องดื่มนมผสม (Milk & Milk-based Drinks)", "q": "ทำไมนม Non-dairy บางชนิด (เช่น Almond Milk) ตีฟองได้ยากกว่า Oat Milk?", "opts": ["มีโปรตีน/ไขมันต่ำกว่า ทำให้กักเก็บฟองอากาศได้น้อยกว่า", "มีสีเข้มกว่าทำให้มองเห็นเนื้อฟองได้ยากกว่าเท่านั้น", "ไม่มีความต่างจริง ทั้งสองชนิดตีฟองได้เท่ากันเสมอ", "มีน้ำตาลตามธรรมชาติมากเกินไปจนรบกวนการตีฟอง"], "correct": 0}, {"section": "หมวด 8: อุปกรณ์ชงกาแฟ (Brewing Equipment)", "q": "เครื่องบดแบบ Burr Grinder ดีกว่าแบบใบมีด (Blade Grinder) อย่างไร?", "opts": ["บดได้ขนาดสม่ำเสมอกว่า ควบคุมความหยาบ-ละเอียดได้แม่นยำกว่า", "ใช้พลังงานไฟฟ้าน้อยกว่าเสมอ", "ราคาถูกกว่าเสมอในทุกระดับ", "บดได้เร็วกว่าแบบใบมีดในทุกกรณี"], "correct": 0}, {"section": "หมวด 8: อุปกรณ์ชงกาแฟ (Brewing Equipment)", "q": "Moka Pot สกัดกาแฟด้วยหลักการใด?", "opts": ["ใช้แรงดันจากมือกดลูกสูบโดยตรง", "หยดน้ำร้อนผ่านกระดาษกรองทีละหยด", "แรงดันไอน้ำผลักน้ำร้อนผ่านผงกาแฟ", "แช่กาแฟในน้ำเย็นเป็นเวลานานก่อนกรอง"], "correct": 2}, {"section": "หมวด 8: อุปกรณ์ชงกาแฟ (Brewing Equipment)", "q": "Siphon (ไซฟ่อน) เป็นวิธีชงที่ใช้หลักการใด?", "opts": ["การแช่เย็นเป็นเวลานานคล้าย Cold Brew", "ความร้อน/สุญญากาศดันน้ำขึ้น-ลงระหว่างภาชนะ 2 ใบ", "แรงดันไฟฟ้าควบคุมการไหลของน้ำ", "แรงโน้มถ่วงเพียงอย่างเดียวไม่มีแรงดันเกี่ยวข้อง"], "correct": 1}, {"section": "หมวด 9: เคมี/สารประกอบในกาแฟ (Coffee Chemistry)", "q": "Maillard Reaction ที่เกิดขึ้นตอนคั่วกาแฟคืออะไร?", "opts": ["ปฏิกิริยาระหว่างน้ำตาลกับกรดอะมิโน ทำให้เกิดสีน้ำตาลและกลิ่นหอมเฉพาะตัว", "การสลายตัวของคาเฟอีนเมื่อโดนความร้อนสูง", "ปฏิกิริยาที่เกิดเฉพาะช่วง Second Crack เท่านั้น", "การระเหยของน้ำในเมล็ดเพียงอย่างเดียว"], "correct": 0}, {"section": "หมวด 9: เคมี/สารประกอบในกาแฟ (Coffee Chemistry)", "q": "กรด Chlorogenic Acid ในเมล็ดกาแฟดิบมีผลอย่างไรเมื่อผ่านการคั่ว?", "opts": ["เปลี่ยนเป็นคาเฟอีนทั้งหมดเมื่อคั่วเข้ม", "เพิ่มปริมาณขึ้นเรื่อยๆ ตามระยะเวลาคั่วที่นานขึ้น", "ไม่เปลี่ยนแปลงเลยไม่ว่าจะคั่วนานแค่ไหน", "สลายตัวบางส่วนกลายเป็นสารที่ให้รสขมและกลิ่นเฉพาะตัว"], "correct": 3}, {"section": "หมวด 9: เคมี/สารประกอบในกาแฟ (Coffee Chemistry)", "q": "กรด Malic Acid มักพบในกาแฟที่ให้รสชาติคล้ายผลไม้ชนิดใด?", "opts": ["สับปะรด/มะม่วง", "แอปเปิล/ลูกแพร์", "ส้ม/เกรปฟรุต", "กล้วยสุก"], "correct": 1}, {"section": "หมวด 9: เคมี/สารประกอบในกาแฟ (Coffee Chemistry)", "q": "Caffeine เป็นสารประเภทใดในทางเคมี?", "opts": ["เอนไซม์ที่ช่วยย่อยโปรตีน", "น้ำตาลโมเลกุลเดี่ยวชนิดหนึ่ง", "กรดไขมันอิ่มตัว", "อัลคาลอยด์ (Alkaloid) ที่ออกฤทธิ์กระตุ้นระบบประสาท"], "correct": 3}, {"section": "หมวด 9: เคมี/สารประกอบในกาแฟ (Coffee Chemistry)", "q": "ทำไมกาแฟที่ผ่านการคั่วนานขึ้นจึงมีรส Acidity ลดลง?", "opts": ["เป็นความเชื่อที่ไม่มีพื้นฐานทางเคมีรองรับจริง", "เพราะคาเฟอีนลดลงไปพร้อมกัน ทำให้รสจืดลงโดยรวม", "กรดต่างๆ ในเมล็ดสลายตัว/ระเหยไปบางส่วนระหว่างคั่ว", "เพราะน้ำตาลในเมล็ดเพิ่มขึ้นจนกลบรสเปรี้ยวทั้งหมด"], "correct": 2}, {"section": "หมวด 9: เคมี/สารประกอบในกาแฟ (Coffee Chemistry)", "q": "Lipids (ไขมัน) ในเมล็ดกาแฟมีผลต่อรสชาติอย่างไร?", "opts": ["ช่วยกักเก็บกลิ่นหอมและให้ความรู้สึก Body/ความมันในปาก", "ไม่มีผลต่อรสชาติหรือกลิ่นเลย มีหน้าที่แค่ให้พลังงานแก่ต้น", "ทำให้กาแฟมีรสขมเพิ่มขึ้นเป็นหลัก", "ทำให้เมล็ดกาแฟมีน้ำหนักเบาลงเมื่อคั่วนานขึ้น"], "correct": 0}, {"section": "หมวด 9: เคมี/สารประกอบในกาแฟ (Coffee Chemistry)", "q": "CO2 ที่สะสมในเมล็ดกาแฟหลังคั่วเกิดจากอะไร?", "opts": ["เป็นผลพลอยได้จากปฏิกิริยาเคมีระหว่างการคั่ว (เช่น Maillard Reaction)", "การเติมแก๊สคาร์บอนไดออกไซด์เข้าไปโดยตรงระหว่างคั่ว", "ก๊าซที่หลงเหลือจากกระบวนการหมักก่อนตาก", "ความชื้นในอากาศที่เมล็ดดูดซับไว้ระหว่างเก็บรักษา"], "correct": 0}, {"section": "หมวด 9: เคมี/สารประกอบในกาแฟ (Coffee Chemistry)", "q": "Melanoidins ที่เกิดขึ้นระหว่างคั่วมีผลต่อกาแฟอย่างไร?", "opts": ["ทำให้เมล็ดมีสีอ่อนลงเมื่อคั่วนานขึ้น", "ทำให้เมล็ดเก็บความชื้นได้นานขึ้น", "ลดปริมาณคาเฟอีนลงอย่างมีนัยสำคัญ", "ให้สีน้ำตาลเข้มและมีส่วนสร้าง Body/รสขมอ่อนๆ"], "correct": 3}, {"section": "หมวด 9: เคมี/สารประกอบในกาแฟ (Coffee Chemistry)", "q": "Quinic Acid ที่เพิ่มขึ้นจากการคั่วเข้มมีผลต่อรสชาติอย่างไร?", "opts": ["ทำให้กลิ่นหอมของกาแฟเพิ่มขึ้นอย่างชัดเจน", "ให้ความหวานที่นุ่มนวลขึ้นแทนความเปรี้ยว", "ไม่มีผลต่อรสชาติที่รับรู้ได้เลย", "ให้รสฝาด/เปรี้ยวแบบแหลมคมมากกว่ารสสดใส"], "correct": 3}, {"section": "หมวด 9: เคมี/สารประกอบในกาแฟ (Coffee Chemistry)", "q": "กรด Phosphoric Acid ในกาแฟให้ความรู้สึกแบบใด?", "opts": ["รสฝาดแห้งคล้ายชาเข้มข้น", "ความเปรี้ยวสดใสแบบแวววาว คล้ายรสซ่า พบเด่นในกาแฟบางแหล่งอย่างเคนยา", "ความหวานคล้ายน้ำผึ้ง", "กลิ่นไหม้คล้ายควัน"], "correct": 1}, {"section": "หมวด 9: เคมี/สารประกอบในกาแฟ (Coffee Chemistry)", "q": "กรด Acetic Acid ในปริมาณน้อยให้ผลอย่างไรต่อกาแฟ แต่ถ้ามากเกินไปจะกลายเป็นอะไร?", "opts": ["น้อย=ไม่มีผล, มาก=รสหวานเกิน", "น้อย=รสฝาด, มาก=รสจืด", "น้อย=ความหวานเด่น, มาก=รสขมจัด", "น้อย=ความสดใสเพิ่มขึ้น, มาก=รสเปรี้ยวคล้ายน้ำส้มสายชู/กลิ่นหมักเสีย"], "correct": 3}, {"section": "หมวด 9: เคมี/สารประกอบในกาแฟ (Coffee Chemistry)", "q": "กรดชนิดใดพบได้น้อยในกาแฟ แต่เมื่อพบจะให้ความรู้สึกคล้ายไวน์ (Wine-like)?", "opts": ["Tartaric Acid", "Quinic Acid", "Citric Acid", "Malic Acid"], "correct": 0}, {"section": "หมวด 9: เคมี/สารประกอบในกาแฟ (Coffee Chemistry)", "q": "กรด Lactic Acid ในกาแฟมักให้ความรู้สึกแบบใด?", "opts": ["ฝาดแห้งคล้ายเปลือกไม้", "เปรี้ยวจัดคล้ายมะนาว", "ขมจัดติดคอ", "นุ่มนวล ครีมมี่ คล้ายโยเกิร์ต/นมเปรี้ยว"], "correct": 3}, {"section": "หมวด 9: เคมี/สารประกอบในกาแฟ (Coffee Chemistry)", "q": "Acetic Acid ที่มากเกินไปในกาแฟ มักเป็นสัญญาณของอะไร?", "opts": ["น้ำที่ใช้ชงมีคลอรีนสูง", "การเก็บรักษาในที่เย็นเกินไป", "กาแฟคั่วไม่สุก", "กระบวนการหมักที่ควบคุมไม่ดี เกิดการหมักเสียเกินควร"], "correct": 3}, {"section": "หมวด 10: มาตรฐาน/Certification (Standards & Certifications)", "q": "Fair Trade Certification มีจุดประสงค์หลักเพื่ออะไร?", "opts": ["รับประกันว่ากาแฟผ่านการคั่วในประเทศต้นทางเท่านั้น", "รับประกันว่ากาแฟปลูกแบบออร์แกนิก 100%", "รับประกันว่าเกษตรกรได้รับราคาที่เป็นธรรมและเงื่อนไขการค้าที่ยุติธรรม", "รับประกันคะแนน Cupping ขั้นต่ำ 80 คะแนนขึ้นไป"], "correct": 2}, {"section": "หมวด 10: มาตรฐาน/Certification (Standards & Certifications)", "q": "Q Grader คือตำแหน่ง/ใบรับรองเกี่ยวกับอะไร?", "opts": ["ผู้เชี่ยวชาญด้านการปลูกและดูแลไร่กาแฟโดยเฉพาะ", "ผู้ผลิตเครื่องคั่วกาแฟที่ได้รับการรับรอง", "ตำแหน่งผู้จัดการฝ่ายจัดซื้อของโรงคั่วขนาดใหญ่", "ผู้ผ่านการฝึกอบรมและสอบผ่านมาตรฐานการประเมิน/ให้คะแนนคุณภาพกาแฟ (Cupping) อย่างเป็นทางการ"], "correct": 3}, {"section": "หมวด 10: มาตรฐาน/Certification (Standards & Certifications)", "q": "SCA (Specialty Coffee Association) ทำหน้าที่หลักอะไรในวงการกาแฟ?", "opts": ["เป็นหน่วยงานรัฐบาลที่ดูแลการส่งออกกาแฟ", "เป็นบริษัทขายกาแฟรายใหญ่ที่สุดในโลก", "กำหนดมาตรฐาน/เกณฑ์การประเมินคุณภาพกาแฟ Specialty ระดับสากล", "ควบคุมราคากาแฟในตลาดโลกโดยตรง"], "correct": 2}, {"section": "หมวด 11: การเก็บรักษา/ความสดใหม่ (Storage & Freshness)", "q": "ทำไมควรเก็บเมล็ดกาแฟในภาชนะปิดสนิท ไม่โดนอากาศ?", "opts": ["ออกซิเจนทำให้เมล็ดเสื่อมสภาพ (Oxidation) กลิ่น/รสชาติจางลงเร็วขึ้น", "เพื่อควบคุมอุณหภูมิของเมล็ดให้คงที่เท่านั้น", "เพื่อไม่ให้เมล็ดดูดซับ CO2 จากอากาศเพิ่มขึ้น", "เพื่อป้องกันแมลงเพียงอย่างเดียว ไม่เกี่ยวกับรสชาติ"], "correct": 0}, {"section": "หมวด 11: การเก็บรักษา/ความสดใหม่ (Storage & Freshness)", "q": "เมล็ดกาแฟที่คั่วแล้วควรบริโภคให้หมดภายในระยะเวลาประมาณเท่าไหร่เพื่อรสชาติที่ดีที่สุด?", "opts": ["3-4 เดือน", "1 ปีขึ้นไปหากเก็บในที่แห้ง", "2-4 สัปดาห์", "1-2 วันเท่านั้น"], "correct": 2}, {"section": "หมวด 11: การเก็บรักษา/ความสดใหม่ (Storage & Freshness)", "q": "กาแฟที่บดแล้ว (Ground Coffee) เสื่อมสภาพเร็วกว่าเมล็ดเต็ม (Whole Bean) เพราะอะไร?", "opts": ["พื้นที่ผิวสัมผัสอากาศมากขึ้น ทำให้ออกซิเดชันเร็วขึ้นมาก", "ไม่มีความต่างจริง ทั้งสองแบบเสื่อมสภาพเร็วเท่ากัน", "เพราะบดแล้วน้ำหนักเบาลง ดูดความชื้นง่ายกว่า", "เพราะการบดทำให้อุณหภูมิของเมล็ดสูงขึ้นถาวร"], "correct": 0}, {"section": "หมวด 11: การเก็บรักษา/ความสดใหม่ (Storage & Freshness)", "q": "ทำไมกาแฟดิบ (Green Coffee) ที่ยังไม่คั่ว เก็บได้นานกว่ากาแฟคั่วแล้วมาก?", "opts": ["เพราะกาแฟดิบมีน้ำหนักมากกว่าทำให้อากาศเข้าถึงยากกว่า", "ยังไม่ผ่านกระบวนการคั่วที่ทำให้เกิดน้ำมัน/สารระเหยที่เสื่อมสภาพง่าย", "เพราะกาแฟดิบมีความชื้นสูงกว่าซึ่งช่วยกันเสื่อมสภาพ", "เพราะกาแฟดิบไม่มีคาเฟอีนซึ่งเป็นสารที่เสื่อมสภาพเร็ว"], "correct": 1}, {"section": "หมวด 11: การเก็บรักษา/ความสดใหม่ (Storage & Freshness)", "q": "ความชื้นในอากาศมีผลต่อเมล็ดกาแฟที่เก็บไว้อย่างไร?", "opts": ["ทำให้ปริมาณคาเฟอีนในเมล็ดเพิ่มขึ้น", "ทำให้เมล็ดดูดความชื้น เสี่ยงขึ้นราและรสชาติเปลี่ยน", "ไม่มีผลใดๆ ตราบใดที่เก็บในที่มืด", "ช่วยรักษาความหอมของเมล็ดให้อยู่ได้นานขึ้น"], "correct": 1}, {"section": "หมวด 12: คาเฟอีน/สุขภาพ (Caffeine & Health)", "q": "คาเฟอีนออกฤทธิ์ต่อร่างกายอย่างไรโดยหลัก?", "opts": ["ทำให้ร่างกายรู้สึกง่วงและผ่อนคลายมากขึ้น", "ไม่มีผลต่อระบบประสาทโดยตรง มีผลแค่กระเพาะอาหาร", "ลดอัตราการเต้นของหัวใจให้ช้าลง", "กระตุ้นระบบประสาทส่วนกลาง ลดความรู้สึกง่วง/เพิ่มความตื่นตัว"], "correct": 3}, {"section": "หมวด 12: คาเฟอีน/สุขภาพ (Caffeine & Health)", "q": "กาแฟ Decaf (ไม่มีคาเฟอีน) หมายความว่าอย่างไรจริงๆ?", "opts": ["ใช้เมล็ด Robusta แทน Arabica เพราะมีคาเฟอีนต่ำกว่า", "ผ่านกระบวนการสกัดคาเฟอีนออกไปเป็นส่วนใหญ่ (มักเหลืออยู่เล็กน้อย ~97% ขึ้นไปถูกสกัดออก)", "ผ่านการคั่วเข้มจัดจนคาเฟอีนสลายไปหมด", "ไม่มีคาเฟอีนเลย 0% อย่างแน่นอน"], "correct": 1}, {"section": "หมวด 12: คาเฟอีน/สุขภาพ (Caffeine & Health)", "q": "ทำไมบางคนถึงไวต่อคาเฟอีนมากกว่าคนอื่น (ใจสั่น/นอนไม่หลับง่าย)?", "opts": ["เกิดจากการคั่วเข้มเกินไปเท่านั้น ไม่เกี่ยวกับตัวบุคคล", "ความแตกต่างทางพันธุกรรมในการเผาผลาญคาเฟอีนของแต่ละบุคคล", "เป็นเพราะเลือกดื่มกาแฟผิดสายพันธุ์", "เป็นเพียงความรู้สึกส่วนบุคคล ไม่มีพื้นฐานทางชีววิทยา"], "correct": 1}, {"section": "หมวด 12: คาเฟอีน/สุขภาพ (Caffeine & Health)", "q": "คาเฟอีนอยู่ในร่างกายและออกฤทธิ์ได้นานโดยประมาณเท่าไหร่ (Half-life)?", "opts": ["24 ชั่วโมงเต็ม", "ประมาณ 3-5 ชั่วโมง", "10-15 นาที", "10-12 ชั่วโมง"], "correct": 1}, {"section": "หมวด 12: คาเฟอีน/สุขภาพ (Caffeine & Health)", "q": "กาแฟมีสารต้านอนุมูลอิสระ (Antioxidants) หรือไม่?", "opts": ["มีเฉพาะในกาแฟ Decaf เท่านั้น", "มี เช่น กลุ่ม Chlorogenic Acid ซึ่งเป็นสารต้านอนุมูลอิสระที่พบมากในกาแฟ", "มีเฉพาะในเมล็ดดิบที่ยังไม่ผ่านการคั่ว", "ไม่มีเลยไม่ว่าจะคั่วระดับใด"], "correct": 1}, {"section": "เพิ่มเติม: พันธุกรรม / เคมี / สูตร Dose", "q": "ต้นกำเนิดของ Arabica คือสายพันธุ์อะไรผสมกับอะไร?", "opts": ["Coffea canephora ผสมกับ Coffea liberica", "Coffea racemosa ผสมกับ Coffea stenophylla", "Coffea liberica ผสมกับ Coffea excelsa", "Coffea canephora ผสมกับ Coffea eugenioides"], "correct": 3}, {"section": "เพิ่มเติม: พันธุกรรม / เคมี / สูตร Dose", "q": "Coffea eugenioides มีจำนวนโครโมโซมเท่าไหร่?", "opts": ["33 โครโมโซม", "22 โครโมโซม", "11 โครโมโซม", "44 โครโมโซม"], "correct": 1}, {"section": "เพิ่มเติม: พันธุกรรม / เคมี / สูตร Dose", "q": "Catimor เกิดจากการผสมพันธุ์ระหว่างสายพันธุ์ใด?", "opts": ["Typica x Robusta โดยตรง", "Bourbon x Typica", "Caturra x Hybrido de Timor", "Geisha x Caturra"], "correct": 2}, {"section": "เพิ่มเติม: พันธุกรรม / เคมี / สูตร Dose", "q": "ประเทศใดผลิตกาแฟมากที่สุดในโลก (ปี 2025/26)?", "opts": ["เอธิโอเปีย", "โคลอมเบีย", "เวียดนาม", "บราซิล"], "correct": 3}, {"section": "เพิ่มเติม: พันธุกรรม / เคมี / สูตร Dose", "q": "สายพันธุ์กาแฟ \"Java\" มีถิ่นกำเนิดที่แท้จริงจากประเทศใด?", "opts": ["เอธิโอเปีย", "เยเมน", "แคเมอรูน", "อินโดนีเซีย"], "correct": 0}, {"section": "เพิ่มเติม: พันธุกรรม / เคมี / สูตร Dose", "q": "ข้อใดคือชุดปัจจัยหลัก 5 อย่างที่ควบคุมการสกัด Espresso?", "opts": ["Dose, Grind Size, Water Temperature, Time, Roast Level", "Dose, Yield, Grind Size, Water Temperature, Coffee Origin", "Dose, Yield, Time, Roast Level, Pressure", "Dose, Yield, Time, Water Temperature, Pressure"], "correct": 3}, {"section": "เพิ่มเติม: พันธุกรรม / เคมี / สูตร Dose", "q": "สารตัวใดคือตัวการหลักที่ทำให้กาแฟมีรสขม?", "opts": ["Chlorogenic Acid Lactones", "Melanoidins", "Citric Acid", "คาเฟอีน (Caffeine)"], "correct": 0}, {"section": "เพิ่มเติม: พันธุกรรม / เคมี / สูตร Dose", "q": "Maillard Reaction คือกระบวนการอะไร?", "opts": ["ปฏิกิริยาการหมักของจุลินทรีย์ในเนื้อเชอร์รี่ก่อนคั่ว", "การสลายตัวของน้ำตาลล้วนๆ โดยไม่มีโปรตีนเกี่ยวข้อง เมื่อโดนความร้อนสูง", "ปฏิกิริยาระหว่างน้ำตาลกับกรดอะมิโน (โปรตีน) เมื่อโดนความร้อน เกิดสีน้ำตาลและกลิ่นหอมเฉพาะตัว", "การระเหยของน้ำออกจากเมล็ดในช่วงแรกของการคั่ว"], "correct": 2}, {"section": "เพิ่มเติม: พันธุกรรม / เคมี / สูตร Dose", "q": "ข้อใดอธิบายลักษณะเฉพาะของ Caramelization ได้ถูกต้อง?", "opts": ["ให้กลิ่น/รสที่เหมือนกับ Maillard Reaction ทุกประการ แยกไม่ออก", "เกิดจากน้ำตาลสลายตัวด้วยความร้อนล้วนๆ โดยไม่จำเป็นต้องมีโปรตีนเข้าร่วม", "เกิดขึ้นเฉพาะช่วงก่อนเชอร์รี่สุกบนต้นเท่านั้น", "ต้องมีกรดอะมิโน (โปรตีน) เข้าร่วมปฏิกิริยาเสมอ จึงจะเกิดสีน้ำตาลได้"], "correct": 1}, {"section": "เพิ่มเติม: พันธุกรรม / เคมี / สูตร Dose", "q": "กระบวนการเปลี่ยนแป้ง (Starch) ในเมล็ดกาแฟให้เป็นน้ำตาลระหว่างที่เชอร์รี่สุกบนต้น เรียกว่าอะไร?", "opts": ["Caramelization", "Hydrolysis (ผ่านเอนไซม์ Amylase)", "Maillard Reaction", "Fermentation"], "correct": 1}, {"section": "เพิ่มเติม: พันธุกรรม / เคมี / สูตร Dose", "q": "Dose2 ใช้ปริมาณกาแฟมากกว่า Dose1 กี่เท่า?", "opts": ["1.05 เท่า", "1.30 เท่า", "1.11 เท่า", "1.20 เท่า"], "correct": 2}, {"section": "เพิ่มเติม: พันธุกรรม / เคมี / สูตร Dose", "q": "Yield ของ Dose2 คิดเป็น Ratio เท่าไหร่? (Roots standard)", "opts": ["1 : 2.2", "1 : 2.5", "1 : 2.0", "1 : 1.8"], "correct": 0}, {"section": "เพิ่มเติม: พันธุกรรม / เคมี / สูตร Dose", "q": "Ratio ของ Dose1 และ Dose2 ตามมาตรฐาน Roots คือเท่าไหร่ตามลำดับ?", "opts": ["Dose1 = 1:1.8, Dose2 = 1:2.0", "Dose1 = 1:2.2, Dose2 = 1:2.0", "Dose1 = 1:2.0, Dose2 = 1:2.5", "Dose1 = 1:2.0, Dose2 = 1:2.2"], "correct": 3}]
+};
+
+const AREA_STAFF = ['Lhing','Eve','Boss','Nu','Ball'];
+const LEVEL_LABELS = { professional: 'Professional Barista', trainer: 'Trainer Barista' };
+
+let currentQuiz = null;
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function shuffleArray(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startExam() {
+  const level = document.getElementById('exam-level').value;
+  const role = window._currentStaff.role || 'professional';
+  if (level === 'trainer' && role !== 'trainer') {
+    showToast('Role ของคุณเป็น Professional — สอบชุด Trainer ไม่ได้');
+    return;
+  }
+  const questions = shuffleArray(QUESTION_BANK[level]);
+  currentQuiz = { level, questions, answers: new Array(questions.length).fill(null), current: 0 };
+  renderQuiz();
+  document.getElementById('page-setup').style.display = 'none';
+  document.getElementById('page-quiz').style.display = 'block';
+}
+
+function renderQuiz() {
+  const el = document.getElementById('quiz-questions');
+  el.innerHTML = currentQuiz.questions.map((q, qi) => `
+    <div class="q-card" id="qcard-${qi}">
+      <div class="q-num">ข้อ ${qi+1} / ${currentQuiz.questions.length}</div>
+      <div class="q-text">${q.q}</div>
+      ${q.opts.map((opt, oi) => `
+        <div class="q-opt ${currentQuiz.answers[qi]===oi?'selected':''}" onclick="selectAnswer(${qi},${oi})">
+          <input type="radio" name="q${qi}" ${currentQuiz.answers[qi]===oi?'checked':''} readonly>
+          <span>${opt}</span>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+  updateProgress();
+}
+
+function updateProgress() {
+  const answered = currentQuiz.answers.filter(a => a !== null).length;
+  const pct = Math.round(answered / currentQuiz.questions.length * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+function selectAnswer(qi, oi) {
+  currentQuiz.answers[qi] = oi;
+  const card = document.getElementById('qcard-' + qi);
+  card.querySelectorAll('.q-opt').forEach((el, i) => el.classList.toggle('selected', i === oi));
+  card.querySelectorAll('input[type=radio]').forEach((el, i) => el.checked = (i === oi));
+  updateProgress();
+}
+
+function cancelExam() {
+  if (!confirm('ยกเลิกการสอบ? คำตอบที่เลือกไว้จะหายไป')) return;
+  currentQuiz = null;
+  document.getElementById('page-quiz').style.display = 'none';
+  document.getElementById('page-setup').style.display = 'block';
+}
+
+async function submitExam() {
+  const unanswered = currentQuiz.answers.filter(a => a === null).length;
+  if (unanswered > 0) { showToast(`ยังเหลือ ${unanswered} ข้อที่ยังไม่ได้ตอบ`); return; }
+
+  let correctCount = 0;
+  currentQuiz.questions.forEach((q, qi) => { if (currentQuiz.answers[qi] === q.correct) correctCount++; });
+  const total = currentQuiz.questions.length;
+  const pct = Math.round(correctCount / total * 100);
+
+  const result = {
+    id: 'exam:' + Date.now() + ':' + Math.random().toString(36).slice(2,7),
+    taster: window._currentStaff.name,
+    branch: window._currentStaff.branch,
+    subject: 'coffee_knowledge',
+    level: currentQuiz.level,
+    correctCount, total, pct,
+    created: Date.now()
+  };
+
+  try {
+    await window._fssetDoc(window._fsdoc(window._db, 'shared', result.id), { key: result.id, branch: window._currentStaff.branch, value: JSON.stringify(result) });
+  } catch(e) {
+    showToast('บันทึกคะแนนไม่สำเร็จ: ' + e.message);
+  }
+
+  showResult(result);
+}
+
+function showResult(result) {
+  document.getElementById('page-quiz').style.display = 'none';
+  document.getElementById('page-result').style.display = 'block';
+  const col = result.pct >= 80 ? 'var(--green)' : result.pct >= 50 ? 'var(--amber)' : 'var(--red)';
+  document.getElementById('result-label').textContent = LEVEL_LABELS[result.level];
+  document.getElementById('result-score').textContent = result.pct + '%';
+  document.getElementById('result-score').style.color = col;
+  document.getElementById('result-detail').textContent = `ตอบถูก ${result.correctCount} จาก ${result.total} ข้อ`;
+
+  const reviewEl = document.getElementById('result-review');
+  reviewEl.innerHTML = currentQuiz.questions.map((q, qi) => {
+    const myAns = currentQuiz.answers[qi];
+    const isCorrect = myAns === q.correct;
+    return `<div class="q-card">
+      <div class="q-num">ข้อ ${qi+1} — ${isCorrect?'✅ ถูก':'❌ ผิด'}</div>
+      <div class="q-text">${q.q}</div>
+      ${q.opts.map((opt, oi) => {
+        let cls = '';
+        if (oi === q.correct) cls = 'correct';
+        else if (oi === myAns) cls = 'wrong';
+        return `<div class="q-opt ${cls}">${opt}${oi===q.correct?' ✓':''}</div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+}
+
+function backToSetup() {
+  currentQuiz = null;
+  document.getElementById('page-result').style.display = 'none';
+  document.getElementById('page-setup').style.display = 'block';
+  loadHistory();
+}
+
+async function loadHistory() {
+  const listEl = document.getElementById('history-list');
+  listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">กำลังโหลด...</div>';
+  try {
+    const snap = await window._fsgetDocs(window._fscollection(window._db, 'shared'));
+    let entries = [];
+    snap.forEach(d => {
+      const data = d.data();
+      if (data.key && data.key.startsWith('exam:')) {
+        try {
+          const e = JSON.parse(data.value);
+          if (e.taster === window._currentStaff.name && e.subject === 'coffee_knowledge') entries.push(e);
+        } catch(err) {}
+      }
+    });
+    entries.sort((a,b) => b.created - a.created);
+    entries = entries.slice(0, 15);
+    if (!entries.length) {
+      listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">ยังไม่เคยทำข้อสอบ</div>';
+      return;
+    }
+    listEl.innerHTML = entries.map(e => {
+      const col = e.pct >= 80 ? 'var(--green)' : e.pct >= 50 ? 'var(--amber)' : 'var(--red)';
+      const d = new Date(e.created);
+      const dateStr = d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear();
+      return `<div class="entry-card">
+        <div class="entry-top"><span>${LEVEL_LABELS[e.level]}</span><span style="color:${col}">${e.pct}%</span></div>
+        <div class="entry-meta">${dateStr} · ตอบถูก ${e.correctCount}/${e.total} ข้อ</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">โหลดไม่สำเร็จ</div>';
+  }
+}
+
+function showAdminPage() {
+  document.getElementById('page-setup').style.display = 'none';
+  document.getElementById('page-admin').style.display = 'block';
+  loadAdminStaffList();
+}
+function hideAdminPage() {
+  document.getElementById('page-admin').style.display = 'none';
+  document.getElementById('page-setup').style.display = 'block';
+}
+
+async function loadAdminStaffList() {
+  const listEl = document.getElementById('admin-staff-list');
+  listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">กำลังโหลด...</div>';
+  try {
+    const snap = await window._fsgetDocs(window._fscollection(window._db, 'staff'));
+    let staffList = [];
+    snap.forEach(d => staffList.push({ email: d.id, ...d.data() }));
+    staffList.sort((a,b) => (a.branch||'').localeCompare(b.branch||'') || (a.name||'').localeCompare(b.name||''));
+
+    listEl.innerHTML = staffList.map(s => `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid var(--bg3)">
+        <div style="font-size:13px">
+          <b>${s.name}</b>
+          <div style="font-size:11px;color:var(--text3)">${s.branch||''}</div>
+        </div>
+        <select style="width:auto;min-width:150px" onchange="saveStaffRole('${s.email}', this.value, this)">
+          <option value="professional" ${(!s.role || s.role==='professional')?'selected':''}>Professional</option>
+          <option value="trainer" ${s.role==='trainer'?'selected':''}>Trainer</option>
+        </select>
+      </div>
+    `).join('');
+  } catch(e) {
+    listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">โหลดไม่สำเร็จ</div>';
+  }
+}
+
+async function saveStaffRole(email, role, selectEl) {
+  try {
+    const existing = await window._fsgetDoc(window._fsdoc(window._db, 'staff', email));
+    const data = existing.exists() ? existing.data() : {};
+    await window._fssetDoc(window._fsdoc(window._db, 'staff', email), { ...data, role });
+    showToast(`อัปเดต Role แล้ว ✓`);
+    // If editing our own role, refresh the exam-level restriction immediately
+    if (email === window._currentStaffEmail) {
+      window._currentStaff.role = role;
+      applyRoleRestriction();
+    }
+  } catch(e) {
+    showToast('บันทึกไม่สำเร็จ: ' + e.message);
+  }
+}
+
+function showScoresPage() {
+  document.getElementById('page-setup').style.display = 'none';
+  document.getElementById('page-scores').style.display = 'block';
+  loadScoresOverview();
+}
+function hideScoresPage() {
+  document.getElementById('page-scores').style.display = 'none';
+  document.getElementById('page-setup').style.display = 'block';
+}
+
+async function loadScoresOverview() {
+  const listEl = document.getElementById('scores-list');
+  listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">กำลังโหลด...</div>';
+  try {
+    const snap = await window._fsgetDocs(window._fscollection(window._db, 'shared'));
+    let entries = [];
+    snap.forEach(d => {
+      const data = d.data();
+      if (data.key && data.key.startsWith('exam:')) {
+        try {
+          const e = JSON.parse(data.value);
+          if (e.subject === 'coffee_knowledge') entries.push(e);
+        } catch(err) {}
+      }
+    });
+    // Keep only the most recent attempt per (person, level) pair
+    const latest = {};
+    entries.forEach(e => {
+      const key = e.taster + '|' + e.level;
+      if (!latest[key] || e.created > latest[key].created) latest[key] = e;
+    });
+    let rows = Object.values(latest);
+    rows.sort((a,b) => (a.branch||'').localeCompare(b.branch||'') || a.taster.localeCompare(b.taster) || a.level.localeCompare(b.level));
+
+    if (!rows.length) {
+      listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">ยังไม่มีใครสอบเลย</div>';
+      return;
+    }
+
+    listEl.innerHTML = rows.map(e => {
+      const col = e.pct >= 80 ? 'var(--green)' : e.pct >= 50 ? 'var(--amber)' : 'var(--red)';
+      const d = new Date(e.created);
+      const dateStr = d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear();
+      return `<div class="entry-card">
+        <div class="entry-top"><span>${e.taster} · ${LEVEL_LABELS[e.level]}</span><span style="color:${col}">${e.pct}%</span></div>
+        <div class="entry-meta">${e.branch||''} · ${dateStr} · ตอบถูก ${e.correctCount}/${e.total} ข้อ</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">โหลดไม่สำเร็จ</div>';
+  }
+}
+
+window.showScoresPage = showScoresPage;
+window.hideScoresPage = hideScoresPage;
+window.showAdminPage = showAdminPage;
+window.hideAdminPage = hideAdminPage;
+window.saveStaffRole = saveStaffRole;
+window.startExam = startExam;
+window.selectAnswer = selectAnswer;
+window.cancelExam = cancelExam;
+window.submitExam = submitExam;
+window.backToSetup = backToSetup;
+window.loadHistory = loadHistory;
+</script>
+
+</body>
+</html>
