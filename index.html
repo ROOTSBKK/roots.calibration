@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th" data-app-version="2026-09-23a">
+<html lang="th" data-app-version="2026-09-23b">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -153,8 +153,11 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
   <button onclick="chooseMode('summary')" style="width:260px;padding:16px;margin-bottom:12px;border:none;border-radius:10px;background:#fff;color:#18181A;font-size:15px;font-weight:700;cursor:pointer">
     ☕ Parameter Summary<br><span style="font-size:11px;font-weight:400;color:#56544F">กรอกพารามิเตอร์เก็บข้อมูล</span>
   </button>
-  <button onclick="chooseMode('calibration')" style="width:260px;padding:16px;border:none;border-radius:10px;background:#2A2A2E;color:#fff;font-size:15px;font-weight:700;cursor:pointer">
+  <button onclick="chooseMode('calibration')" style="width:260px;padding:16px;margin-bottom:12px;border:none;border-radius:10px;background:#2A2A2E;color:#fff;font-size:15px;font-weight:700;cursor:pointer">
     🎯 Palate Calibration Test<br><span style="font-size:11px;font-weight:400;color:#D9D6CE">ชิม + ให้คะแนน + เทียบทีม</span>
+  </button>
+  <button onclick="chooseMode('taste')" style="width:260px;padding:16px;border:none;border-radius:10px;background:#2A2A2E;color:#fff;font-size:15px;font-weight:700;cursor:pointer">
+    👅 Taste Only<br><span style="font-size:11px;font-weight:400;color:#D9D6CE">วัดผลจาก Intensity + Accept/Unaccept</span>
   </button>
 </div>
 
@@ -2005,6 +2008,10 @@ function initApp(user){
 window.chooseMode = function(mode){
   if (mode === 'summary') {
     window.location.href = 'param-summary.html';
+    return;
+  }
+  if (mode === 'taste') {
+    window.location.href = 'taste-only.html';
     return;
   }
   document.getElementById('mode-chooser').style.display = 'none';
