@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="th" data-app-version="2026-09-23a">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -25,7 +25,7 @@
   --blue:#1A5FA8;--bbg:#E7F0FB;--bborder:#7AAEE0;
   --radius:10px;--r2:6px;
 }
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;line-height:1.5}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg) url('roots-bg-tile.png') repeat;background-size:300px;color:var(--text);min-height:100vh;font-size:15px;line-height:1.5}
 .hdr{background:#18181A;color:#F8F7F4;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
 .hdr-brand{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.5}
 .hdr-title{font-size:16px;font-weight:600}
@@ -118,7 +118,7 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
 .btab{font-size:12px;padding:6px 12px;border-radius:20px;border:1px solid var(--bg3);background:#fff;cursor:pointer;color:var(--text2);font-weight:500}
 .btab.active{background:#18181A;color:#F8F7F4;border-color:#18181A}
 
-#login-screen{position:fixed;inset:0;background:#18181A;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999}
+#login-screen{position:fixed;inset:0;background:linear-gradient(rgba(24,24,26,.78),rgba(24,24,26,.78)),url('roots-bg-bold.png');background-size:cover;background-position:center;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999}
 #login-screen.hidden{display:none}
 .login-logo{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#F8F7F450;margin-bottom:6px}
 .login-title{font-size:22px;font-weight:600;color:#F8F7F4;margin-bottom:6px}
@@ -144,6 +144,18 @@ td{padding:8px 8px;border-bottom:1px solid var(--bg2);vertical-align:middle}
     Sign in with Google
   </button>
   <div class="login-status" id="login-status">กำลังโหลด...</div>
+</div>
+
+<div id="mode-chooser" style="display:none;min-height:100vh;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(rgba(24,24,26,.78),rgba(24,24,26,.78)),url('roots-bg-bold.png');background-size:cover;background-position:center;color:#fff;padding:20px;text-align:center">
+  <div style="font-size:12px;letter-spacing:2px;color:#D9D6CE;font-weight:700;margin-bottom:6px">ROOTS BKK</div>
+  <div style="font-size:19px;font-weight:700;margin-bottom:4px" id="chooser-hello"></div>
+  <div style="font-size:13px;color:#D9D6CE;margin-bottom:26px">เลือกเครื่องมือที่จะใช้</div>
+  <button onclick="chooseMode('summary')" style="width:260px;padding:16px;margin-bottom:12px;border:none;border-radius:10px;background:#fff;color:#18181A;font-size:15px;font-weight:700;cursor:pointer">
+    ☕ Parameter Summary<br><span style="font-size:11px;font-weight:400;color:#56544F">กรอกพารามิเตอร์เก็บข้อมูล</span>
+  </button>
+  <button onclick="chooseMode('calibration')" style="width:260px;padding:16px;border:none;border-radius:10px;background:#2A2A2E;color:#fff;font-size:15px;font-weight:700;cursor:pointer">
+    🎯 Palate Calibration Test<br><span style="font-size:11px;font-weight:400;color:#D9D6CE">ชิม + ให้คะแนน + เทียบทีม</span>
+  </button>
 </div>
 
 
@@ -1981,7 +1993,25 @@ async function lookupStaff(email){
   return s2.exists()?s2.data():null;
 }
 
+// initApp is now a wrapper that shows the tool-chooser first — the real
+// app init only runs once "Palate Calibration Test" is picked (or if the
+// user already chose it in this browser session before).
 function initApp(user){
+  window._pendingUser = user;
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('mode-chooser').style.display = 'flex';
+  document.getElementById('chooser-hello').textContent = `สวัสดี ${user.name}`;
+}
+window.chooseMode = function(mode){
+  if (mode === 'summary') {
+    window.location.href = 'param-summary.html';
+    return;
+  }
+  document.getElementById('mode-chooser').style.display = 'none';
+  _initAppReal(window._pendingUser);
+};
+
+function _initAppReal(user){
   window._currentUser=user;
   document.getElementById('login-screen').classList.add('hidden');
   const hdr=document.getElementById('hdr-date');
@@ -2068,7 +2098,7 @@ const STAFF_DATA = {
   'Thonglor':  ['Pond','Lek','May','Mali','Eve','Jah','Caesar','HB','Bank','Pairwa',...AREA_STAFF],
   'Lasalle':   ['MM','Mild','Noey','Dew',...AREA_STAFF],
   'Saladang':  ['Nut','Meen','Toey','Evee','Prim',...AREA_STAFF],
-  'Emquartier':['Jean','Weena','Bank','Next',...AREA_STAFF],
+  'Emquartier':['Jean','Weena','Bank','Next','Green',...AREA_STAFF],
   'Ari':       ['UT','Preaw','Kwang','Pack','Frung',...AREA_STAFF],
   'Bitec':     ['Milk','Eveee',...AREA_STAFF],
   'Sathorn':   ['Por','Give','Saito','RB','Wawaii','Pang','Hot',...AREA_STAFF],
@@ -2107,6 +2137,7 @@ const STAFF_DIRECTORY = [
   {name:'Weena',  branch:'Emquartier', email:'jah.rootsbkk@gmail.com'},
   {name:'Bank',   branch:'Emquartier', email:'bank.rootsbkk@gmail.com'},
   {name:'Next',   branch:'Emquartier', email:'next.rootsbkk@gmail.com'},
+  {name:'Green',  branch:'Emquartier', email:'green.rootsbkk@gmail.com'},
   // Ari
   {name:'UT',     branch:'Ari',        email:'ut.rootsbkk@gmail.com'},
   {name:'Preaw',  branch:'Ari',        email:'praew.rootsbkk@gmail.com'},
@@ -4164,7 +4195,8 @@ function printReport() {
     ${tableHtml}
     <h2>สถานะ Calibration ล่าสุดตามสาขา</h2>
     ${freshHtml}
-  </body></html>`);
+  
+</body></html>`);
   w.document.close();
   setTimeout(() => w.print(), 400);
 }
@@ -5700,5 +5732,31 @@ setTimeout(() => {
   <div id="person-modal-content"></div>
 </div>
 
+<script>
+// ═══ Auto-update check ═══ Detects when a newer version of this page has
+// been uploaded (even inside a stale "Add to Home Screen" cache on iOS)
+// and prompts to reload. Uses fetch with cache:"no-store" + a cache-busting
+// query string so the check itself always hits the network, never a cache.
+(function checkForAppUpdate() {
+  try {
+    const currentVersion = document.documentElement.dataset.appVersion;
+    if (!currentVersion) return;
+    fetch(window.location.pathname + "?_v=" + Date.now(), { cache: "no-store" })
+      .then(res => res.text())
+      .then(text => {
+        const m = text.match(/data-app-version="([^"]+)"/);
+        const liveVersion = m ? m[1] : null;
+        if (liveVersion && liveVersion !== currentVersion) {
+          const banner = document.createElement("div");
+          banner.style.cssText = "position:fixed;bottom:0;left:0;right:0;background:#9A5F0A;color:#fff;padding:12px 16px;font-size:13px;font-weight:700;text-align:center;z-index:99999;cursor:pointer";
+          banner.textContent = "🔄 มีอัปเดตใหม่ — แตะเพื่อโหลดเวอร์ชันล่าสุด";
+          banner.onclick = () => { window.location.href = window.location.pathname + "?_v=" + Date.now(); };
+          document.body.appendChild(banner);
+        }
+      })
+      .catch(() => {}); // silent — no update-check on network errors, never block the app
+  } catch(e) {}
+})();
+</script>
 </body>
 </html>
