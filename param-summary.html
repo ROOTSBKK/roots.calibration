@@ -80,6 +80,9 @@ input:focus,select:focus{outline:none;border-color:var(--bborder)}
   <button onclick="chooseMode('calibration')" style="width:260px;padding:16px;margin-bottom:12px;border:none;border-radius:10px;background:#2A2A2E;color:#fff;font-size:15px;font-weight:700;cursor:pointer">
     🎯 Palate Calibration Test<br><span style="font-size:11px;font-weight:400;color:#D9D6CE">ชิม + ให้คะแนน + เทียบทีม</span>
   </button>
+  <button onclick="chooseMode('taste')" style="width:260px;padding:16px;margin-bottom:12px;border:none;border-radius:10px;background:#2A2A2E;color:#fff;font-size:15px;font-weight:700;cursor:pointer">
+    👅 Taste Only<br><span style="font-size:11px;font-weight:400;color:#D9D6CE">วัดผลจาก Intensity + Accept/Unaccept</span>
+  </button>
   <!-- ข้อสอบพนักงาน — ปิดไว้ก่อน (Closed beta) ยังไม่เปิดให้พนักงานทั่วไปเห็นปุ่มนี้
        เข้าทดสอบได้โดยตรงผ่าน staff-exam.html เอง ไม่ต้องผ่านปุ่มนี้ -->
   <button onclick="chooseMode('exam')" style="display:none;width:260px;padding:16px;border:none;border-radius:10px;background:#2A2A2E;color:#fff;font-size:15px;font-weight:700;cursor:pointer">
@@ -388,6 +391,10 @@ window.chooseMode = function(mode){
   }
   if (mode === 'exam') {
     window.location.href = 'staff-exam.html';
+    return;
+  }
+  if (mode === 'taste') {
+    window.location.href = 'taste-only.html';
     return;
   }
   document.getElementById('mode-chooser').style.display = 'none';

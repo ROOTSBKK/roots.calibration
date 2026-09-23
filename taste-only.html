@@ -83,6 +83,7 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
   <div class="hdr">
     <div class="hdr-title">👅 Taste Only</div>
     <div class="hdr-sub" id="hdr-user"></div>
+    <div style="margin-top:4px"><a href="param-summary.html" style="color:#D9D6CE;font-size:11px;text-decoration:underline">← กลับไปเลือกเครื่องมืออื่น</a></div>
   </div>
 
   <div id="nav-tabs" style="display:flex;background:#fff;border-bottom:1px solid var(--bg3);position:sticky;top:0;z-index:9">
@@ -157,6 +158,7 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
     <div class="score-box">
       <div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-bottom:6px">คะแนน Taste Only</div>
       <div class="score-num" id="result-score">—</div>
+      <div id="result-rank" style="font-size:14px;font-weight:800;margin-top:4px"></div>
       <div class="score-sub">
         <span>Reference: <b id="result-ref">—</b>/60</span>
         <span>Team: <b id="result-team">—</b>/40</span>
@@ -406,6 +408,15 @@ function computeScore(myEntry, refEntries, teamEntries) {
   return { refTotal, teamTotal, total: Math.round(refTotal + teamTotal) };
 }
 
+// Rank 1 = เหมือน (score ≥80, green) · Rank 2 = คล้าย (50-79, amber) · Rank 3 = ไม่เหมือน (<50, red)
+// Same 80/50 breakpoints already used for score coloring throughout the app.
+function getRank(score) {
+  if (score === null || score === undefined) return { rank: null, label: '—', color: 'var(--text3)' };
+  if (score >= 80) return { rank: 1, label: 'เหมือน', color: 'var(--green)' };
+  if (score >= 50) return { rank: 2, label: 'คล้าย', color: 'var(--amber)' };
+  return { rank: 3, label: 'ไม่เหมือน', color: 'var(--red)' };
+}
+
 async function submitTasting() {
   const missing = ACCEPT_ATTRS.filter(a => !currentAccept[a]);
   if (missing.length) {
@@ -512,6 +523,10 @@ async function showResult(myEntry) {
     document.getElementById('result-score').textContent = total !== null ? total : (myEntry.isRef ? Math.round(refTotal)+'/60 (Ref)' : '—');
     document.getElementById('result-ref').textContent = Math.round(refTotal);
     document.getElementById('result-team').textContent = teamTotal !== null ? Math.round(teamTotal) : '—';
+    const rankInfo = getRank(total);
+    document.getElementById('result-rank').innerHTML = total !== null
+      ? `<span style="color:${rankInfo.color}">Rank ${rankInfo.rank} — ${rankInfo.label}</span>`
+      : '';
 
     const fmtAccept = v => v === 'accept' ? '✓ Accept' : v === 'unaccept' ? '✕ Unaccept' : '—';
     const refRows = detail.filter(d=>d.kind==='ref-intensity').map(d => `
@@ -686,8 +701,8 @@ async function loadTeamCompare() {
       if (e.taster === refName) return;
       const score = computeScore(e, refEntries, teamEntries);
       const pct = score?.total;
-      const col = pct===null||pct===undefined ? 'var(--text3)' : pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--red)';
-      html += `<div class="entry-card"><div class="entry-top"><span>${e.taster}</span><span style="color:${col}">${pct ?? '—'}</span></div></div>`;
+      const rankInfo = getRank(pct);
+      html += `<div class="entry-card"><div class="entry-top"><span>${e.taster}</span><span style="color:${rankInfo.color}">${pct ?? '—'} ${pct!==null&&pct!==undefined?`· Rank ${rankInfo.rank} ${rankInfo.label}`:''}</span></div></div>`;
     });
     html += '</div>';
 
