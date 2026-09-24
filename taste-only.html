@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th" data-app-version="2026-09-23b">
+<html lang="th" data-app-version="2026-09-24a">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
@@ -95,7 +95,7 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
 
   <div class="wrap" id="page-setup">
     <div class="card">
-      <div class="card-title">เริ่ม/เข้าร่วม Session ชิม</div>
+      <div class="card-title">➕ สร้าง Session ใหม่ (คนแรกเท่านั้น)</div>
       <div class="row">
         <div class="col"><div class="lbl">วันที่</div><input type="date" id="f-date"></div>
         <div class="col"><div class="lbl">สาขา</div><select id="f-branch"></select></div>
@@ -107,7 +107,7 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
       <button class="btn btn-primary" onclick="startTasting()">👅 เริ่มชิม</button>
     </div>
 
-    <div style="margin:20px 0 10px;font-size:13px;font-weight:700;color:var(--text2)">📋 Session ล่าสุด</div>
+    <div style="margin:20px 0 10px;font-size:13px;font-weight:700;color:var(--text2)">👥 เข้าร่วม Session ที่มีอยู่แล้ว</div>
     <div id="recent-sessions"><div style="color:var(--text3);font-size:13px">กำลังโหลด...</div></div>
   </div>
 
@@ -333,14 +333,7 @@ function sessionKeyOf(date, branch, coffee) {
   return `${date}|${branch}|${coffee.trim().toLowerCase()}`;
 }
 
-function startTasting() {
-  const date = document.getElementById('f-date').value;
-  const branch = document.getElementById('f-branch').value;
-  const coffee = document.getElementById('f-coffee').value.trim();
-  const refName = document.getElementById('f-ref').value;
-  if (!coffee) { showToast('กรุณากรอกชื่อกาแฟ'); return; }
-
-  currentSession = { date, branch, coffee, refName, sessionKey: sessionKeyOf(date, branch, coffee) };
+function resetTastingInputs() {
   currentIntensity = { acidity:3, sweetness:3, bitterness:3, mouthfeel:3, aftertaste:3 };
   currentAccept = { acidity:null, bitterness:null };
   document.querySelectorAll('.intensity-scale').forEach(el => {
@@ -349,10 +342,31 @@ function startTasting() {
   document.querySelectorAll('.accept-row').forEach(el => {
     el.querySelectorAll('.accept-opt').forEach(o => o.classList.remove('selected'));
   });
+}
 
-  document.getElementById('tasting-session-label').textContent = `${coffee} · ${branch} · ${date} (Ref: ${refName})`;
+function openTastingPage(session) {
+  currentSession = session;
+  resetTastingInputs();
+  document.getElementById('tasting-session-label').textContent = `${session.coffee} · ${session.branch} · ${session.date} (Ref: ${session.refName})`;
   document.getElementById('page-setup').style.display = 'none';
   document.getElementById('page-tasting').style.display = 'block';
+}
+
+function startTasting() {
+  const date = document.getElementById('f-date').value;
+  const branch = document.getElementById('f-branch').value;
+  const coffee = document.getElementById('f-coffee').value.trim();
+  const refName = document.getElementById('f-ref').value;
+  if (!coffee) { showToast('กรุณากรอกชื่อกาแฟ'); return; }
+  openTastingPage({ date, branch, coffee, refName, sessionKey: sessionKeyOf(date, branch, coffee) });
+}
+
+// Join an existing session exactly as-is (from the recent-sessions list) —
+// no retyping, so the sessionKey is guaranteed to match everyone else's.
+function joinSession(i) {
+  const s = window._recentSessionsCache?.[i];
+  if (!s) { showToast('หา Session นี้ไม่เจอ ลองรีเฟรชหน้าใหม่'); return; }
+  openTastingPage({ date: s.date, branch: s.branch, coffee: s.coffee, refName: s.refName, sessionKey: s.sessionKey });
 }
 
 function cancelTasting() {
@@ -583,14 +597,16 @@ async function loadRecentSessions() {
       bySession[e.sessionKey].latest = Math.max(bySession[e.sessionKey].latest, e.created);
     });
     let sessions = Object.values(bySession).sort((a,b) => b.latest - a.latest).slice(0, 10);
+    window._recentSessionsCache = sessions;
     if (!sessions.length) {
       listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">ยังไม่มี Session</div>';
       return;
     }
-    listEl.innerHTML = sessions.map(s => `
+    listEl.innerHTML = sessions.map((s, i) => `
       <div class="entry-card">
         <div class="entry-top"><span>${s.coffee}</span><span style="color:var(--text3)">${s.count} คนชิมแล้ว</span></div>
         <div class="entry-meta">${s.branch} · ${s.date} · Ref: ${s.refName}</div>
+        <button class="btn btn-secondary" style="margin-top:8px;padding:8px" onclick="joinSession(${i})">👥 เข้าร่วมชิม Session นี้</button>
       </div>
     `).join('');
   } catch(e) {
@@ -791,6 +807,7 @@ window.setupForm = setupForm;
 window.setIntensity = setIntensity;
 window.setAccept = setAccept;
 window.startTasting = startTasting;
+window.joinSession = joinSession;
 window.cancelTasting = cancelTasting;
 window.submitTasting = submitTasting;
 window.backToSetup = backToSetup;
