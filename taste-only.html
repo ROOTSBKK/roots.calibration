@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th" data-app-version="2026-09-24d">
+<html lang="th" data-app-version="2026-09-24e">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
@@ -378,13 +378,33 @@ function openTastingPage(session) {
   document.getElementById('page-tasting').style.display = 'block';
 }
 
-function startTasting() {
+async function startTasting() {
   const date = document.getElementById('f-date').value;
   const branch = document.getElementById('f-branch').value;
   const coffee = document.getElementById('f-coffee').value.trim();
   const refName = document.getElementById('f-ref').value;
   if (!coffee) { showToast('กรุณากรอกชื่อกาแฟ'); return; }
-  openTastingPage({ date, branch, coffee, refName, sessionKey: sessionKeyOf(date, branch, coffee) });
+
+  const sessionKey = sessionKeyOf(date, branch, coffee);
+  const sessionRecord = {
+    id: 'tastesession:' + Date.now() + ':' + Math.random().toString(36).slice(2,7),
+    sessionKey, date, branch, coffee, refName,
+    createdBy: window._currentStaff.name,
+    created: Date.now()
+  };
+
+  // Write the session itself FIRST — same idea as "opening a shot" in the
+  // main Calibration app: it exists and is visible to teammates the
+  // instant it's created, before anyone (including the creator) has
+  // submitted a single score.
+  try {
+    await window._fssetDoc(window._fsdoc(window._db, 'shared', sessionRecord.id), { key: sessionRecord.id, branch, value: JSON.stringify(sessionRecord) });
+  } catch(e) {
+    showToast('เปิด Session ไม่สำเร็จ: ' + e.message);
+    return;
+  }
+
+  openTastingPage({ date, branch, coffee, refName, sessionKey });
 }
 
 // Join an existing session exactly as-is (from the recent-sessions list) —
@@ -609,24 +629,32 @@ async function loadRecentSessions() {
   try {
     const filterBranch = document.getElementById('session-branch-filter').value;
     const snap = await window._fsgetDocs(window._fscollection(window._db, 'shared'));
-    let entries = [];
+    let sessionRecords = [];
+    let scoreEntries = [];
     snap.forEach(d => {
       const data = d.data();
-      if (data.key && data.key.startsWith('taste:')) {
+      if (data.key && data.key.startsWith('tastesession:')) {
         try {
-          const e = JSON.parse(data.value);
-          if (e.branch === filterBranch) entries.push(e);
+          const s = JSON.parse(data.value);
+          if (s.branch === filterBranch) sessionRecords.push(s);
         } catch(err) {}
+      } else if (data.key && data.key.startsWith('taste:')) {
+        try { scoreEntries.push(JSON.parse(data.value)); } catch(err) {}
       }
     });
-    // group by session, show most recent 10 sessions (already filtered to this branch)
-    const bySession = {};
-    entries.forEach(e => {
-      if (!bySession[e.sessionKey]) bySession[e.sessionKey] = { ...e, count: 0, latest: 0 };
-      bySession[e.sessionKey].count++;
-      bySession[e.sessionKey].latest = Math.max(bySession[e.sessionKey].latest, e.created);
+
+    // De-duplicate session records that share the same sessionKey (e.g. if
+    // "create" was pressed twice by accident) — keep the earliest one.
+    const bySessionKey = {};
+    sessionRecords.forEach(s => {
+      if (!bySessionKey[s.sessionKey] || s.created < bySessionKey[s.sessionKey].created) bySessionKey[s.sessionKey] = s;
     });
-    let sessions = Object.values(bySession).sort((a,b) => b.latest - a.latest).slice(0, 10);
+
+    let sessions = Object.values(bySessionKey).map(s => ({
+      ...s,
+      count: scoreEntries.filter(e => e.sessionKey === s.sessionKey).length
+    })).sort((a,b) => b.created - a.created).slice(0, 10);
+
     window._recentSessionsCache = sessions;
     if (!sessions.length) {
       listEl.innerHTML = `<div style="color:var(--text3);font-size:13px;text-align:center;padding:10px 0">ยังไม่มี Session ในสาขา ${filterBranch} เลย<br>ถ้าเป็นคนแรก กด "สร้าง Session + เริ่มชิม" ด้านบนได้เลย</div>`;
@@ -636,7 +664,7 @@ async function loadRecentSessions() {
     listEl.innerHTML = sessions.map((s, i) => `
       <div class="entry-card">
         <div class="entry-top"><span>${s.coffee}</span><span style="color:var(--text3)">${s.count} คนชิมแล้ว</span></div>
-        <div class="entry-meta">${s.branch} · ${s.date} · Ref: ${s.refName}</div>
+        <div class="entry-meta">${s.branch} · ${s.date} · Ref: ${s.refName} · เปิดโดย ${s.createdBy||'—'}</div>
         <button class="btn btn-secondary" style="margin-top:8px;padding:8px" onclick="joinSession(${i})">👥 เข้าร่วมชิม Session นี้</button>
       </div>
     `).join('');
