@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th" data-app-version="2026-09-24e">
+<html lang="th" data-app-version="2026-09-24f">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
@@ -153,6 +153,22 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
         <div class="intensity-lbl">Aftertaste Length</div>
         <div class="intensity-scale" data-attr="aftertaste"></div>
         <div class="scale-caption"><span>Low</span><span>High</span></div>
+      </div>
+
+      <div style="border-top:1px solid var(--bg3);margin:14px 0 10px;padding-top:10px">
+        <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-bottom:2px">เก็บเป็นข้อมูล — ไม่มีผลกับคะแนน 100</div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <div class="lbl">Taste Balance (0-6)</div>
+          <input type="number" id="f-tb" min="0" max="6" step="0.5" placeholder="0-6" style="font-size:18px;font-weight:700;text-align:center">
+          <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-top:2px"><span>0 Unacceptable</span><span>6 Extraordinary</span></div>
+        </div>
+        <div class="col">
+          <div class="lbl">Tactile (0-6)</div>
+          <input type="number" id="f-tc" min="0" max="6" step="0.5" placeholder="0-6" style="font-size:18px;font-weight:700;text-align:center">
+          <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-top:2px"><span>0 Unacceptable</span><span>6 Extraordinary</span></div>
+        </div>
       </div>
 
       <button class="btn btn-primary" style="margin-top:10px" onclick="submitTasting()">✅ ส่งคำตอบ</button>
@@ -368,6 +384,8 @@ function resetTastingInputs() {
   document.querySelectorAll('.accept-row').forEach(el => {
     el.querySelectorAll('.accept-opt').forEach(o => o.classList.remove('selected'));
   });
+  document.getElementById('f-tb').value = '';
+  document.getElementById('f-tc').value = '';
 }
 
 function openTastingPage(session) {
@@ -484,6 +502,9 @@ async function submitTasting() {
     return;
   }
 
+  const tb = document.getElementById('f-tb').value;
+  const tc = document.getElementById('f-tc').value;
+
   const entry = {
     id: 'taste:' + Date.now() + ':' + Math.random().toString(36).slice(2,7),
     sessionKey: currentSession.sessionKey,
@@ -495,6 +516,8 @@ async function submitTasting() {
     isRef: window._currentStaff.name === currentSession.refName,
     intensity: { ...currentIntensity },
     accept: { ...currentAccept },
+    tasteBalance: tb === '' ? null : +tb,
+    tactile: tc === '' ? null : +tc,
     created: Date.now()
   };
 
@@ -608,9 +631,18 @@ async function showResult(myEntry) {
         <div class="entry-meta">คุณ: ${fmtAccept(d.mine)} · ทีม: ${fmtAccept(d.ref)}</div>
       </div>`).join('');
 
+    const tbTcHtml = (myEntry.tasteBalance !== null && myEntry.tasteBalance !== undefined) || (myEntry.tactile !== null && myEntry.tactile !== undefined)
+      ? `<div style="margin-top:14px">
+          <div style="font-size:11px;color:var(--text3);font-weight:800;text-transform:uppercase;margin-bottom:8px">📋 ข้อมูลเพิ่มเติม (ไม่มีผลกับคะแนน)</div>
+          <div class="entry-card"><div class="entry-top"><span>Taste Balance</span><span>${myEntry.tasteBalance ?? '—'} / 6</span></div></div>
+          <div class="entry-card"><div class="entry-top"><span>Tactile</span><span>${myEntry.tactile ?? '—'} / 6</span></div></div>
+        </div>`
+      : '';
+
     document.getElementById('result-detail-list').innerHTML =
       `<div style="font-size:11px;color:var(--blue);font-weight:800;text-transform:uppercase;margin:14px 0 8px">Reference Alignment</div>${refRows}` +
-      (teamRows ? `<div style="font-size:11px;color:var(--green);font-weight:800;text-transform:uppercase;margin:14px 0 8px">Team Alignment</div>${teamRows}` : `<div style="font-size:12px;color:var(--text3);margin-top:10px">ยังไม่มีคนอื่นในทีมชิมพอ (ต้องมีอย่างน้อย 2 คนนอกจาก Ref) — ยังไม่คำนวณ Team Alignment</div>`);
+      (teamRows ? `<div style="font-size:11px;color:var(--green);font-weight:800;text-transform:uppercase;margin:14px 0 8px">Team Alignment</div>${teamRows}` : `<div style="font-size:12px;color:var(--text3);margin-top:10px">ยังไม่มีคนอื่นในทีมชิมพอ (ต้องมีอย่างน้อย 2 คนนอกจาก Ref) — ยังไม่คำนวณ Team Alignment</div>`) +
+      tbTcHtml;
   } catch(e) {
     showToast('โหลดผลไม่สำเร็จ: ' + e.message);
   }
