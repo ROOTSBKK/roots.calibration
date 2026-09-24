@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th" data-app-version="2026-09-24b">
+<html lang="th" data-app-version="2026-09-24d">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
@@ -104,13 +104,15 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
       <input type="text" id="f-coffee" placeholder="เช่น House Blend" style="margin-bottom:12px">
       <div class="lbl">Reference Taster (คนอ้างอิงของ Session นี้)</div>
       <select id="f-ref" style="margin-bottom:14px"></select>
-      <button class="btn btn-primary" onclick="startTasting()">👅 เริ่มชิม</button>
+      <button class="btn btn-primary" onclick="startTasting()">👅 สร้าง Session + เริ่มชิม</button>
     </div>
 
     <div style="margin:20px 0 10px;font-size:13px;font-weight:700;color:var(--text2)">👥 เข้าร่วม Session ที่มีอยู่แล้ว</div>
     <div class="card" style="margin-bottom:8px">
-      <div class="lbl">ดูสาขา</div>
-      <select id="session-branch-filter" onchange="loadRecentSessions()"></select>
+      <div style="display:flex;gap:8px;align-items:flex-end">
+        <div style="flex:1"><div class="lbl">ดูสาขา</div><select id="session-branch-filter" onchange="loadRecentSessions()"></select></div>
+        <button class="btn btn-secondary" style="width:auto;padding:9px 14px;flex-shrink:0" onclick="loadRecentSessions()">🔄 รีเฟรช</button>
+      </div>
     </div>
     <div id="recent-sessions"><div style="color:var(--text3);font-size:13px">กำลังโหลด...</div></div>
   </div>
@@ -302,8 +304,17 @@ function setupForm() {
   const isArea = AREA_STAFF.includes(window._currentStaff.name);
   const branchSel = document.getElementById('f-branch');
   const branches = Object.keys(STAFF_DATA).filter(b => b !== 'Area');
-  branchSel.innerHTML = branches.map(b => `<option value="${b}" ${b===window._currentStaff.branch?'selected':''}>${b}</option>`).join('');
-  branchSel.onchange = populateRefDropdown;
+  // Non-Area staff always taste at their own branch — lock it so login
+  // alone decides the branch, no dropdown to fumble with. Area still
+  // floats between branches, so they keep the picker.
+  if (isArea) {
+    branchSel.innerHTML = branches.map(b => `<option value="${b}" ${b===window._currentStaff.branch?'selected':''}>${b}</option>`).join('');
+    branchSel.disabled = false;
+  } else {
+    branchSel.innerHTML = `<option value="${window._currentStaff.branch}">${window._currentStaff.branch}</option>`;
+    branchSel.disabled = true;
+  }
+  branchSel.onchange = () => { populateRefDropdown(); loadRecentSessions(); };
   populateRefDropdown();
 
   // Session list filter — Area can browse any branch, everyone else is
@@ -618,7 +629,8 @@ async function loadRecentSessions() {
     let sessions = Object.values(bySession).sort((a,b) => b.latest - a.latest).slice(0, 10);
     window._recentSessionsCache = sessions;
     if (!sessions.length) {
-      listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">ยังไม่มี Session ในสาขานี้</div>';
+      listEl.innerHTML = `<div style="color:var(--text3);font-size:13px;text-align:center;padding:10px 0">ยังไม่มี Session ในสาขา ${filterBranch} เลย<br>ถ้าเป็นคนแรก กด "สร้าง Session + เริ่มชิม" ด้านบนได้เลย</div>`;
+      showToast('รีเฟรชแล้ว — ยังไม่มี Session');
       return;
     }
     listEl.innerHTML = sessions.map((s, i) => `
@@ -628,6 +640,7 @@ async function loadRecentSessions() {
         <button class="btn btn-secondary" style="margin-top:8px;padding:8px" onclick="joinSession(${i})">👥 เข้าร่วมชิม Session นี้</button>
       </div>
     `).join('');
+    showToast(`รีเฟรชแล้ว — เจอ ${sessions.length} Session`);
   } catch(e) {
     listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">โหลดไม่สำเร็จ</div>';
   }
