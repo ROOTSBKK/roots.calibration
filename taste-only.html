@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th" data-app-version="2026-09-24f">
+<html lang="th" data-app-version="2026-09-25a">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
@@ -102,8 +102,7 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
       </div>
       <div class="lbl">ชื่อกาแฟ</div>
       <input type="text" id="f-coffee" placeholder="เช่น House Blend" style="margin-bottom:12px">
-      <div class="lbl">Reference Taster (คนอ้างอิงของ Session นี้)</div>
-      <select id="f-ref" style="margin-bottom:14px"></select>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:14px;background:var(--bbg);border:1px solid var(--bborder);border-radius:8px;padding:8px 10px">ℹ️ ไม่ต้องเลือกคนอ้างอิง — ถ้า Boss ร่วมชิมด้วย Boss จะเป็นตัวเทียบอัตโนมัติ ถ้าไม่มี Boss ระบบใช้เสียงส่วนมากของคนที่ชิมแทน</div>
       <button class="btn btn-primary" onclick="startTasting()">👅 สร้าง Session + เริ่มชิม</button>
     </div>
 
@@ -178,13 +177,9 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
 
   <div class="wrap" id="page-result" style="display:none">
     <div class="score-box">
-      <div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-bottom:6px">คะแนน Taste Only</div>
+      <div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-bottom:6px">คะแนน Taste Only (เต็ม 100)</div>
       <div class="score-num" id="result-score">—</div>
       <div id="result-rank" style="font-size:14px;font-weight:800;margin-top:4px"></div>
-      <div class="score-sub">
-        <span>Reference: <b id="result-ref">—</b>/60</span>
-        <span>Team: <b id="result-team">—</b>/40</span>
-      </div>
     </div>
     <div id="result-detail-list"></div>
     <button class="btn btn-primary" onclick="backToSetup()">← กลับหน้าหลัก</button>
@@ -302,7 +297,7 @@ const ATTRS = ['acidity','sweetness','bitterness','mouthfeel','aftertaste'];
 const ATTR_LABELS = { acidity:'Acidity', sweetness:'Sweetness', bitterness:'Bitterness', mouthfeel:'Mouthfeel', aftertaste:'Aftertaste Length' };
 const INTENSITY_LABELS = ['Short','Short-Medium','Medium','Medium-Long','Long'];
 
-let currentSession = null; // {date, branch, coffee, refName, sessionKey}
+let currentSession = null; // {date, branch, coffee, sessionKey}
 let currentIntensity = { acidity:3, sweetness:3, bitterness:3, mouthfeel:3, aftertaste:3 };
 let currentAccept = { acidity:null, bitterness:null }; // 'accept' | 'unaccept'
 const ACCEPT_ATTRS = ['acidity','bitterness'];
@@ -330,8 +325,7 @@ function setupForm() {
     branchSel.innerHTML = `<option value="${window._currentStaff.branch}">${window._currentStaff.branch}</option>`;
     branchSel.disabled = true;
   }
-  branchSel.onchange = () => { populateRefDropdown(); loadRecentSessions(); };
-  populateRefDropdown();
+  branchSel.onchange = () => { loadRecentSessions(); };
 
   // Session list filter — Area can browse any branch, everyone else is
   // locked to their own so they always find their session quickly.
@@ -351,12 +345,6 @@ function setupForm() {
   });
 
   loadRecentSessions();
-}
-
-function populateRefDropdown() {
-  const branch = document.getElementById('f-branch').value;
-  const names = STAFF_DATA[branch] || [];
-  document.getElementById('f-ref').innerHTML = names.map(n => `<option value="${n}">${n}</option>`).join('');
 }
 
 function setIntensity(attr, val, el) {
@@ -391,7 +379,7 @@ function resetTastingInputs() {
 function openTastingPage(session) {
   currentSession = session;
   resetTastingInputs();
-  document.getElementById('tasting-session-label').textContent = `${session.coffee} · ${session.branch} · ${session.date} (Ref: ${session.refName})`;
+  document.getElementById('tasting-session-label').textContent = `${session.coffee} · ${session.branch} · ${session.date}`;
   document.getElementById('page-setup').style.display = 'none';
   document.getElementById('page-tasting').style.display = 'block';
 }
@@ -400,13 +388,12 @@ async function startTasting() {
   const date = document.getElementById('f-date').value;
   const branch = document.getElementById('f-branch').value;
   const coffee = document.getElementById('f-coffee').value.trim();
-  const refName = document.getElementById('f-ref').value;
   if (!coffee) { showToast('กรุณากรอกชื่อกาแฟ'); return; }
 
   const sessionKey = sessionKeyOf(date, branch, coffee);
   const sessionRecord = {
     id: 'tastesession:' + Date.now() + ':' + Math.random().toString(36).slice(2,7),
-    sessionKey, date, branch, coffee, refName,
+    sessionKey, date, branch, coffee,
     createdBy: window._currentStaff.name,
     created: Date.now()
   };
@@ -422,7 +409,7 @@ async function startTasting() {
     return;
   }
 
-  openTastingPage({ date, branch, coffee, refName, sessionKey });
+  openTastingPage({ date, branch, coffee, sessionKey });
 }
 
 // Join an existing session exactly as-is (from the recent-sessions list) —
@@ -430,7 +417,7 @@ async function startTasting() {
 function joinSession(i) {
   const s = window._recentSessionsCache?.[i];
   if (!s) { showToast('หา Session นี้ไม่เจอ ลองรีเฟรชหน้าใหม่'); return; }
-  openTastingPage({ date: s.date, branch: s.branch, coffee: s.coffee, refName: s.refName, sessionKey: s.sessionKey });
+  openTastingPage({ date: s.date, branch: s.branch, coffee: s.coffee, sessionKey: s.sessionKey });
 }
 
 function cancelTasting() {
@@ -458,32 +445,51 @@ function scoreAccept(myVal, refVal) {
   return myVal === refVal ? 1 : 0;
 }
 
-// Computes the full Taste Only score (0-100) for one entry against its
-// session's Reference + Team, reused by the result page, team compare,
-// branch overview, and leaderboard so the math stays in one place.
-function computeScore(myEntry, refEntries, teamEntries) {
-  if (!refEntries.length) return null;
-  const refAvg = {};
-  ATTRS.forEach(a => { refAvg[a] = refEntries.reduce((s,e)=>s+e.intensity[a],0) / refEntries.length; });
-  const refAcceptMaj = {};
-  ACCEPT_ATTRS.forEach(a => { refAcceptMaj[a] = majorityAccept(refEntries, a); });
+// Mode (most-repeated value) for a 1-5 Intensity attribute across everyone
+// who tasted — this is the "majority vote" standard used when Boss isn't
+// part of the session. Ties are broken by whichever value appears first.
+function calcMode(values) {
+  if (!values.length) return null;
+  const counts = {};
+  values.forEach(v => { counts[v] = (counts[v] || 0) + 1; });
+  let best = values[0], bestCount = 0;
+  values.forEach(v => {
+    if (counts[v] > bestCount) { bestCount = counts[v]; best = v; }
+  });
+  return best;
+}
 
-  let refTotal = 0;
-  ATTRS.forEach(a => { refTotal += scoreIntensityDiff(myEntry.intensity[a], Math.round(refAvg[a])) * 6; });
-  ACCEPT_ATTRS.forEach(a => { refTotal += scoreAccept(myEntry.accept?.[a], refAcceptMaj[a]) * 15; });
+// Determines the single reference standard for a session:
+//  - If "Boss" tasted in this session, Boss's own answers ARE the
+//    reference (bound to that exact name, per Boss's own instruction).
+//  - Otherwise, the reference is the group's majority/mode across
+//    everyone who tasted — no named Ref role needed at all.
+function determineReference(sessionEntries) {
+  const bossEntry = sessionEntries.find(e => e.taster === 'Boss');
+  if (bossEntry) {
+    return { source: 'boss', bossName: 'Boss', intensity: bossEntry.intensity, accept: bossEntry.accept };
+  }
+  if (sessionEntries.length < 2) return null; // need at least 2 people for a meaningful majority
+  const intensity = {};
+  ATTRS.forEach(a => { intensity[a] = calcMode(sessionEntries.map(e => e.intensity[a])); });
+  const accept = {};
+  ACCEPT_ATTRS.forEach(a => { accept[a] = majorityAccept(sessionEntries, a); });
+  return { source: 'majority', intensity, accept };
+}
 
-  if (myEntry.isRef || teamEntries.length < 2) return { refTotal, teamTotal: null, total: null };
+// Computes the full Taste Only score (0-100) for one entry against the
+// session's single reference standard (Boss, or group majority) — reused
+// by the result page, team compare, branch overview, and leaderboard.
+function computeScore(myEntry, sessionEntries) {
+  const ref = determineReference(sessionEntries);
+  if (!ref) return null;
+  // Boss doesn't get scored against himself when he IS the reference.
+  if (ref.source === 'boss' && myEntry.taster === 'Boss') return { total: null, isRefPerson: true, refSource: 'boss' };
 
-  const teamAvg = {};
-  ATTRS.forEach(a => { teamAvg[a] = teamEntries.reduce((s,e)=>s+e.intensity[a],0) / teamEntries.length; });
-  const teamAcceptMaj = {};
-  ACCEPT_ATTRS.forEach(a => { teamAcceptMaj[a] = majorityAccept(teamEntries, a); });
-
-  let teamTotal = 0;
-  ATTRS.forEach(a => { teamTotal += scoreIntensityDiff(myEntry.intensity[a], Math.round(teamAvg[a])) * 4; });
-  ACCEPT_ATTRS.forEach(a => { teamTotal += scoreAccept(myEntry.accept?.[a], teamAcceptMaj[a]) * 10; });
-
-  return { refTotal, teamTotal, total: Math.round(refTotal + teamTotal) };
+  let total = 0;
+  ATTRS.forEach(a => { total += scoreIntensityDiff(myEntry.intensity[a], ref.intensity[a]) * 10; }); // 5 × 10 = 50
+  ACCEPT_ATTRS.forEach(a => { total += scoreAccept(myEntry.accept?.[a], ref.accept[a]) * 25; }); // 2 × 25 = 50
+  return { total: Math.round(total), refSource: ref.source };
 }
 
 // Rank 1 = เหมือน (score ≥80, green) · Rank 2 = คล้าย (50-79, amber) · Rank 3 = ไม่เหมือน (<50, red)
@@ -511,9 +517,7 @@ async function submitTasting() {
     date: currentSession.date,
     branch: currentSession.branch,
     coffee: currentSession.coffee,
-    refName: currentSession.refName,
     taster: window._currentStaff.name,
-    isRef: window._currentStaff.name === currentSession.refName,
     intensity: { ...currentIntensity },
     accept: { ...currentAccept },
     tasteBalance: tb === '' ? null : +tb,
@@ -547,88 +551,51 @@ async function showResult(myEntry) {
       }
     });
 
-    const refEntries = sessionEntries.filter(e => e.taster === myEntry.refName);
-    const teamEntries = sessionEntries.filter(e => e.taster !== myEntry.refName);
-
-    if (!refEntries.length) {
+    const ref = determineReference(sessionEntries);
+    if (!ref) {
       document.getElementById('result-score').textContent = '—';
-      document.getElementById('result-ref').textContent = '—';
-      document.getElementById('result-team').textContent = '—';
-      document.getElementById('result-detail-list').innerHTML = `<div class="card" style="text-align:center;color:var(--text3);font-size:13px">Reference Taster (${myEntry.refName}) ยังไม่ได้ส่งคำตอบ รอ Ref ชิมก่อนถึงจะให้คะแนนได้</div>`;
+      document.getElementById('result-rank').innerHTML = '';
+      document.getElementById('result-detail-list').innerHTML = `<div class="card" style="text-align:center;color:var(--text3);font-size:13px">ต้องมีอย่างน้อย 2 คนชิม (หรือมี Boss ร่วมชิม) ก่อนถึงจะคำนวณคะแนนได้</div>`;
       return;
     }
 
-    const refAvg = {};
-    ATTRS.forEach(a => { refAvg[a] = refEntries.reduce((s,e)=>s+e.intensity[a],0) / refEntries.length; });
-    const refAcceptMaj = {};
-    ACCEPT_ATTRS.forEach(a => { refAcceptMaj[a] = majorityAccept(refEntries, a); });
+    const result = computeScore(myEntry, sessionEntries);
+    const refLabel = ref.source === 'boss' ? 'Boss' : 'เสียงส่วนมากของทีม (Mode)';
 
-    let refTotal = 0;
-    const detail = [];
-    // Intensity: 5 attrs × 6pt = 30pt of the 60pt Reference Alignment (50%)
-    ATTRS.forEach(a => {
-      const pts = scoreIntensityDiff(myEntry.intensity[a], Math.round(refAvg[a])) * 6;
-      refTotal += pts;
-      detail.push({ attr: a, mine: myEntry.intensity[a], ref: Math.round(refAvg[a]), pts, max: 6, kind: 'ref-intensity' });
-    });
-    // Accept/Unaccept: 2 attrs × 15pt = 30pt of the 60pt Reference Alignment (50%)
-    ACCEPT_ATTRS.forEach(a => {
-      const pts = scoreAccept(myEntry.accept?.[a], refAcceptMaj[a]) * 15;
-      refTotal += pts;
-      detail.push({ attr: a, mine: myEntry.accept?.[a], ref: refAcceptMaj[a], pts, max: 15, kind: 'ref-accept' });
-    });
-
-    let teamTotal = null;
-    if (myEntry.isRef) {
-      // Ref's own score is Reference Alignment only (matches original app's convention: sole Ref shows "—")
-    } else if (teamEntries.length >= 2) {
-      teamTotal = 0;
-      const teamAvg = {};
-      ATTRS.forEach(a => { teamAvg[a] = teamEntries.reduce((s,e)=>s+e.intensity[a],0) / teamEntries.length; });
-      const teamAcceptMaj = {};
-      ACCEPT_ATTRS.forEach(a => { teamAcceptMaj[a] = majorityAccept(teamEntries, a); });
-
-      // Intensity: 5 attrs × 4pt = 20pt of the 40pt Team Alignment (50%)
-      ATTRS.forEach(a => {
-        const pts = scoreIntensityDiff(myEntry.intensity[a], Math.round(teamAvg[a])) * 4;
-        teamTotal += pts;
-        detail.push({ attr: a, mine: myEntry.intensity[a], ref: Math.round(teamAvg[a]), pts, max: 4, kind: 'team-intensity' });
-      });
-      // Accept/Unaccept: 2 attrs × 10pt = 20pt of the 40pt Team Alignment (50%)
-      ACCEPT_ATTRS.forEach(a => {
-        const pts = scoreAccept(myEntry.accept?.[a], teamAcceptMaj[a]) * 10;
-        teamTotal += pts;
-        detail.push({ attr: a, mine: myEntry.accept?.[a], ref: teamAcceptMaj[a], pts, max: 10, kind: 'team-accept' });
-      });
+    if (result && result.isRefPerson) {
+      document.getElementById('result-score').textContent = '—';
+      document.getElementById('result-rank').innerHTML = '';
+      document.getElementById('result-detail-list').innerHTML = `<div class="card" style="text-align:center;color:var(--text3);font-size:13px">คุณคือตัวเทียบของ Session นี้ (Boss) — ไม่มีคะแนนให้ตัวเอง คนอื่นจะถูกเทียบกับคำตอบของคุณแทน</div>`;
+      return;
     }
 
-    const total = teamTotal !== null ? Math.round(refTotal + teamTotal) : null;
-    document.getElementById('result-score').textContent = total !== null ? total : (myEntry.isRef ? Math.round(refTotal)+'/60 (Ref)' : '—');
-    document.getElementById('result-ref').textContent = Math.round(refTotal);
-    document.getElementById('result-team').textContent = teamTotal !== null ? Math.round(teamTotal) : '—';
+    const total = result?.total ?? null;
+    document.getElementById('result-score').textContent = total !== null ? total : '—';
     const rankInfo = getRank(total);
     document.getElementById('result-rank').innerHTML = total !== null
       ? `<span style="color:${rankInfo.color}">Rank ${rankInfo.rank} — ${rankInfo.label}</span>`
       : '';
 
+    const detail = [];
+    ATTRS.forEach(a => {
+      const pts = scoreIntensityDiff(myEntry.intensity[a], ref.intensity[a]) * 10;
+      detail.push({ attr: a, mine: myEntry.intensity[a], ref: ref.intensity[a], pts, max: 10, kind: 'intensity' });
+    });
+    ACCEPT_ATTRS.forEach(a => {
+      const pts = scoreAccept(myEntry.accept?.[a], ref.accept[a]) * 25;
+      detail.push({ attr: a, mine: myEntry.accept?.[a], ref: ref.accept[a], pts, max: 25, kind: 'accept' });
+    });
+
     const fmtAccept = v => v === 'accept' ? '✓ Accept' : v === 'unaccept' ? '✕ Unaccept' : '—';
-    const refRows = detail.filter(d=>d.kind==='ref-intensity').map(d => `
+    const intensityRows = detail.filter(d=>d.kind==='intensity').map(d => `
       <div class="entry-card">
-        <div class="entry-top"><span>${ATTR_LABELS[d.attr]} — Intensity (vs Ref)</span><span style="color:var(--blue)">${d.pts.toFixed(1)}/${d.max}</span></div>
-        <div class="entry-meta">คุณ: ${d.mine} · Ref เฉลี่ย: ${d.ref}</div>
-      </div>`).join('') + detail.filter(d=>d.kind==='ref-accept').map(d => `
-      <div class="entry-card">
-        <div class="entry-top"><span>${ATTR_LABELS[d.attr]} — Accept (vs Ref)</span><span style="color:var(--blue)">${d.pts.toFixed(1)}/${d.max}</span></div>
-        <div class="entry-meta">คุณ: ${fmtAccept(d.mine)} · Ref: ${fmtAccept(d.ref)}</div>
+        <div class="entry-top"><span>${ATTR_LABELS[d.attr]} — Intensity</span><span style="color:var(--blue)">${d.pts.toFixed(1)}/${d.max}</span></div>
+        <div class="entry-meta">คุณ: ${d.mine} · ตัวเทียบ: ${d.ref}</div>
       </div>`).join('');
-    const teamRows = detail.filter(d=>d.kind==='team-intensity').map(d => `
+    const acceptRows = detail.filter(d=>d.kind==='accept').map(d => `
       <div class="entry-card">
-        <div class="entry-top"><span>${ATTR_LABELS[d.attr]} — Intensity (vs ทีม)</span><span style="color:var(--green)">${d.pts.toFixed(1)}/${d.max}</span></div>
-        <div class="entry-meta">คุณ: ${d.mine} · ทีมเฉลี่ย: ${d.ref}</div>
-      </div>`).join('') + detail.filter(d=>d.kind==='team-accept').map(d => `
-      <div class="entry-card">
-        <div class="entry-top"><span>${ATTR_LABELS[d.attr]} — Accept (vs ทีม)</span><span style="color:var(--green)">${d.pts.toFixed(1)}/${d.max}</span></div>
-        <div class="entry-meta">คุณ: ${fmtAccept(d.mine)} · ทีม: ${fmtAccept(d.ref)}</div>
+        <div class="entry-top"><span>${ATTR_LABELS[d.attr]} — Accept</span><span style="color:var(--blue)">${d.pts.toFixed(1)}/${d.max}</span></div>
+        <div class="entry-meta">คุณ: ${fmtAccept(d.mine)} · ตัวเทียบ: ${fmtAccept(d.ref)}</div>
       </div>`).join('');
 
     const tbTcHtml = (myEntry.tasteBalance !== null && myEntry.tasteBalance !== undefined) || (myEntry.tactile !== null && myEntry.tactile !== undefined)
@@ -640,8 +607,7 @@ async function showResult(myEntry) {
       : '';
 
     document.getElementById('result-detail-list').innerHTML =
-      `<div style="font-size:11px;color:var(--blue);font-weight:800;text-transform:uppercase;margin:14px 0 8px">Reference Alignment</div>${refRows}` +
-      (teamRows ? `<div style="font-size:11px;color:var(--green);font-weight:800;text-transform:uppercase;margin:14px 0 8px">Team Alignment</div>${teamRows}` : `<div style="font-size:12px;color:var(--text3);margin-top:10px">ยังไม่มีคนอื่นในทีมชิมพอ (ต้องมีอย่างน้อย 2 คนนอกจาก Ref) — ยังไม่คำนวณ Team Alignment</div>`) +
+      `<div style="font-size:11px;color:var(--blue);font-weight:800;text-transform:uppercase;margin:14px 0 4px">เทียบกับ: ${refLabel}</div>${intensityRows}${acceptRows}` +
       tbTcHtml;
   } catch(e) {
     showToast('โหลดผลไม่สำเร็จ: ' + e.message);
@@ -696,7 +662,7 @@ async function loadRecentSessions() {
     listEl.innerHTML = sessions.map((s, i) => `
       <div class="entry-card">
         <div class="entry-top"><span>${s.coffee}</span><span style="color:var(--text3)">${s.count} คนชิมแล้ว</span></div>
-        <div class="entry-meta">${s.branch} · ${s.date} · Ref: ${s.refName} · เปิดโดย ${s.createdBy||'—'}</div>
+        <div class="entry-meta">${s.branch} · ${s.date} · เปิดโดย ${s.createdBy||'—'}</div>
         <button class="btn btn-secondary" style="margin-top:8px;padding:8px" onclick="joinSession(${i})">👥 เข้าร่วมชิม Session นี้</button>
       </div>
     `).join('');
@@ -748,10 +714,11 @@ async function loadTeamSessionPicker() {
   const picker = document.getElementById('team-session-picker');
   picker.innerHTML = '<option>กำลังโหลด...</option>';
   try {
-    const entries = await fetchAllTasteEntries();
+    const filterBranch = document.getElementById('session-branch-filter').value;
+    const entries = (await fetchAllTasteEntries()).filter(e => e.branch === filterBranch);
     const bySession = groupBySession(entries);
     const sessions = Object.entries(bySession).map(([key, es]) => ({
-      key, coffee: es[0].coffee, branch: es[0].branch, date: es[0].date, refName: es[0].refName,
+      key, coffee: es[0].coffee, branch: es[0].branch, date: es[0].date,
       latest: Math.max(...es.map(e=>e.created))
     })).sort((a,b) => b.latest - a.latest);
     if (!sessions.length) {
@@ -775,44 +742,53 @@ async function loadTeamCompare() {
     const sessionEntries = entries.filter(e => e.sessionKey === sessionKey);
     if (!sessionEntries.length) { contentEl.innerHTML = '<div style="color:var(--text3);font-size:13px">ไม่มีข้อมูล</div>'; return; }
 
-    const refName = sessionEntries[0].refName;
-    const refEntries = sessionEntries.filter(e => e.taster === refName);
-    const teamEntries = sessionEntries.filter(e => e.taster !== refName);
-    // order: Ref first, then everyone else
-    const ordered = [...refEntries, ...teamEntries];
+    const ref = determineReference(sessionEntries);
+    const refTasterName = ref?.source === 'boss' ? 'Boss' : null;
+    // order: Boss first if present, then everyone else
+    const ordered = refTasterName
+      ? [...sessionEntries.filter(e=>e.taster===refTasterName), ...sessionEntries.filter(e=>e.taster!==refTasterName)]
+      : sessionEntries;
 
     const rows = [
-      ...ATTRS.map(a => ({ label: ATTR_LABELS[a] + ' (Intensity)', get: e => e.intensity[a], isAccept: false, attr: a })),
-      ...ACCEPT_ATTRS.map(a => ({ label: ATTR_LABELS[a] + ' (Accept)', get: e => e.accept?.[a] === 'accept' ? '✓' : e.accept?.[a] === 'unaccept' ? '✕' : '—', isAccept: true, attr: a })),
+      ...ATTRS.map(a => ({ label: ATTR_LABELS[a] + ' (Intensity)', get: e => e.intensity[a], attr: a })),
+      ...ACCEPT_ATTRS.map(a => ({ label: ATTR_LABELS[a] + ' (Accept)', get: e => e.accept?.[a] === 'accept' ? '✓' : e.accept?.[a] === 'unaccept' ? '✕' : '—', attr: a })),
     ];
 
-    const refRow = refEntries[0];
     let html = '<div class="table-scroll"><table class="compare-table"><thead><tr><th class="attr-lbl">Attribute</th>';
-    ordered.forEach(e => { html += `<th>${e.taster}${e.taster===refName?' (Ref)':''}</th>`; });
+    ordered.forEach(e => { html += `<th>${e.taster}${e.taster===refTasterName?' (อ้างอิง)':''}</th>`; });
     html += '</tr></thead><tbody>';
     rows.forEach(r => {
       html += `<tr><td class="attr-lbl">${r.label}</td>`;
       ordered.forEach(e => {
         const val = r.get(e);
-        const refVal = refRow ? r.get(refRow) : null;
-        const isMatch = refRow && (e === refRow || val === refVal);
-        const cls = refRow && e !== refRow ? (isMatch ? 'match' : 'mismatch') : '';
+        const refVal = ref ? (r.attr in (ref.intensity||{}) ? ref.intensity[r.attr] : ref.accept?.[r.attr]) : null;
+        const refValFmt = ACCEPT_ATTRS.includes(r.attr) ? (refVal === 'accept' ? '✓' : refVal === 'unaccept' ? '✕' : null) : refVal;
+        const isRefRow = e.taster === refTasterName;
+        const isMatch = ref && (isRefRow || val === refValFmt);
+        const cls = ref && !isRefRow ? (isMatch ? 'match' : 'mismatch') : '';
         html += `<td class="${cls}">${val ?? '—'}</td>`;
       });
       html += '</tr>';
     });
     html += '</tbody></table></div>';
 
-    // Score summary row per person
-    html += '<div style="margin-top:14px">';
-    ordered.forEach(e => {
-      if (e.taster === refName) return;
-      const score = computeScore(e, refEntries, teamEntries);
-      const pct = score?.total;
-      const rankInfo = getRank(pct);
-      html += `<div class="entry-card"><div class="entry-top"><span>${e.taster}</span><span style="color:${rankInfo.color}">${pct ?? '—'} ${pct!==null&&pct!==undefined?`· Rank ${rankInfo.rank} ${rankInfo.label}`:''}</span></div></div>`;
-    });
-    html += '</div>';
+    // Score summary row per person, ranked by score
+    if (ref) {
+      const scored = ordered
+        .filter(e => e.taster !== refTasterName)
+        .map(e => ({ e, score: computeScore(e, sessionEntries) }))
+        .sort((a,b) => (b.score?.total ?? -1) - (a.score?.total ?? -1));
+      html += '<div style="margin-top:14px">';
+      html += `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">เทียบกับ: ${refTasterName ? 'Boss' : 'เสียงส่วนมากของทีม (Mode)'}</div>`;
+      scored.forEach(({e, score}) => {
+        const pct = score?.total;
+        const rankInfo = getRank(pct);
+        html += `<div class="entry-card"><div class="entry-top"><span>${e.taster}</span><span style="color:${rankInfo.color}">${pct ?? '—'} ${pct!==null&&pct!==undefined?`· Rank ${rankInfo.rank} ${rankInfo.label}`:''}</span></div></div>`;
+      });
+      html += '</div>';
+    } else {
+      html += '<div style="font-size:12px;color:var(--text3);margin-top:10px">ต้องมีอย่างน้อย 2 คนชิม (หรือมี Boss ร่วมชิม) ก่อนถึงจะคำนวณคะแนนได้</div>';
+    }
 
     contentEl.innerHTML = html;
   } catch(e) {
@@ -825,16 +801,19 @@ async function loadBranchOverview() {
   const contentEl = document.getElementById('branch-overview-content');
   contentEl.innerHTML = '<div style="color:var(--text3);font-size:13px">กำลังโหลด...</div>';
   try {
+    const isArea = AREA_STAFF.includes(window._currentStaff.name);
+    const myBranch = window._currentStaff.branch;
     const entries = await fetchAllTasteEntries();
     const bySession = groupBySession(entries);
     const branchScores = {}; // branch -> [scores]
     Object.values(bySession).forEach(sessionEntries => {
-      const refName = sessionEntries[0].refName;
-      const refEntries = sessionEntries.filter(e => e.taster === refName);
-      const teamEntries = sessionEntries.filter(e => e.taster !== refName);
+      const ref = determineReference(sessionEntries);
+      if (!ref) return;
+      const refTasterName = ref.source === 'boss' ? 'Boss' : null;
       sessionEntries.forEach(e => {
-        if (e.taster === refName) return;
-        const score = computeScore(e, refEntries, teamEntries);
+        if (e.taster === refTasterName) return;
+        if (!isArea && e.branch !== myBranch) return; // non-Area only sees their own branch
+        const score = computeScore(e, sessionEntries);
         if (score && score.total !== null) {
           if (!branchScores[e.branch]) branchScores[e.branch] = [];
           branchScores[e.branch].push(score.total);
@@ -860,16 +839,19 @@ async function loadLeaderboard() {
   const contentEl = document.getElementById('leaderboard-content');
   contentEl.innerHTML = '<div style="color:var(--text3);font-size:13px">กำลังโหลด...</div>';
   try {
+    const isArea = AREA_STAFF.includes(window._currentStaff.name);
+    const myBranch = window._currentStaff.branch;
     const entries = await fetchAllTasteEntries();
     const bySession = groupBySession(entries);
     const personScores = {}; // name -> [scores]
     Object.values(bySession).forEach(sessionEntries => {
-      const refName = sessionEntries[0].refName;
-      const refEntries = sessionEntries.filter(e => e.taster === refName);
-      const teamEntries = sessionEntries.filter(e => e.taster !== refName);
+      const ref = determineReference(sessionEntries);
+      if (!ref) return;
+      const refTasterName = ref.source === 'boss' ? 'Boss' : null;
       sessionEntries.forEach(e => {
-        if (e.taster === refName) return;
-        const score = computeScore(e, refEntries, teamEntries);
+        if (e.taster === refTasterName) return;
+        if (!isArea && e.branch !== myBranch) return; // non-Area only sees their own branch
+        const score = computeScore(e, sessionEntries);
         if (score && score.total !== null) {
           if (!personScores[e.taster]) personScores[e.taster] = [];
           personScores[e.taster].push(score.total);
