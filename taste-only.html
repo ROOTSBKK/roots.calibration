@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th" data-app-version="2026-10-09f">
+<html lang="th" data-app-version="2026-10-09g">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
@@ -238,6 +238,12 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
       <input type="text" id="x-link" placeholder="https://docs.google.com/spreadsheets/d/..." style="margin-bottom:8px">
       <button class="btn btn-secondary" onclick="saveSheetCfg()">💾 บันทึกการเชื่อมต่อ</button>
     </div>
+    <div class="card" id="x-danger" style="display:none;border-color:var(--red)">
+      <div class="card-title" style="color:var(--red)">🗑️ ล้างข้อมูลทดสอบ (Area เท่านั้น)</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">ลบผลชิมและ Session ของ Taste Only ทั้งหมด (และล้างแถวใน Google Sheet ถ้าเชื่อมไว้) ไม่แตะข้อมูลส่วนอื่น ย้อนกลับไม่ได้</div>
+      <button class="btn btn-secondary" style="color:var(--red);border-color:var(--red)" onclick="clearTestData()">🗑️ ล้างข้อมูลทดสอบ</button>
+      <div id="x-clear-status" style="font-size:12px;margin-top:8px"></div>
+    </div>
   </div>
 
   <div class="wrap" id="page-leaderboard" style="display:none">
@@ -253,7 +259,7 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
-import { getFirestore, initializeFirestore, doc, getDoc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+import { getFirestore, initializeFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
 const cfg = {
   apiKey:"AIzaSyASqWQL08s1np9HEm-0_WIv0tQ9r3WmzZE",
@@ -269,7 +275,7 @@ const db = initializeFirestore(fbApp, { experimentalAutoDetectLongPolling: true 
 
 window._auth = auth;
 window._db = db;
-window._fsdoc = doc; window._fsgetDoc = getDoc; window._fssetDoc = setDoc;
+window._fsdoc = doc; window._fsgetDoc = getDoc; window._fssetDoc = setDoc; window._fsdeleteDoc = deleteDoc;
 window._fscollection = collection; window._fsgetDocs = getDocs;
 
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
@@ -803,6 +809,7 @@ async function initExportTab() {
   const isArea = AREA_STAFF.includes(window._currentStaff.name);
   document.getElementById('x-scope').textContent = isArea ? 'ขอบเขต: ทุกสาขา' : 'ขอบเขต: สาขา ' + window._currentStaff.branch + ' (รวมคนสาขาคุณที่ไปชิมเป็น Guest)';
   document.getElementById('x-config').style.display = isArea ? 'block' : 'none';
+  document.getElementById('x-danger').style.display = isArea ? 'block' : 'none';
   const cfg = await getSheetCfg(true);
   document.getElementById('x-hint').textContent = cfg.url
     ? '✅ เชื่อม Google Sheet แล้ว — ทุกครั้งที่มีคนส่งผลชิม ระบบซิงค์เข้า Sheet ให้อัตโนมัติ (ปุ่มด้านบนใช้ส่งย้อนหลัง/ซ้ำได้ ไม่ซ้ำแถว)'
@@ -826,6 +833,35 @@ async function saveSheetCfg() {
     st.textContent = 'บันทึกขึ้นระบบไม่สำเร็จ (' + e.message + ') — เก็บไว้ในเครื่องนี้แทน';
   }
   await initExportTab();
+}
+
+async function clearTestData() {
+  if (!AREA_STAFF.includes(window._currentStaff.name)) return;
+  const st = document.getElementById('x-clear-status');
+  if (!confirm('ลบผลชิมและ Session ของ Taste Only ทั้งหมด?\nย้อนกลับไม่ได้')) return;
+  const typed = prompt('พิมพ์คำว่า ล้าง เพื่อยืนยัน');
+  if (typed === null || typed.trim() !== 'ล้าง') { st.textContent = 'ยกเลิกแล้ว'; return; }
+  st.textContent = 'กำลังลบ...';
+  try {
+    const snap = await window._fsgetDocs(window._fscollection(window._db, 'shared'));
+    const targets = [];
+    snap.forEach(d => { const k = d.data().key || ''; if (k.startsWith('taste:') || k.startsWith('tastesession:')) targets.push(d.id); });
+    let done = 0, failed = 0;
+    for (const id of targets) {
+      try { await window._fsdeleteDoc(window._fsdoc(window._db, 'shared', id)); done++; } catch(e) { failed++; }
+    }
+    let sheetMsg = '';
+    const cfg = await getSheetCfg(true);
+    if (cfg.url) {
+      try {
+        await fetch(cfg.url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: SHEET_SECRET, action: 'clear' }) });
+        sheetMsg = ' · ส่งคำสั่งล้าง Google Sheet แล้ว';
+      } catch(e) { sheetMsg = ' · ล้าง Google Sheet ไม่สำเร็จ'; }
+    }
+    st.textContent = failed
+      ? `ลบได้ ${done} จาก ${targets.length} รายการ — ${failed} รายการลบไม่ได้ (กฎความปลอดภัยของ Firestore ไม่อนุญาต ให้ลบใน Firebase Console แทน)` + sheetMsg
+      : `✅ ลบแล้ว ${done} รายการ` + sheetMsg;
+  } catch(e) { st.textContent = 'ไม่สำเร็จ: ' + e.message; }
 }
 
 async function pushToSheet(url, data) {
