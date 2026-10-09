@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th" data-app-version="2026-09-25a">
+<html lang="th" data-app-version="2026-10-09a">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
@@ -94,6 +94,13 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
   </div>
 
   <div class="wrap" id="page-setup">
+    <div class="card" id="guest-card" style="margin-bottom:12px">
+      <div class="lbl">ฉันชิมในฐานะ</div>
+      <select id="f-guest" onchange="onGuestChange()">
+        <option value="home">สาขาตัวเอง</option>
+        <option value="guest">Guest — ไปชิมที่สาขาอื่น</option>
+      </select>
+    </div>
     <div class="card">
       <div class="card-title">➕ สร้าง Session ใหม่ (คนแรกเท่านั้น)</div>
       <div class="row">
@@ -102,6 +109,17 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
       </div>
       <div class="lbl">ชื่อกาแฟ</div>
       <input type="text" id="f-coffee" placeholder="เช่น House Blend" style="margin-bottom:12px">
+      <div class="lbl">🧪 Recipe</div>
+      <div class="row">
+        <div class="col"><div class="lbl">Dose (g)</div><input type="number" inputmode="decimal" step="0.1" id="r-dose" oninput="calcRatio()"></div>
+        <div class="col"><div class="lbl">Yield (g)</div><input type="number" inputmode="decimal" step="0.1" id="r-yield" oninput="calcRatio()"></div>
+        <div class="col"><div class="lbl">Time (s)</div><input type="number" inputmode="decimal" step="1" id="r-time"></div>
+      </div>
+      <div class="row">
+        <div class="col"><div class="lbl">Temp (°C)</div><input type="number" inputmode="decimal" step="0.5" id="r-temp"></div>
+        <div class="col"><div class="lbl">Grind</div><input type="text" id="r-grind"></div>
+        <div class="col"><div class="lbl">Ratio</div><input type="text" id="r-ratio" readonly placeholder="auto" style="background:var(--bg2)"></div>
+      </div>
       <div style="font-size:11px;color:var(--text3);margin-bottom:14px;background:var(--bbg);border:1px solid var(--bborder);border-radius:8px;padding:8px 10px">ℹ️ ไม่ต้องเลือกคนอ้างอิง — ถ้า Boss ร่วมชิมด้วย Boss จะเป็นตัวเทียบอัตโนมัติ ถ้าไม่มี Boss ระบบใช้เสียงส่วนมากของคนที่ชิมแทน</div>
       <button class="btn btn-primary" onclick="startTasting()">👅 สร้าง Session + เริ่มชิม</button>
     </div>
@@ -119,6 +137,7 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
   <div class="wrap" id="page-tasting" style="display:none">
     <div class="card">
       <div class="card-title" id="tasting-session-label"></div>
+      <div id="tasting-recipe" style="font-size:12px;color:var(--text2);margin-bottom:10px"></div>
 
       <div class="intensity-row">
         <div class="intensity-lbl">Acidity</div>
@@ -181,6 +200,7 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
       <div class="score-num" id="result-score">—</div>
       <div id="result-rank" style="font-size:14px;font-weight:800;margin-top:4px"></div>
     </div>
+    <div id="result-recipe" style="font-size:12px;color:var(--text2);text-align:center;margin-bottom:10px"></div>
     <div id="result-detail-list"></div>
     <button class="btn btn-primary" onclick="backToSetup()">← กลับหน้าหลัก</button>
   </div>
@@ -376,10 +396,60 @@ function resetTastingInputs() {
   document.getElementById('f-tc').value = '';
 }
 
+function calcRatio() {
+  const d = parseFloat(document.getElementById('r-dose').value);
+  const y = parseFloat(document.getElementById('r-yield').value);
+  document.getElementById('r-ratio').value = (d>0 && y>0) ? '1:' + (y/d).toFixed(2) : '';
+}
+
+function readRecipe() {
+  const g = id => document.getElementById(id).value.trim();
+  const r = { dose:g('r-dose'), yield:g('r-yield'), time:g('r-time'), temp:g('r-temp'), grind:g('r-grind') };
+  const d = parseFloat(r.dose), y = parseFloat(r.yield);
+  r.ratio = (d>0 && y>0) ? '1:' + (y/d).toFixed(2) : '';
+  return Object.values(r).some(v => v) ? r : null;
+}
+
+function recipeText(r) {
+  if (!r) return '';
+  const parts = [];
+  if (r.dose) parts.push('Dose ' + r.dose + 'g');
+  if (r.yield) parts.push('Yield ' + r.yield + 'g');
+  if (r.ratio) parts.push('Ratio ' + r.ratio);
+  if (r.time) parts.push('Time ' + r.time + 's');
+  if (r.temp) parts.push('Temp ' + r.temp + '°C');
+  if (r.grind) parts.push('Grind ' + r.grind);
+  return parts.join(' · ');
+}
+
+function isGuestMode() {
+  const el = document.getElementById('f-guest');
+  return !!el && el.value === 'guest' && !AREA_STAFF.includes(window._currentStaff.name);
+}
+
+// Guest = staff from another branch tasting at a different branch's session.
+// Branch pickers unlock (excluding own branch) so they can find that session.
+function onGuestChange() {
+  if (AREA_STAFF.includes(window._currentStaff.name)) return;
+  const guest = isGuestMode();
+  const own = window._currentStaff.branch;
+  const branches = Object.keys(STAFF_DATA).filter(b => b !== 'Area');
+  const opts = guest ? branches.filter(b => b !== own) : [own];
+  const html = opts.map(b => `<option value="${b}">${b}</option>`).join('');
+  ['f-branch','session-branch-filter'].forEach(id => {
+    const el = document.getElementById(id);
+    el.innerHTML = html;
+    el.disabled = !guest;
+  });
+  loadRecentSessions();
+}
+
 function openTastingPage(session) {
   currentSession = session;
   resetTastingInputs();
   document.getElementById('tasting-session-label').textContent = `${session.coffee} · ${session.branch} · ${session.date}`;
+  const rt = recipeText(session.recipe);
+  document.getElementById('tasting-recipe').textContent = rt ? '🧪 ' + rt : '';
   document.getElementById('page-setup').style.display = 'none';
   document.getElementById('page-tasting').style.display = 'block';
 }
@@ -394,6 +464,7 @@ async function startTasting() {
   const sessionRecord = {
     id: 'tastesession:' + Date.now() + ':' + Math.random().toString(36).slice(2,7),
     sessionKey, date, branch, coffee,
+    recipe: readRecipe(),
     createdBy: window._currentStaff.name,
     created: Date.now()
   };
@@ -409,7 +480,7 @@ async function startTasting() {
     return;
   }
 
-  openTastingPage({ date, branch, coffee, sessionKey });
+  openTastingPage({ date, branch, coffee, sessionKey, recipe: sessionRecord.recipe });
 }
 
 // Join an existing session exactly as-is (from the recent-sessions list) —
@@ -417,7 +488,7 @@ async function startTasting() {
 function joinSession(i) {
   const s = window._recentSessionsCache?.[i];
   if (!s) { showToast('หา Session นี้ไม่เจอ ลองรีเฟรชหน้าใหม่'); return; }
-  openTastingPage({ date: s.date, branch: s.branch, coffee: s.coffee, sessionKey: s.sessionKey });
+  openTastingPage({ date: s.date, branch: s.branch, coffee: s.coffee, sessionKey: s.sessionKey, recipe: s.recipe || null });
 }
 
 function cancelTasting() {
@@ -518,6 +589,8 @@ async function submitTasting() {
     branch: currentSession.branch,
     coffee: currentSession.coffee,
     taster: window._currentStaff.name,
+    homeBranch: window._currentStaff.branch,
+    isGuest: currentSession.branch !== window._currentStaff.branch && !AREA_STAFF.includes(window._currentStaff.name),
     intensity: { ...currentIntensity },
     accept: { ...currentAccept },
     tasteBalance: tb === '' ? null : +tb,
@@ -537,6 +610,7 @@ async function submitTasting() {
 async function showResult(myEntry) {
   document.getElementById('page-tasting').style.display = 'none';
   document.getElementById('page-result').style.display = 'block';
+  { const rt = recipeText(currentSession && currentSession.recipe); document.getElementById('result-recipe').textContent = rt ? '🧪 ' + rt : ''; }
 
   try {
     const snap = await window._fsgetDocs(window._fscollection(window._db, 'shared'));
@@ -663,6 +737,7 @@ async function loadRecentSessions() {
       <div class="entry-card">
         <div class="entry-top"><span>${s.coffee}</span><span style="color:var(--text3)">${s.count} คนชิมแล้ว</span></div>
         <div class="entry-meta">${s.branch} · ${s.date} · เปิดโดย ${s.createdBy||'—'}</div>
+        ${s.recipe ? `<div class="entry-meta">🧪 ${recipeText(s.recipe)}</div>` : ''}
         <button class="btn btn-secondary" style="margin-top:8px;padding:8px" onclick="joinSession(${i})">👥 เข้าร่วมชิม Session นี้</button>
       </div>
     `).join('');
@@ -812,7 +887,7 @@ async function loadBranchOverview() {
       const refTasterName = ref.source === 'boss' ? 'Boss' : null;
       sessionEntries.forEach(e => {
         if (e.taster === refTasterName) return;
-        if (!isArea && e.branch !== myBranch) return; // non-Area only sees their own branch
+        if (!isArea && e.branch !== myBranch && e.homeBranch !== myBranch) return; // non-Area only sees their own branch
         const score = computeScore(e, sessionEntries);
         if (score && score.total !== null) {
           if (!branchScores[e.branch]) branchScores[e.branch] = [];
@@ -850,7 +925,7 @@ async function loadLeaderboard() {
       const refTasterName = ref.source === 'boss' ? 'Boss' : null;
       sessionEntries.forEach(e => {
         if (e.taster === refTasterName) return;
-        if (!isArea && e.branch !== myBranch) return; // non-Area only sees their own branch
+        if (!isArea && e.branch !== myBranch && e.homeBranch !== myBranch) return; // non-Area only sees their own branch
         const score = computeScore(e, sessionEntries);
         if (score && score.total !== null) {
           if (!personScores[e.taster]) personScores[e.taster] = [];
