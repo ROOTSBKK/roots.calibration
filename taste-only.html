@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th" data-app-version="2026-10-09b">
+<html lang="th" data-app-version="2026-10-09c">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
@@ -91,6 +91,7 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
     <button class="nav-tab" onclick="showTab('team')" data-tab="team">👥 ทีม</button>
     <button class="nav-tab" onclick="showTab('branch')" data-tab="branch">🏢 สาขา</button>
     <button class="nav-tab" onclick="showTab('leaderboard')" data-tab="leaderboard">🏆 Leaderboard</button>
+    <button class="nav-tab" onclick="showTab('export')" data-tab="export">📥 Export</button>
   </div>
 
   <div class="wrap" id="page-setup">
@@ -211,6 +212,22 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
       <div class="card-title">ภาพรวมคะแนนเฉลี่ยรายสาขา</div>
       <div style="font-size:11px;color:var(--text3);margin-bottom:8px">เฉลี่ยคะแนน Taste Only ทุกรายการที่มีคะแนนสมบูรณ์ (Ref+Team)</div>
       <div id="branch-overview-content"><div style="color:var(--text3);font-size:13px">กำลังโหลด...</div></div>
+    </div>
+  </div>
+
+  <div class="wrap" id="page-export" style="display:none">
+    <div class="card">
+      <div class="card-title">📥 Export ผลการชิม</div>
+      <div class="row">
+        <div class="col"><div class="lbl">ตั้งแต่วันที่</div><input type="date" id="x-from"></div>
+        <div class="col"><div class="lbl">ถึงวันที่</div><input type="date" id="x-to"></div>
+      </div>
+      <div class="lbl" id="x-scope" style="margin-bottom:10px"></div>
+      <button class="btn btn-secondary" style="margin-bottom:8px" onclick="exportCSV('entries')">📄 CSV รายคน (1 แถว = 1 คนชิม)</button>
+      <button class="btn btn-secondary" style="margin-bottom:8px" onclick="exportCSV('sessions')">📄 CSV รายรอบ (1 แถว = 1 Session)</button>
+      <button class="btn btn-primary" onclick="sendToSheet()">📤 ส่งเข้า Google Sheet</button>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.6" id="x-hint"></div>
+      <div id="x-status" style="font-size:12px;margin-top:8px"></div>
     </div>
   </div>
 
@@ -738,7 +755,7 @@ function groupBySession(entries) {
 }
 
 function showTab(tab) {
-  ['setup','team','branch','leaderboard'].forEach(t => {
+  ['setup','team','branch','leaderboard','export'].forEach(t => {
     document.getElementById('page-'+t).style.display = (t===tab) ? 'block' : 'none';
   });
   // tasting/result pages are sub-states of the "setup" tab — hide them when leaving it
@@ -750,6 +767,125 @@ function showTab(tab) {
   if (tab === 'team') loadTeamSessionPicker();
   if (tab === 'branch') loadBranchOverview();
   if (tab === 'leaderboard') loadLeaderboard();
+  if (tab === 'export') initExportTab();
+}
+
+// ═══ Export (CSV + Google Sheet) ═══
+// Paste the Apps Script Web App URL here (see apps-script-taste.gs), or leave
+// empty and the app will ask once and remember it on this device.
+const SHEET_WEBHOOK_URL = '';
+const SHEET_SECRET = 'roots-taste';
+
+function initExportTab() {
+  const isArea = AREA_STAFF.includes(window._currentStaff.name);
+  document.getElementById('x-scope').textContent = isArea ? 'ขอบเขต: ทุกสาขา' : 'ขอบเขต: สาขา ' + window._currentStaff.branch + ' (รวมคนสาขาคุณที่ไปชิมเป็น Guest)';
+  const url = SHEET_WEBHOOK_URL || (()=>{ try { return localStorage.getItem('taste_sheet_url')||''; } catch(e){ return ''; } })();
+  document.getElementById('x-hint').innerHTML = url ? '✅ ตั้งค่า Google Sheet แล้ว — กดส่งซ้ำได้ ระบบอัปเดตแถวเดิม ไม่ซ้ำ' : 'ยังไม่ได้ตั้งค่า Google Sheet — กดปุ่มส่งแล้ววาง URL ของ Apps Script (ทำครั้งเดียว)';
+}
+
+async function buildExportData() {
+  const isArea = AREA_STAFF.includes(window._currentStaff.name);
+  const myBranch = window._currentStaff.branch;
+  const from = document.getElementById('x-from').value;
+  const to = document.getElementById('x-to').value;
+  const snap = await window._fsgetDocs(window._fscollection(window._db, 'shared'));
+  let entries = [], sessRecs = {};
+  snap.forEach(d => {
+    const data = d.data();
+    try {
+      if (data.key && data.key.startsWith('taste:')) entries.push(JSON.parse(data.value));
+      else if (data.key && data.key.startsWith('tastesession:')) {
+        const r = JSON.parse(data.value);
+        if (!sessRecs[r.sessionKey] || r.created < sessRecs[r.sessionKey].created) sessRecs[r.sessionKey] = r;
+      }
+    } catch(err) {}
+  });
+  const inRange = e => (!from || e.date >= from) && (!to || e.date <= to);
+  const visible = e => isArea || e.branch === myBranch || e.homeBranch === myBranch;
+  // Score against the FULL session (before visibility filter) so numbers match the app.
+  const bySession = groupBySession(entries.filter(inRange));
+  const fmtTime = t => { const d = new Date(t); return isNaN(d) ? '' : d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
+  const entryRows = [], sessionRows = [];
+  Object.entries(bySession).forEach(([key, es]) => {
+    if (!es.some(visible)) return;
+    const rec = sessRecs[key] || {};
+    const rc = rec.recipe || {};
+    const ref = determineReference(es);
+    const scored = es.map(e => ({ e, sc: computeScore(e, es) }));
+    es.filter(visible).sort((a,b)=>a.created-b.created).forEach(e => {
+      const sc = scored.find(x => x.e.id === e.id).sc;
+      const total = sc && sc.total != null ? sc.total : '';
+      const rk = total === '' ? '' : getRank(total).rank;
+      entryRows.push({
+        id: e.id, date: e.date, branch: e.branch, coffee: e.coffee,
+        dose: rc.dose||'', yield: rc.yield||'', ratio: rc.ratio||'', time: rc.time||'', temp: rc.temp||'', grind: rc.grind||'',
+        taster: e.taster, home_branch: e.homeBranch || e.branch, guest: e.isGuest ? 'Y' : '',
+        acidity: e.intensity.acidity, sweetness: e.intensity.sweetness, bitterness: e.intensity.bitterness, mouthfeel: e.intensity.mouthfeel, aftertaste: e.intensity.aftertaste,
+        acidity_accept: e.accept?.acidity||'', bitterness_accept: e.accept?.bitterness||'',
+        taste_balance: e.tasteBalance ?? '', tactile: e.tactile ?? '',
+        ref_source: ref ? (ref.source === 'boss' ? 'Boss' : 'Majority') : '', score: total, rank: rk,
+        time_recorded: fmtTime(e.created)
+      });
+    });
+    const totals = scored.map(x => x.sc && x.sc.total != null ? x.sc.total : null).filter(v => v !== null);
+    const avg = a => es.length ? +(es.reduce((t,e)=>t+e.intensity[a],0)/es.length).toFixed(2) : '';
+    const ranks = totals.map(t => getRank(t).rank);
+    sessionRows.push({
+      id: key, date: es[0].date, branch: es[0].branch, coffee: es[0].coffee,
+      dose: rc.dose||'', yield: rc.yield||'', ratio: rc.ratio||'', time: rc.time||'', temp: rc.temp||'', grind: rc.grind||'',
+      opened_by: rec.createdBy || '', tasters: es.length, guests: es.filter(e=>e.isGuest).length,
+      ref_source: ref ? (ref.source === 'boss' ? 'Boss' : 'Majority') : '',
+      avg_score: totals.length ? Math.round(totals.reduce((a,b)=>a+b,0)/totals.length) : '',
+      rank1: ranks.filter(r=>r===1).length, rank2: ranks.filter(r=>r===2).length, rank3: ranks.filter(r=>r===3).length,
+      avg_acidity: avg('acidity'), avg_sweetness: avg('sweetness'), avg_bitterness: avg('bitterness'), avg_mouthfeel: avg('mouthfeel'), avg_aftertaste: avg('aftertaste'),
+      accept_acidity_pct: Math.round(es.filter(e=>e.accept?.acidity==='accept').length/es.length*100),
+      accept_bitterness_pct: Math.round(es.filter(e=>e.accept?.bitterness==='accept').length/es.length*100)
+    });
+  });
+  return { entries: entryRows, sessions: sessionRows };
+}
+
+function toCSV(rows) {
+  if (!rows.length) return '';
+  const cols = Object.keys(rows[0]);
+  const esc = v => { v = String(v ?? ''); return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v; };
+  return [cols.join(','), ...rows.map(r => cols.map(c => esc(r[c])).join(','))].join('\n');
+}
+
+async function exportCSV(kind) {
+  const st = document.getElementById('x-status');
+  st.textContent = 'กำลังเตรียมข้อมูล...';
+  try {
+    const data = await buildExportData();
+    const rows = data[kind];
+    if (!rows.length) { st.textContent = 'ไม่มีข้อมูลในช่วงที่เลือก'; return; }
+    const blob = new Blob(['﻿' + toCSV(rows)], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'taste-only-' + (kind === 'entries' ? 'per-person' : 'per-session') + '-' + new Date().toISOString().slice(0,10) + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    st.textContent = '✅ ดาวน์โหลดแล้ว ' + rows.length + ' แถว';
+  } catch(e) { st.textContent = 'ไม่สำเร็จ: ' + e.message; }
+}
+
+async function sendToSheet() {
+  const st = document.getElementById('x-status');
+  let url = SHEET_WEBHOOK_URL;
+  try { if (!url) url = localStorage.getItem('taste_sheet_url') || ''; } catch(e) {}
+  if (!url) {
+    url = (prompt('วาง URL ของ Apps Script Web App (ลงท้าย /exec)') || '').trim();
+    if (!url) return;
+    try { localStorage.setItem('taste_sheet_url', url); } catch(e) {}
+  }
+  st.textContent = 'กำลังส่ง...';
+  try {
+    const data = await buildExportData();
+    if (!data.entries.length) { st.textContent = 'ไม่มีข้อมูลในช่วงที่เลือก'; return; }
+    // text/plain avoids a CORS preflight; Apps Script can't answer one.
+    await fetch(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: SHEET_SECRET, entries: data.entries, sessions: data.sessions }) });
+    st.textContent = '✅ ส่งแล้ว ' + data.entries.length + ' คนชิม / ' + data.sessions.length + ' รอบ — เปิด Sheet ตรวจดู (แถวเดิมจะถูกอัปเดต ไม่ซ้ำ)';
+    document.getElementById('x-hint').textContent = '✅ ตั้งค่า Google Sheet แล้ว';
+  } catch(e) { st.textContent = 'ส่งไม่สำเร็จ: ' + e.message; }
 }
 
 // ═══ Team Compare ═══
