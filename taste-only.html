@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th" data-app-version="2026-10-09a">
+<html lang="th" data-app-version="2026-10-09b">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
@@ -94,13 +94,6 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
   </div>
 
   <div class="wrap" id="page-setup">
-    <div class="card" id="guest-card" style="margin-bottom:12px">
-      <div class="lbl">ฉันชิมในฐานะ</div>
-      <select id="f-guest" onchange="onGuestChange()">
-        <option value="home">สาขาตัวเอง</option>
-        <option value="guest">Guest — ไปชิมที่สาขาอื่น</option>
-      </select>
-    </div>
     <div class="card">
       <div class="card-title">➕ สร้าง Session ใหม่ (คนแรกเท่านั้น)</div>
       <div class="row">
@@ -350,13 +343,8 @@ function setupForm() {
   // Session list filter — Area can browse any branch, everyone else is
   // locked to their own so they always find their session quickly.
   const sessionFilterSel = document.getElementById('session-branch-filter');
-  if (isArea) {
-    sessionFilterSel.innerHTML = branches.map(b => `<option value="${b}" ${b===window._currentStaff.branch?'selected':''}>${b}</option>`).join('');
-    sessionFilterSel.disabled = false;
-  } else {
-    sessionFilterSel.innerHTML = `<option value="${window._currentStaff.branch}">${window._currentStaff.branch}</option>`;
-    sessionFilterSel.disabled = true;
-  }
+  sessionFilterSel.innerHTML = branches.map(b => `<option value="${b}" ${b===window._currentStaff.branch?'selected':''}>${b}${b!==window._currentStaff.branch&&!isArea?' (ไปชิมเป็น Guest)':''}</option>`).join('');
+  sessionFilterSel.disabled = false;
 
   // Build the intensity scale buttons (1-5) for each attribute
   document.querySelectorAll('.intensity-scale').forEach(el => {
@@ -422,34 +410,14 @@ function recipeText(r) {
   return parts.join(' · ');
 }
 
-function isGuestMode() {
-  const el = document.getElementById('f-guest');
-  return !!el && el.value === 'guest' && !AREA_STAFF.includes(window._currentStaff.name);
-}
-
-// Guest = staff from another branch tasting at a different branch's session.
-// Branch pickers unlock (excluding own branch) so they can find that session.
-function onGuestChange() {
-  if (AREA_STAFF.includes(window._currentStaff.name)) return;
-  const guest = isGuestMode();
-  const own = window._currentStaff.branch;
-  const branches = Object.keys(STAFF_DATA).filter(b => b !== 'Area');
-  const opts = guest ? branches.filter(b => b !== own) : [own];
-  const html = opts.map(b => `<option value="${b}">${b}</option>`).join('');
-  ['f-branch','session-branch-filter'].forEach(id => {
-    const el = document.getElementById(id);
-    el.innerHTML = html;
-    el.disabled = !guest;
-  });
-  loadRecentSessions();
-}
-
 function openTastingPage(session) {
   currentSession = session;
   resetTastingInputs();
   document.getElementById('tasting-session-label').textContent = `${session.coffee} · ${session.branch} · ${session.date}`;
   const rt = recipeText(session.recipe);
   document.getElementById('tasting-recipe').textContent = rt ? '🧪 ' + rt : '';
+  const visiting = session.branch !== window._currentStaff.branch && !AREA_STAFF.includes(window._currentStaff.name);
+  document.getElementById('tasting-session-label').textContent += visiting ? ` · 👤 Guest จาก ${window._currentStaff.branch}` : '';
   document.getElementById('page-setup').style.display = 'none';
   document.getElementById('page-tasting').style.display = 'block';
 }
