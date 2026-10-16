@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th" data-app-version="2026-10-09g">
+<html lang="th" data-app-version="2026-10-16a">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
@@ -19,7 +19,7 @@ body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;backgrou
 .hdr-title{font-size:14px;font-weight:700}
 .hdr-sub{font-size:12px;color:#D9D6CE;margin-top:2px}
 .wrap{max-width:520px;margin:0 auto;padding:10px}
-.nav-tab{flex:1;padding:9px 4px;border:none;background:none;color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent}
+.nav-tab{flex:1 0 auto;white-space:nowrap;padding:9px 10px;border:none;background:none;color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent}
 .nav-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
 .compare-table{width:100%;border-collapse:collapse;font-size:11px}
 .compare-table th,.compare-table td{border:1px solid var(--bg3);padding:6px 5px;text-align:center;white-space:nowrap}
@@ -86,9 +86,10 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
     <div style="margin-top:4px"><a href="param-summary.html" style="color:#D9D6CE;font-size:11px;text-decoration:underline">← กลับไปเลือกเครื่องมืออื่น</a></div>
   </div>
 
-  <div id="nav-tabs" style="display:flex;background:#fff;border-bottom:1px solid var(--bg3);position:sticky;top:0;z-index:9">
+  <div id="nav-tabs" style="display:flex;overflow-x:auto;background:#fff;border-bottom:1px solid var(--bg3);position:sticky;top:0;z-index:9">
     <button class="nav-tab active" onclick="showTab('setup')" data-tab="setup">👅 ชิม</button>
     <button class="nav-tab" onclick="showTab('team')" data-tab="team">👥 ทีม</button>
+    <button class="nav-tab" onclick="showTab('history')" data-tab="history">📋 ประวัติ</button>
     <button class="nav-tab" onclick="showTab('branch')" data-tab="branch">🏢 สาขา</button>
     <button class="nav-tab" onclick="showTab('leaderboard')" data-tab="leaderboard">🏆 Leaderboard</button>
     <button class="nav-tab" onclick="showTab('export')" data-tab="export">📥 Export</button>
@@ -207,6 +208,18 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
     <div id="team-compare-content"><div style="color:var(--text3);font-size:13px">เลือก Session ด้านบนก่อน</div></div>
   </div>
 
+  <div class="wrap" id="page-history" style="display:none">
+    <div class="card">
+      <div class="card-title">📋 ประวัติ Session รายสาขา</div>
+      <div style="display:flex;gap:8px;align-items:flex-end">
+        <div style="flex:1"><div class="lbl">สาขา</div><select id="h-branch" onchange="loadHistory()"></select></div>
+        <button class="btn btn-secondary" style="width:auto;padding:9px 14px;flex-shrink:0" onclick="loadHistory()">🔄 รีเฟรช</button>
+      </div>
+      <div id="h-summary" style="font-size:11.5px;color:var(--text3);margin-top:8px"></div>
+    </div>
+    <div id="h-list"><div style="color:var(--text3);font-size:13px">กำลังโหลด...</div></div>
+  </div>
+
   <div class="wrap" id="page-branch" style="display:none">
     <div class="card">
       <div class="card-title">ภาพรวมคะแนนเฉลี่ยรายสาขา</div>
@@ -236,7 +249,8 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
       <input type="text" id="x-url" placeholder="https://script.google.com/macros/s/.../exec" style="margin-bottom:8px">
       <div class="lbl">ลิงก์ Google Sheet (ไม่บังคับ — ไว้ทำปุ่มเปิด)</div>
       <input type="text" id="x-link" placeholder="https://docs.google.com/spreadsheets/d/..." style="margin-bottom:8px">
-      <button class="btn btn-secondary" onclick="saveSheetCfg()">💾 บันทึกการเชื่อมต่อ</button>
+      <button class="btn btn-secondary" style="margin-bottom:8px" onclick="saveSheetCfg()">💾 บันทึกการเชื่อมต่อ</button>
+      <button class="btn btn-secondary" onclick="testSheetConnection()">🔍 ทดสอบการเชื่อมต่อ</button>
     </div>
     <div class="card" id="x-danger" style="display:none;border-color:var(--red)">
       <div class="card-title" style="color:var(--red)">🗑️ ล้างข้อมูลทดสอบ (Area เท่านั้น)</div>
@@ -771,7 +785,7 @@ function groupBySession(entries) {
 }
 
 function showTab(tab) {
-  ['setup','team','branch','leaderboard','export'].forEach(t => {
+  ['setup','team','history','branch','leaderboard','export'].forEach(t => {
     document.getElementById('page-'+t).style.display = (t===tab) ? 'block' : 'none';
   });
   // tasting/result pages are sub-states of the "setup" tab — hide them when leaving it
@@ -781,6 +795,7 @@ function showTab(tab) {
   }
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   if (tab === 'team') loadTeamSessionPicker();
+  if (tab === 'history') loadHistory();
   if (tab === 'branch') loadBranchOverview();
   if (tab === 'leaderboard') loadLeaderboard();
   if (tab === 'export') initExportTab();
@@ -854,8 +869,8 @@ async function clearTestData() {
     const cfg = await getSheetCfg(true);
     if (cfg.url) {
       try {
-        await fetch(cfg.url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: SHEET_SECRET, action: 'clear' }) });
-        sheetMsg = ' · ส่งคำสั่งล้าง Google Sheet แล้ว';
+        const r = await pushToSheet(cfg.url, null, 'clear');
+        sheetMsg = r.ok === false ? ' · ล้าง Google Sheet ไม่สำเร็จ: ' + r.msg : ' · ล้าง Google Sheet แล้ว';
       } catch(e) { sheetMsg = ' · ล้าง Google Sheet ไม่สำเร็จ'; }
     }
     st.textContent = failed
@@ -864,16 +879,46 @@ async function clearTestData() {
   } catch(e) { st.textContent = 'ไม่สำเร็จ: ' + e.message; }
 }
 
-async function pushToSheet(url, data) {
-  // text/plain avoids a CORS preflight; Apps Script can't answer one.
-  await fetch(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: SHEET_SECRET, entries: data.entries, sessions: data.sessions }) });
+// Returns {ok:true} when the script answered "ok"; {ok:false,msg} when it answered
+// something else (login page, wrong secret, script error); {ok:null} when the
+// browser could not read the reply (sent blind).
+async function pushToSheet(url, data, action) {
+  const body = JSON.stringify(action ? { secret: SHEET_SECRET, action } : { secret: SHEET_SECRET, entries: data.entries, sessions: data.sessions });
+  const headers = { 'Content-Type': 'text/plain;charset=utf-8' };
+  try {
+    const res = await fetch(url, { method: 'POST', headers, body });
+    const txt = (await res.text()).trim();
+    if (txt === 'ok' || txt === 'cleared') return { ok: true };
+    if (/<html|<!doctype/i.test(txt)) return { ok: false, msg: 'Apps Script ตอบเป็นหน้าเว็บ (มักเพราะสิทธิ์ไม่ใช่ "ทุกคน" หรือ URL ไม่ใช่ /exec ของการ Deploy ล่าสุด)' };
+    if (txt === 'forbidden') return { ok: false, msg: 'รหัสไม่ตรง (SECRET ใน Apps Script ต้องเป็น roots-taste)' };
+    return { ok: false, msg: txt.slice(0, 160) || 'ไม่มีคำตอบจาก Apps Script' };
+  } catch(e) {
+    try { await fetch(url, { method: 'POST', mode: 'no-cors', headers, body }); return { ok: null }; }
+    catch(e2) { return { ok: false, msg: 'เชื่อมต่อ URL ไม่ได้: ' + e2.message }; }
+  }
+}
+
+async function testSheetConnection() {
+  const st = document.getElementById('x-status');
+  const url = (document.getElementById('x-url').value || '').trim() || (await getSheetCfg(true)).url;
+  if (!url) { st.textContent = '⚠️ ยังไม่มี URL — วางในช่อง Apps Script URL ก่อน'; return; }
+  st.textContent = 'กำลังทดสอบ...';
+  try {
+    const res = await fetch(url);
+    const txt = (await res.text()).trim();
+    if (txt.includes('Taste Only webhook is running')) st.textContent = '✅ Apps Script ตอบแล้ว — เชื่อมต่อได้ (ถ้าส่งข้อมูลแล้วยังไม่เข้า ให้เช็กว่า Deploy เวอร์ชันล่าสุด)';
+    else if (/<html|<!doctype/i.test(txt)) st.textContent = '❌ ได้หน้าเว็บกลับมา: ไปที่ Deploy → จัดการการทำให้ใช้งานได้ → แก้ไข ตั้ง "ผู้ที่มีสิทธิ์เข้าถึง = ทุกคน" แล้ว Deploy เวอร์ชันใหม่';
+    else st.textContent = '⚠️ ตอบกลับ: ' + txt.slice(0, 120);
+  } catch(e) {
+    st.textContent = '❌ เรียก URL ไม่ได้ (' + e.message + ') — ตรวจว่าคัดลอก URL ครบและลงท้าย /exec';
+  }
 }
 
 // Fire-and-forget: after someone submits, refresh that session's rows in the Sheet.
 function autoSyncSession(sessionKey) {
   getSheetCfg().then(cfg => {
     if (!cfg.url) return;
-    return buildExportData({ sessionKey, all: true }).then(d => d.entries.length ? pushToSheet(cfg.url, d).then(() => showToast('📤 ซิงค์เข้า Sheet แล้ว')) : null);
+    return buildExportData({ sessionKey, all: true }).then(d => d.entries.length ? pushToSheet(cfg.url, d).then(r => showToast(r.ok === false ? '⚠️ ซิงค์เข้า Sheet ไม่สำเร็จ: ' + r.msg : '📤 ซิงค์เข้า Sheet แล้ว')) : null);
   }).catch(() => {});
 }
 
@@ -989,9 +1034,74 @@ async function sendToSheet() {
   try {
     const data = await buildExportData();
     if (!data.entries.length) { st.textContent = 'ไม่มีข้อมูลในช่วงที่เลือก'; return; }
-    await pushToSheet(cfg.url, data);
-    st.textContent = '✅ ส่งแล้ว ' + data.entries.length + ' คนชิม / ' + data.sessions.length + ' รอบ — เปิด Sheet ตรวจดู (แถวเดิมถูกอัปเดต ไม่ซ้ำ)';
+    const r = await pushToSheet(cfg.url, data);
+    if (r.ok === false) st.textContent = '❌ ส่งไม่สำเร็จ: ' + r.msg;
+    else st.textContent = (r.ok ? '✅ Apps Script ยืนยันแล้ว: ' : '📨 ส่งแล้ว (ยืนยันคำตอบไม่ได้) ') + data.entries.length + ' คนชิม / ' + data.sessions.length + ' รอบ — เปิด Sheet ตรวจดู';
   } catch(e) { st.textContent = 'ส่งไม่สำเร็จ: ' + e.message; }
+}
+
+// ═══ History: every session a branch has opened/tasted ═══
+function escHtml(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function loadHistory() {
+  const listEl = document.getElementById('h-list');
+  const sumEl = document.getElementById('h-summary');
+  const sel = document.getElementById('h-branch');
+  const isArea = AREA_STAFF.includes(window._currentStaff.name);
+  const branches = Object.keys(STAFF_DATA).filter(b => b !== 'Area');
+  if (!sel.options.length) {
+    const own = window._currentStaff.branch;
+    const opts = isArea ? branches : [own];
+    sel.innerHTML = opts.map(b => `<option value="${b}" ${b===own?'selected':''}>${b}</option>`).join('');
+    sel.disabled = !isArea;
+  }
+  listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">กำลังโหลด...</div>';
+  try {
+    const branch = sel.value;
+    const snap = await window._fsgetDocs(window._fscollection(window._db, 'shared'));
+    const recs = {}, entries = [];
+    snap.forEach(d => {
+      const data = d.data();
+      try {
+        if (data.key && data.key.startsWith('tastesession:')) {
+          const r = JSON.parse(data.value);
+          if (!recs[r.sessionKey] || r.created < recs[r.sessionKey].created) recs[r.sessionKey] = r;
+        } else if (data.key && data.key.startsWith('taste:')) entries.push(JSON.parse(data.value));
+      } catch(err) {}
+    });
+    const bySession = groupBySession(entries);
+    const keys = new Set([...Object.keys(recs), ...Object.keys(bySession)]);
+    let sessions = [];
+    keys.forEach(k => {
+      const rec = recs[k], es = bySession[k] || [];
+      const info = rec || es[0];
+      if (!info || info.branch !== branch) return;
+      sessions.push({ key: k, date: info.date, coffee: info.coffee, recipe: rec && rec.recipe, openedBy: rec && rec.createdBy, created: rec ? rec.created : Math.min(...es.map(e => e.created)), es });
+    });
+    sessions.sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.created - a.created);
+    const total = sessions.length, tasted = sessions.filter(s => s.es.length).length;
+    sumEl.textContent = `${branch}: ${total} Session · มีคนชิมแล้ว ${tasted} · ยังไม่มีคนชิม ${total - tasted}`;
+    if (!total) { listEl.innerHTML = `<div style="color:var(--text3);font-size:13px;text-align:center;padding:10px 0">สาขา ${escHtml(branch)} ยังไม่มี Session</div>`; return; }
+    listEl.innerHTML = sessions.slice(0, 60).map(s => {
+      const ref = determineReference(s.es);
+      const rows = s.es.slice().sort((a, b) => a.created - b.created).map(e => {
+        const sc = computeScore(e, s.es);
+        let tag = '<span style="color:var(--text3)">รอตัวเทียบ</span>';
+        if (sc && sc.isRefPerson) tag = '<span style="color:var(--blue,#1A5FA8);font-weight:700">ตัวเทียบ</span>';
+        else if (sc && sc.total != null) { const rk = getRank(sc.total); tag = `<span style="color:${rk.color};font-weight:700">${sc.total} · ${rk.label}</span>`; }
+        const guest = e.isGuest ? ` <span style="font-size:10px;background:var(--bg2);border-radius:8px;padding:1px 6px">Guest ${escHtml(e.homeBranch||'')}</span>` : '';
+        return `<div style="display:flex;justify-content:space-between;padding:3px 0;border-top:1px solid var(--bg3)"><span>${escHtml(e.taster)}${guest}</span>${tag}</div>`;
+      }).join('');
+      return `<div class="entry-card">
+        <div class="entry-top"><span>${escHtml(s.coffee)}</span><span style="color:var(--text3)">${escHtml(s.date)}</span></div>
+        <div class="entry-meta">เปิดโดย ${escHtml(s.openedBy || '—')} · ${s.es.length} คนชิม${ref ? ' · ตัวเทียบ: ' + (ref.source === 'boss' ? 'Boss' : 'เสียงส่วนมาก') : ''}</div>
+        ${s.recipe ? `<div class="entry-meta">🧪 ${escHtml(recipeText(s.recipe))}</div>` : ''}
+        <div style="margin-top:6px">${rows || '<div style="color:var(--text3)">ยังไม่มีคนชิม</div>'}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">โหลดไม่สำเร็จ: ' + escHtml(e.message) + '</div>';
+  }
 }
 
 // ═══ Team Compare ═══
