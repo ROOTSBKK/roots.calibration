@@ -103,7 +103,7 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
         <div class="col"><div class="lbl">สาขา</div><select id="f-branch"></select></div>
       </div>
       <div class="lbl">ชื่อกาแฟ</div>
-      <input type="text" id="f-coffee" placeholder="เช่น House Blend" style="margin-bottom:12px">
+      <select id="f-coffee" style="margin-bottom:12px"><option value="">— เลือกกาแฟ —</option><option value="House Blend">House Blend</option><option value="Merlaku">Merlaku</option><option value="Manop">Manop</option><option value="Aten">Aten</option><option value="Ake">Ake</option><option value="Jaroon">Jaroon</option><option value="Sri">Sri</option><option value="Kaleb">Kaleb</option><option value="Nawin">Nawin</option><option value="Nawin&amp;Tina">Nawin&amp;Tina</option><option value="Nui&amp;Aoy">Nui&amp;Aoy</option><option value="Sopa">Sopa</option></select>
       <div class="lbl">🧪 Recipe</div>
       <div class="row">
         <div class="col"><div class="lbl">Dose (g)</div><input type="number" inputmode="decimal" step="0.1" id="r-dose" oninput="calcRatio()"></div>
@@ -475,7 +475,7 @@ async function startTasting() {
   const date = document.getElementById('f-date').value;
   const branch = document.getElementById('f-branch').value;
   const coffee = document.getElementById('f-coffee').value.trim();
-  if (!coffee) { showToast('กรุณากรอกชื่อกาแฟ'); return; }
+  if (!coffee) { showToast('กรุณาเลือกกาแฟ'); return; }
 
   const sessionKey = sessionKeyOf(date, branch, coffee);
   const sessionRecord = {
