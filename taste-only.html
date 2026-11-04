@@ -203,6 +203,9 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
   <div class="wrap" id="page-team" style="display:none">
     <div class="card">
       <div class="card-title">เลือก Session</div>
+      <div class="lbl">สาขา</div>
+      <select id="team-branch" onchange="loadTeamSessionPicker()" style="margin-bottom:10px"></select>
+      <div class="lbl">Session</div>
       <select id="team-session-picker" onchange="loadTeamCompare()"></select>
     </div>
     <div id="team-compare-content"><div style="color:var(--text3);font-size:13px">เลือก Session ด้านบนก่อน</div></div>
@@ -1141,7 +1144,7 @@ async function loadHistory() {
       const ref = determineReference(s.es);
       const rows = s.es.slice().sort((a, b) => a.created - b.created).map(e => {
         const sc = computeScore(e, s.es);
-        let tag = '<span style="color:var(--text3)">รอตัวเทียบ</span>';
+        let tag = '<span style="color:var(--text3)">' + (s.es.length < 2 ? 'รอคนชิมเพิ่ม (ต้อง 2 คนขึ้นไป หรือมี Boss)' : 'รอตัวเทียบ') + '</span>';
         if (sc && sc.isRefPerson) tag = '<span style="color:var(--blue,#1A5FA8);font-weight:700">ตัวเทียบ</span>';
         else if (sc && sc.total != null) { const rk = getRank(sc.total); tag = `<span style="color:${rk.color};font-weight:700">${sc.total} · ${rk.label}</span>`; }
         const guest = e.isGuest ? ` <span style="font-size:10px;background:var(--bg2);border-radius:8px;padding:1px 6px">Guest ${escHtml(e.homeBranch||'')}</span>` : '';
@@ -1164,8 +1167,17 @@ async function loadTeamSessionPicker() {
   const picker = document.getElementById('team-session-picker');
   picker.innerHTML = '<option>กำลังโหลด...</option>';
   try {
-    const filterBranch = document.getElementById('session-branch-filter').value;
-    const entries = (await fetchAllTasteEntries()).filter(e => e.branch === filterBranch);
+    const tsel = document.getElementById('team-branch');
+    if (!tsel.options.length) {
+      const isArea = AREA_STAFF.includes(window._currentStaff.name);
+      const own = window._currentStaff.branch;
+      const all = Object.keys(STAFF_DATA).filter(b => b !== 'Area');
+      const opts = isArea ? [['ALL','ทุกสาขา'], ...all.map(b => [b, b])] : [[own, own]];
+      tsel.innerHTML = opts.map(([v, l]) => `<option value="${v}" ${v === (isArea ? 'ALL' : own) ? 'selected' : ''}>${l}</option>`).join('');
+      tsel.disabled = !isArea;
+    }
+    const filterBranch = tsel.value;
+    const entries = (await fetchAllTasteEntries()).filter(e => filterBranch === 'ALL' || e.branch === filterBranch);
     const bySession = groupBySession(entries);
     const sessions = Object.entries(bySession).map(([key, es]) => ({
       key, coffee: es[0].coffee, branch: es[0].branch, date: es[0].date,
