@@ -511,6 +511,22 @@ function cancelTasting() {
   document.getElementById('page-setup').style.display = 'block';
 }
 
+// One person = one entry per session. If the same taster submitted twice to
+// the same session (e.g. re-joined it a day later), keep only the latest.
+function dedupeLatest(entries) {
+  const best = {};
+  entries.forEach(e => {
+    const k = e.sessionKey + '||' + String(e.taster || '').trim().toLowerCase();
+    if (!best[k] || (e.created || 0) > (best[k].created || 0)) best[k] = e;
+  });
+  const keep = new Set(Object.values(best));
+  return entries.filter(e => keep.has(e));
+}
+function todayStr() {
+  const t = new Date();
+  return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+}
+
 function scoreIntensityDiff(myVal, refVal) {
   const diff = Math.abs(myVal - refVal);
   if (diff === 0) return 1;
@@ -579,7 +595,7 @@ function determineReference(sessionEntries) {
   if (bossEntry) {
     return { source: 'boss', bossName: 'Boss', intensity: bossEntry.intensity, accept: bossEntry.accept };
   }
-  if (sessionEntries.length < 3) return null; // need at least 3 people for a meaningful majority
+  if (sessionEntries.length < 2) return null; // 2 people = pairwise comparison, 3+ = majority
   const intensity = {};
   ATTRS.forEach(a => { intensity[a] = calcMode(sessionEntries.map(e => e.intensity[a])); });
   const accept = {};
@@ -588,15 +604,23 @@ function determineReference(sessionEntries) {
   ATTRS.forEach(a => { intensityTies[a] = calcModes(sessionEntries.map(e => e.intensity[a])); });
   const acceptTiesMap = {};
   ACCEPT_ATTRS.forEach(a => { acceptTiesMap[a] = acceptTies(sessionEntries, a); });
-  return { source: 'majority', intensity, accept, intensityTies, acceptTies: acceptTiesMap };
+  return { source: sessionEntries.length === 2 ? 'pair' : 'majority', intensity, accept, intensityTies, acceptTies: acceptTiesMap };
 }
 
 // Computes the full Taste Only score (0-100) for one entry against the
 // session's single reference standard (Boss, or group majority) — reused
 // by the result page, team compare, branch overview, and leaderboard.
+// With exactly 2 tasters (no Boss) each person is scored against the OTHER
+// person, so both get the same similarity score and order doesn't matter.
+function personalRef(ref, myEntry, sessionEntries) {
+  if (!ref || ref.source !== 'pair') return ref;
+  const other = sessionEntries.find(e => e.id !== myEntry.id) || sessionEntries.find(e => e !== myEntry);
+  return other ? { source: 'pair', intensity: other.intensity, accept: other.accept || {} } : ref;
+}
 function computeScore(myEntry, sessionEntries) {
-  const ref = determineReference(sessionEntries);
-  if (!ref) return null;
+  const ref0 = determineReference(sessionEntries);
+  if (!ref0) return null;
+  const ref = personalRef(ref0, myEntry, sessionEntries);
   // Boss doesn't get scored against himself when he IS the reference.
   if (ref.source === 'boss' && myEntry.taster === 'Boss') return { total: null, isRefPerson: true, refSource: 'boss' };
 
@@ -668,17 +692,18 @@ async function showResult(myEntry) {
         } catch(err) {}
       }
     });
+    sessionEntries = dedupeLatest(sessionEntries);
 
-    const ref = determineReference(sessionEntries);
+    const ref = personalRef(determineReference(sessionEntries), myEntry, sessionEntries);
     if (!ref) {
       document.getElementById('result-score').textContent = '—';
       document.getElementById('result-rank').innerHTML = '';
-      document.getElementById('result-detail-list').innerHTML = `<div class="card" style="text-align:center;color:var(--text3);font-size:13px">ต้องมีอย่างน้อย 3 คนชิม (หรือมี Boss ร่วมชิม) ก่อนถึงจะคำนวณคะแนนได้</div>`;
+      document.getElementById('result-detail-list').innerHTML = `<div class="card" style="text-align:center;color:var(--text3);font-size:13px">ต้องมีอย่างน้อย 2 คนชิม (หรือมี Boss ร่วมชิม) ก่อนถึงจะคำนวณคะแนนได้</div>`;
       return;
     }
 
     const result = computeScore(myEntry, sessionEntries);
-    const refLabel = ref.source === 'boss' ? 'Boss' : 'เสียงส่วนมากของทีม (Mode)';
+    const refLabel = ref.source === 'boss' ? 'Boss' : ref.source === 'pair' ? 'อีก 1 คนที่ชิมด้วยกัน' : 'เสียงส่วนมากของทีม (Mode)';
 
     if (result && result.isRefPerson) {
       document.getElementById('result-score').textContent = '—';
@@ -752,7 +777,7 @@ async function loadRecentSessions() {
       if (data.key && data.key.startsWith('tastesession:')) {
         try {
           const s = JSON.parse(data.value);
-          if (s.branch === filterBranch) sessionRecords.push(s);
+          if (s.branch === filterBranch && s.date === todayStr()) sessionRecords.push(s);
         } catch(err) {}
       } else if (data.key && data.key.startsWith('taste:')) {
         try { scoreEntries.push(JSON.parse(data.value)); } catch(err) {}
@@ -768,12 +793,12 @@ async function loadRecentSessions() {
 
     let sessions = Object.values(bySessionKey).map(s => ({
       ...s,
-      count: scoreEntries.filter(e => e.sessionKey === s.sessionKey).length
+      count: dedupeLatest(scoreEntries.filter(e => e.sessionKey === s.sessionKey)).length
     })).sort((a,b) => b.created - a.created).slice(0, 10);
 
     window._recentSessionsCache = sessions;
     if (!sessions.length) {
-      listEl.innerHTML = `<div style="color:var(--text3);font-size:13px;text-align:center;padding:10px 0">ยังไม่มี Session ในสาขา ${filterBranch} เลย<br>ถ้าเป็นคนแรก กด "สร้าง Session + เริ่มชิม" ด้านบนได้เลย</div>`;
+      listEl.innerHTML = `<div style="color:var(--text3);font-size:13px;text-align:center;padding:10px 0">ยังไม่มี Session ของวันนี้ในสาขา ${filterBranch}<br>ถ้าเป็นคนแรก กด "สร้าง Session + เริ่มชิม" ด้านบนได้เลย</div>`;
       showToast('รีเฟรชแล้ว — ยังไม่มี Session');
       return;
     }
@@ -801,7 +826,7 @@ async function fetchAllTasteEntries() {
       try { entries.push(JSON.parse(data.value)); } catch(err) {}
     }
   });
-  return entries;
+  return dedupeLatest(entries);
 }
 
 function groupBySession(entries) {
@@ -810,6 +835,7 @@ function groupBySession(entries) {
     if (!bySession[e.sessionKey]) bySession[e.sessionKey] = [];
     bySession[e.sessionKey].push(e);
   });
+  Object.keys(bySession).forEach(k => { bySession[k] = dedupeLatest(bySession[k]); });
   return bySession;
 }
 
@@ -992,7 +1018,7 @@ async function buildExportData(opts) {
         acidity: e.intensity.acidity, sweetness: e.intensity.sweetness, bitterness: e.intensity.bitterness, mouthfeel: e.intensity.mouthfeel, aftertaste: e.intensity.aftertaste,
         acidity_accept: e.accept?.acidity||'', bitterness_accept: e.accept?.bitterness||'',
         taste_balance: e.tasteBalance ?? '', tactile: e.tactile ?? '',
-        ref_source: ref ? (ref.source === 'boss' ? 'Boss' : 'Majority') : '', score: total, rank: rk,
+        ref_source: ref ? (ref.source === 'boss' ? 'Boss' : ref.source === 'pair' ? 'Pair' : 'Majority') : '', score: total, rank: rk,
         time_recorded: fmtTime(e.created),
         ...Object.fromEntries(DIR_ATTRS.map(a => [a + '_vs', (ref && !(ref.source === 'boss' && e.taster === 'Boss')) ? dirLabel(e.intensity[a], ref.intensity[a]) : '']))
       });
@@ -1011,7 +1037,7 @@ async function buildExportData(opts) {
       id: key, date: es[0].date, branch: es[0].branch, coffee: es[0].coffee,
       dose: rc.dose||'', yield: rc.yield||'', ratio: rc.ratio||'', time: rc.time||'', temp: rc.temp||'', grind: rc.grind||'',
       opened_by: rec.createdBy || '', tasters: es.length, guests: es.filter(e=>e.isGuest).length,
-      ref_source: ref ? (ref.source === 'boss' ? 'Boss' : 'Majority') : '',
+      ref_source: ref ? (ref.source === 'boss' ? 'Boss' : ref.source === 'pair' ? 'Pair' : 'Majority') : '',
       avg_score: totals.length ? Math.round(totals.reduce((a,b)=>a+b,0)/totals.length) : '',
       rank1: ranks.filter(r=>r===1).length, rank2: ranks.filter(r=>r===2).length, rank3: ranks.filter(r=>r===3).length,
       avg_acidity: avg('acidity'), avg_sweetness: avg('sweetness'), avg_bitterness: avg('bitterness'), avg_mouthfeel: avg('mouthfeel'), avg_aftertaste: avg('aftertaste'),
@@ -1123,7 +1149,7 @@ async function loadHistory() {
       }).join('');
       return `<div class="entry-card">
         <div class="entry-top"><span>${escHtml(s.coffee)}</span><span style="color:var(--text3)">${escHtml(s.date)}</span></div>
-        <div class="entry-meta">เปิดโดย ${escHtml(s.openedBy || '—')} · ${s.es.length} คนชิม${ref ? ' · ตัวเทียบ: ' + (ref.source === 'boss' ? 'Boss' : 'เสียงส่วนมาก') : ''}</div>
+        <div class="entry-meta">เปิดโดย ${escHtml(s.openedBy || '—')} · ${s.es.length} คนชิม${ref ? ' · ตัวเทียบ: ' + (ref.source === 'boss' ? 'Boss' : ref.source === 'pair' ? 'เทียบกันเอง 2 คน' : 'เสียงส่วนมาก') : ''}</div>
         ${s.recipe ? `<div class="entry-meta">🧪 ${escHtml(recipeText(s.recipe))}</div>` : ''}
         <div style="margin-top:6px">${rows || '<div style="color:var(--text3)">ยังไม่มีคนชิม</div>'}</div>
       </div>`;
@@ -1185,7 +1211,8 @@ async function loadTeamCompare() {
       html += `<tr><td class="attr-lbl">${r.label}</td>`;
       ordered.forEach(e => {
         const val = r.get(e);
-        const refVal = ref ? (r.attr in (ref.intensity||{}) ? ref.intensity[r.attr] : ref.accept?.[r.attr]) : null;
+        const pr = personalRef(ref, e, sessionEntries);
+        const refVal = pr ? (r.attr in (pr.intensity||{}) ? pr.intensity[r.attr] : pr.accept?.[r.attr]) : null;
         const refValFmt = ACCEPT_ATTRS.includes(r.attr) ? (refVal === 'accept' ? '✓' : refVal === 'unaccept' ? '✕' : null) : refVal;
         const isRefRow = e.taster === refTasterName;
         const isMatch = ref && (isRefRow || val === refValFmt);
@@ -1211,7 +1238,7 @@ async function loadTeamCompare() {
       });
       html += '</div>';
     } else {
-      html += '<div style="font-size:12px;color:var(--text3);margin-top:10px">ต้องมีอย่างน้อย 3 คนชิม (หรือมี Boss ร่วมชิม) ก่อนถึงจะคำนวณคะแนนได้</div>';
+      html += '<div style="font-size:12px;color:var(--text3);margin-top:10px">ต้องมีอย่างน้อย 2 คนชิม (หรือมี Boss ร่วมชิม) ก่อนถึงจะคำนวณคะแนนได้</div>';
     }
 
     contentEl.innerHTML = html;
