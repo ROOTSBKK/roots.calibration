@@ -382,7 +382,7 @@ onAuthStateChanged(auth, async (user) => {
 function initApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-content').style.display = 'block';
-  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v11 พ.ย.-06i`;
+  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v11 พ.ย.-06j`;
   window.setupForm();
 }
 </script>
@@ -1519,7 +1519,7 @@ function aaRowData(name, weeks, period, isTotal) {
 }
 function aaTrendText(d) { return d === null ? '—' : d > 0 ? '📈 +' + d : d < 0 ? '📉 ' + d : '➖ 0'; }
 // entries: deduped taste entries. Returns [{name, head, rows, total, parts}] in branch order.
-function aaCompute(entries, isArea, myBranch, period) {
+function aaCompute(entries, isArea, myBranch, period, monthAcc) {
   const bySession = groupBySession(entries);
   const people = {};
   Object.values(bySession).forEach(es => {
@@ -1539,6 +1539,10 @@ function aaCompute(entries, isArea, myBranch, period) {
       });
       const b = people[home] || (people[home] = {});
       aaAdd(b[e.taster] || (b[e.taster] = {}), aaBucket(e.date), vals, diffs);
+      if (monthAcc) { // รายเดือน (สำหรับกราฟเส้นใน Sheet เท่านั้น)
+        const mp = (monthAcc[home] || (monthAcc[home] = {}))[e.taster] || (monthAcc[home][e.taster] = {});
+        aaAdd(mp, String(e.date).slice(0, 7), vals, diffs);
+      }
     });
   });
   const order = Object.keys(STAFF_DATA);
@@ -1566,15 +1570,30 @@ function aaCompute(entries, isArea, myBranch, period) {
   });
 }
 // Compact payload for the Google Sheet tab (rendered by the Apps Script)
+// พัฒนาการรายเดือนต่อคน (เฉลี่ย 3 รส) — คนที่มีอย่างน้อย 2 เดือนที่ชิม ≥AA_MIN ครั้ง · แสดง 5 เดือนล่าสุด · สูงสุด 6 คน
+function aaMonthTrend(byPerson) {
+  const ppl = Object.keys(byPerson).map(name => {
+    const m = byPerson[name], vals = {}; let tot = 0;
+    Object.keys(m).forEach(k => { tot += m[k].n; if (m[k].n >= AA_MIN) vals[k] = Math.round(aaAvg(m[k])); });
+    return { name, vals, tot };
+  }).filter(p => Object.keys(p.vals).length >= 2).sort((a, b) => b.tot - a.tot).slice(0, 6);
+  if (!ppl.length) return null;
+  const all = {}; ppl.forEach(p => Object.keys(p.vals).forEach(k => all[k] = 1));
+  const months = Object.keys(all).sort().slice(-5);
+  if (months.length < 2) return null;
+  return { months, people: ppl.map(p => ({ name: p.name, v: months.map(k => p.vals[k] === undefined ? null : p.vals[k]) })) };
+}
 function aaSheetPayload(entries) {
   const slim = r => ({ t: r.isTotal ? 1 : 0, name: r.name, n: r.n, small: r.small ? 1 : 0,
     p: r.pcts ? r.pcts.map(Math.round) : null, c: r.cls, avg: r.avg === null ? null : Math.round(r.avg),
     prev: r.prev === null ? null : Math.round(r.prev), trend: aaTrendText(r.d), spark: r.spark, hist: r.hist, weak: r.weak, note: r.note });
   const now = new Date();
+  const monthAcc = {};
   return {
     updated: aaFmt2(now), period: 'ทุก Session ที่มีทั้งหมด',
-    branches: aaCompute(entries, true, 'Area', 'all').map(b => ({
+    branches: aaCompute(entries, true, 'Area', 'all', monthAcc).map(b => ({
       name: b.name, head: b.head, rows: b.rows.map(slim).concat([slim(b.total)]),
+      trend: aaMonthTrend(monthAcc[b.name] || {}),
       summary: b.rows.filter(r => r.small).length ? 'ข้อมูลยังน้อย (ไม่ขึ้นกราฟ): ' + b.rows.filter(r => r.small).map(r => r.name).join(', ') : ''
     }))
   };
