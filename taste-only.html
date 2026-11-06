@@ -380,7 +380,7 @@ onAuthStateChanged(auth, async (user) => {
 function initApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-content').style.display = 'block';
-  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v11 พ.ย.-06c`;
+  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v11 พ.ย.-06d`;
   window.setupForm();
 }
 </script>
@@ -1479,7 +1479,7 @@ function aaSpark(weeks) {
   let out = '';
   for (let k = 3; k >= 0; k--) {
     const w = weeks[k];
-    out += (!w || !w.n) ? '·' : AA_BARS[Math.min(7, Math.floor(aaAvg(w) / 12.5))];
+    out += (out ? ' ' : '') + ((!w || !w.n) ? '·' : AA_BARS[Math.min(7, Math.floor(aaAvg(w) / 12.5))]);
   }
   return out;
 }
@@ -1496,6 +1496,7 @@ function aaRowData(name, weeks, period, isTotal) {
     cls: small ? null : pcts.map(p => aaCls(p, cur.n)),
     avg: small ? null : aaAvg(cur), prev, d,
     spark: aaSpark(weeks),
+    hist: [3, 2, 1, 0].map(k => weeks[k] && weeks[k].n ? Math.round(aaAvg(weeks[k])) : null),
     weak: small ? '—' : ATTR_LABELS[AA_ATTRS[pcts.indexOf(Math.min(...pcts))]]
   };
 }
@@ -1546,7 +1547,7 @@ function aaCompute(entries, isArea, myBranch, period) {
 function aaSheetPayload(entries) {
   const slim = r => ({ t: r.isTotal ? 1 : 0, name: r.name, n: r.n, small: r.small ? 1 : 0,
     p: r.pcts ? r.pcts.map(Math.round) : null, c: r.cls, avg: r.avg === null ? null : Math.round(r.avg),
-    prev: r.prev === null ? null : Math.round(r.prev), trend: aaTrendText(r.d), spark: r.spark, weak: r.weak });
+    prev: r.prev === null ? null : Math.round(r.prev), trend: aaTrendText(r.d), spark: r.spark, hist: r.hist, weak: r.weak });
   const now = new Date();
   return {
     updated: aaFmt2(now), period: '7 วันล่าสุด เทียบ 7 วันก่อนหน้า',
