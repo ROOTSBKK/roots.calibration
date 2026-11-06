@@ -65,6 +65,19 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
 .score-sub{display:flex;justify-content:center;gap:20px;margin-top:10px;font-size:12px;color:var(--text2)}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:#18181A;color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:999}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.aa-box{border:2px solid var(--text);border-radius:10px;overflow:hidden;margin-bottom:14px}
+.aa-bh{background:#efe6dd;padding:8px 12px;font-weight:700;display:flex;justify-content:space-between;font-size:14px}
+.aa-scroll{overflow-x:auto}
+.aa-t{border-collapse:collapse;width:100%;font-size:12.5px;min-width:560px}
+.aa-t th{background:#f8f9fa;border:1px solid #e3e3e3;padding:5px 6px;text-align:center;font-size:11px;color:#666;font-weight:600}
+.aa-t td{border:1px solid #e3e3e3;padding:5px 6px;text-align:center}
+.aa-t td.n{text-align:left;font-weight:700}
+.aa-g{background:#b7e1cd}.aa-y{background:#fff2cc}.aa-r{background:#f4c7c3}.aa-x{background:#f1f3f4;color:#9aa0a6}
+.aa-chip{display:inline-block;padding:1px 7px;border-radius:3px;margin-right:4px}
+.aa-tot td{background:#faf6f1;font-weight:700}
+.aa-sum{padding:8px 12px;font-size:12.5px;line-height:1.7;background:#fffdf7;border-top:1px solid #e3e3e3}
+.aa-up{color:#188038;font-weight:700}.aa-dn{color:#c5221f;font-weight:700}
 </style>
 </head>
 <body>
@@ -92,6 +105,7 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
     <button class="nav-tab" onclick="showTab('history')" data-tab="history">📋 ประวัติ</button>
     <button class="nav-tab" onclick="showTab('branch')" data-tab="branch">🏢 สาขา</button>
     <button class="nav-tab" onclick="showTab('leaderboard')" data-tab="leaderboard">🏆 Leaderboard</button>
+    <button class="nav-tab" onclick="showTab('attr')" data-tab="attr">📊 Attribute</button>
     <button class="nav-tab" onclick="showTab('export')" data-tab="export">📥 Export</button>
     <span style="display:flex;align-items:center;gap:4px;padding:0 10px;flex-shrink:0">
       <select id="range-sel" onchange="setRange(this.value)" style="width:auto;padding:4px 6px;font-size:12px"><option value="30">30 วันล่าสุด</option><option value="all">ทั้งหมด</option></select>
@@ -273,6 +287,18 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
       <div id="leaderboard-content"><div style="color:var(--text3);font-size:13px">กำลังโหลด...</div></div>
     </div>
   </div>
+
+  <div class="wrap" id="page-attr" style="display:none">
+    <div class="card">
+      <div class="card-title">📊 Attribute Analysis — % ที่ชิมตรงกับตัวเทียบ</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;font-size:12px;color:var(--text3)">
+        ช่วงในตาราง:
+        <select id="aa-period" onchange="loadAttrAnalysis()" style="width:auto;padding:4px 8px;font-size:12px"><option value="week">สัปดาห์นี้</option><option value="all">ทั้งช่วงข้อมูล</option></select>
+      </div>
+      <div id="aa-legend" style="font-size:11.5px;color:var(--text3);margin-bottom:10px"><span class="aa-chip aa-g">80%+</span><span class="aa-chip aa-y">60–79%</span><span class="aa-chip aa-r">&lt;60%</span><span class="aa-chip aa-x">ข้อมูลน้อย (&lt;3 รายการ)</span> · ต่าง 1 ระดับนับครึ่ง · 📈📉 เทียบสัปดาห์ก่อน</div>
+      <div id="aa-content"><div style="color:var(--text3);font-size:13px">กำลังโหลด...</div></div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -354,7 +380,7 @@ onAuthStateChanged(auth, async (user) => {
 function initApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-content').style.display = 'block';
-  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v10 พ.ย.-06d`;
+  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v11 พ.ย.-06a`;
   window.setupForm();
 }
 </script>
@@ -905,7 +931,7 @@ function groupBySession(entries) {
 
 function showTab(tab) {
   window._activeTab = tab;
-  ['setup','team','history','branch','leaderboard','export'].forEach(t => {
+  ['setup','team','history','branch','leaderboard','attr','export'].forEach(t => {
     document.getElementById('page-'+t).style.display = (t===tab) ? 'block' : 'none';
   });
   // tasting/result pages are sub-states of the "setup" tab — hide them when leaving it
@@ -918,6 +944,7 @@ function showTab(tab) {
   if (tab === 'history') loadHistory();
   if (tab === 'branch') loadBranchOverview();
   if (tab === 'leaderboard') loadLeaderboard();
+  if (tab === 'attr') loadAttrAnalysis();
   if (tab === 'export') initExportTab();
 }
 
@@ -1420,6 +1447,128 @@ async function loadLeaderboard() {
   }
 }
 
+
+// ═══ Attribute Analysis ═══
+// Per person × attribute: how closely the person matches the session's reference
+// (same reference as the score: Boss / majority / pair). Exact = 100%, 1 level apart = 50%.
+// Boxes are grouped by the PERSON'S home branch, so guest sessions count for the person.
+const AA_ATTRS = ['sweetness','acidity','bitterness'];
+const AA_MIN = 3;
+function aaFmt(x) { return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'); }
+function aaWeekStart(dateStr) {
+  const x = new Date(dateStr + 'T00:00:00'); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return aaFmt(x);
+}
+function aaShift(wk, days) { const x = new Date(wk + 'T00:00:00'); x.setDate(x.getDate() + days); return aaFmt(x); }
+function aaCanonBranch(b) {
+  const keys = Object.keys(STAFF_DATA);
+  const k = keys.find(x => x.toLowerCase() === String(b || '').trim().toLowerCase());
+  return k || String(b || '').trim();
+}
+function aaCls(p, n) { return n < AA_MIN ? 'aa-x' : p >= 80 ? 'aa-g' : p >= 60 ? 'aa-y' : 'aa-r'; }
+function aaAdd(map, wk, vals) {
+  const w = map[wk] || (map[wk] = { n: 0, s: { sweetness: 0, acidity: 0, bitterness: 0 } });
+  w.n++; AA_ATTRS.forEach(a => { w.s[a] += vals[a]; });
+}
+function aaMerge(weeks, wkList) {
+  const o = { n: 0, s: { sweetness: 0, acidity: 0, bitterness: 0 } };
+  wkList.forEach(wk => { const w = weeks[wk]; if (!w) return; o.n += w.n; AA_ATTRS.forEach(a => { o.s[a] += w.s[a]; }); });
+  return o;
+}
+function aaPct(agg, a) { return agg.n ? agg.s[a] / agg.n * 100 : null; }
+function aaAvg(agg) { return agg.n ? AA_ATTRS.reduce((t, a) => t + agg.s[a] / agg.n * 100, 0) / AA_ATTRS.length : null; }
+const AA_BARS = '▁▂▃▄▅▆▇█';
+function aaSpark(weeks, thisWk) {
+  let out = '';
+  for (let k = 3; k >= 0; k--) {
+    const w = weeks[aaShift(thisWk, -7 * k)];
+    if (!w || !w.n) { out += '·'; continue; }
+    out += AA_BARS[Math.min(7, Math.floor(aaAvg(w) / 12.5))];
+  }
+  return out;
+}
+function aaRow(name, weeks, thisWk, period, isTotal) {
+  const prevWk = aaShift(thisWk, -7);
+  const allWks = Object.keys(weeks);
+  const cur = period === 'week' ? aaMerge(weeks, [thisWk]) : aaMerge(weeks, allWks);
+  const wkCur = aaMerge(weeks, [thisWk]), wkPrev = aaMerge(weeks, [prevWk]);
+  const cells = AA_ATTRS.map(a => cur.n < AA_MIN ? '' : aaPct(cur, a));
+  let tds = cur.n < AA_MIN
+    ? `<td class="aa-x" colspan="3">ข้อมูลยังน้อย</td>`
+    : AA_ATTRS.map((a, i) => `<td class="${aaCls(cells[i], cur.n)}">${Math.round(cells[i])}%</td>`).join('');
+  const avgNow = aaAvg(cur);
+  const avgPrev = wkPrev.n >= AA_MIN ? aaAvg(wkPrev) : null;
+  let trend = '<td class="aa-x">—</td>', d = null;
+  if (wkCur.n >= AA_MIN && avgPrev !== null) {
+    d = Math.round(aaAvg(wkCur) - avgPrev);
+    trend = d > 0 ? `<td class="aa-up">📈 +${d}</td>` : d < 0 ? `<td class="aa-dn">📉 ${d}</td>` : '<td>➖ 0</td>';
+  }
+  let weak = '—';
+  if (cur.n >= AA_MIN) { const mi = cells.indexOf(Math.min(...cells)); weak = ATTR_LABELS[AA_ATTRS[mi]]; }
+  const row = `<tr class="${isTotal ? 'aa-tot' : ''}"><td class="n">${name}</td><td>${cur.n}</td>${tds}` +
+    `<td>${cur.n >= AA_MIN ? '<b>' + Math.round(avgNow) + '%</b>' : '—'}</td>` +
+    `<td>${avgPrev !== null ? Math.round(avgPrev) + '%' : '—'}</td>${trend}` +
+    `<td style="letter-spacing:1px;color:#666">${aaSpark(weeks, thisWk)}</td><td>${weak}</td></tr>`;
+  return { html: row, d, weak, curN: cur.n };
+}
+async function loadAttrAnalysis() {
+  const el = document.getElementById('aa-content');
+  el.innerHTML = '<div style="color:var(--text3);font-size:13px">กำลังโหลด...</div>';
+  try {
+    const period = document.getElementById('aa-period').value;
+    const isArea = AREA_STAFF.includes(window._currentStaff.name);
+    const myBranch = aaCanonBranch(window._currentStaff.branch);
+    const entries = await fetchAllTasteEntries();
+    const bySession = groupBySession(entries);
+    const people = {}; // branch -> name -> weeks
+    Object.values(bySession).forEach(es => {
+      const ref0 = determineReference(es);
+      if (!ref0) return;
+      es.forEach(e => {
+        if (ref0.source === 'boss' && e.taster === 'Boss') return;
+        const home = aaCanonBranch(e.homeBranch || e.branch);
+        if (!isArea && home !== myBranch) return;
+        const ref = personalRef(ref0, e, es);
+        const vals = {};
+        AA_ATTRS.forEach(a => { vals[a] = scoreIntensityRef(e.intensity[a], ref, a); });
+        const b = people[home] || (people[home] = {});
+        const w = b[e.taster] || (b[e.taster] = {});
+        aaAdd(w, aaWeekStart(e.date), vals);
+      });
+    });
+    const thisWk = aaWeekStart(todayStr());
+    const order = Object.keys(STAFF_DATA);
+    const branches = Object.keys(people).sort((a, b) => (order.indexOf(a) < 0 ? 99 : order.indexOf(a)) - (order.indexOf(b) < 0 ? 99 : order.indexOf(b)));
+    if (!branches.length) { el.innerHTML = '<div style="color:var(--text3);font-size:13px">ยังไม่มีข้อมูลที่มีตัวเทียบ (ต้องมี 2 คนขึ้นไป หรือมี Boss)</div>'; return; }
+    el.innerHTML = branches.map(b => {
+      const names = Object.keys(people[b]).sort((x, y) => x.toLowerCase().localeCompare(y.toLowerCase()));
+      const teamWeeks = {};
+      names.forEach(n => Object.entries(people[b][n]).forEach(([wk, w]) => {
+        const t = teamWeeks[wk] || (teamWeeks[wk] = { n: 0, s: { sweetness: 0, acidity: 0, bitterness: 0 } });
+        t.n += w.n; AA_ATTRS.forEach(a => { t.s[a] += w.s[a]; });
+      }));
+      const rows = names.map(n => ({ n, r: aaRow(n, people[b][n], thisWk, period, false) }));
+      const team = aaRow('รวมสาขา', teamWeeks, thisWk, period, true);
+      const tW = aaMerge(teamWeeks, [thisWk]), tP = aaMerge(teamWeeks, [aaShift(thisWk, -7)]);
+      const head = tW.n >= AA_MIN ? `เฉลี่ยสาขา ${Math.round(aaAvg(tW))}%` + (team.d !== null ? (team.d > 0 ? ` · 📈 +${team.d}` : team.d < 0 ? ` · 📉 ${team.d}` : '') : '') : 'ข้อมูลสัปดาห์นี้ยังน้อย';
+      const ups = rows.filter(x => x.r.d !== null && x.r.d > 0).sort((x, y) => y.r.d - x.r.d);
+      const dns = rows.filter(x => x.r.d !== null && x.r.d <= -5).sort((x, y) => x.r.d - y.r.d);
+      const small = rows.filter(x => x.r.curN < AA_MIN).map(x => x.n);
+      const parts = [];
+      if (ups.length) parts.push(`⭐ ดีขึ้นมากสุด: <b>${ups[0].n} +${ups[0].r.d}</b>`);
+      if (dns.length) parts.push(`⚠️ ควรติดตาม: <b>${dns[0].n} ${dns[0].r.d}</b>`);
+      if (team.weak && team.weak !== '—') parts.push(`จุดอ่อนทั้งสาขา: <b>${team.weak}</b>`);
+      if (small.length) parts.push(`ข้อมูลยังน้อย: ${small.join(', ')}`);
+      return `<div class="aa-box"><div class="aa-bh"><span>🏢 ${b}</span><span>${head}</span></div>
+        <div class="aa-scroll"><table class="aa-t"><tr><th style="width:90px">คน</th><th>ครั้ง</th><th>Sweet</th><th>Acid</th><th>Bitter</th><th>เฉลี่ย</th><th>สัปดาห์ก่อน</th><th>แนวโน้ม</th><th>4 สัปดาห์</th><th>จุดอ่อน</th></tr>
+        ${rows.map(x => x.r.html).join('')}${team.html}</table></div>
+        ${parts.length ? `<div class="aa-sum">${parts.join(' &nbsp;·&nbsp; ')}</div>` : ''}</div>`;
+    }).join('');
+  } catch (e) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px">โหลดไม่สำเร็จ: ' + (e.message || e) + '</div>';
+  }
+}
+
+window.loadAttrAnalysis = loadAttrAnalysis;
 window.setupForm = setupForm;
 window.setIntensity = setIntensity;
 window.setAccept = setAccept;
