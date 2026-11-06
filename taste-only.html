@@ -115,7 +115,7 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
         <div class="col"><div class="lbl">Grind</div><input type="text" id="r-grind"></div>
         <div class="col"><div class="lbl">Ratio</div><input type="text" id="r-ratio" readonly placeholder="auto" style="background:var(--bg2)"></div>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:14px;background:var(--bbg);border:1px solid var(--bborder);border-radius:8px;padding:8px 10px">ℹ️ ไม่ต้องเลือกคนอ้างอิง — ถ้า Boss ร่วมชิมด้วย Boss จะเป็นตัวเทียบอัตโนมัติ ถ้าไม่มี Boss ระบบใช้เสียงส่วนมากของคนที่ชิมแทน</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:14px;background:var(--bbg);border:1px solid var(--bborder);border-radius:8px;padding:8px 10px">ℹ️ ไม่ต้องเลือกคนอ้างอิง — ถ้า Boss ร่วมชิมด้วย Boss จะเป็นตัวเทียบอัตโนมัติ ถ้าไม่มี Boss ระบบใช้เสียงส่วนมากของคนที่ชิมแทน<br>🧳 ไปชิมสาขาอื่น: เลือก "สาขา" แล้วเข้าร่วม Session ที่เปิดอยู่ หรือเลือกกาแฟให้ตรงกันแล้วสร้างเอง — ทุกคนใน Session เดียวกัน (รวม Guest) เห็นคะแนนเทียบกัน แต่ไม่เห็นคะแนนของ Session อื่นในสาขาอื่น</div>
       <button class="btn btn-primary" onclick="startTasting()">👅 สร้าง Session + เริ่มชิม</button>
     </div>
 
@@ -276,7 +276,7 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
-import { getFirestore, initializeFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+import { getFirestore, initializeFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
 const cfg = {
   apiKey:"AIzaSyASqWQL08s1np9HEm-0_WIv0tQ9r3WmzZE",
@@ -293,7 +293,7 @@ const db = initializeFirestore(fbApp, { experimentalAutoDetectLongPolling: true 
 window._auth = auth;
 window._db = db;
 window._fsdoc = doc; window._fsgetDoc = getDoc; window._fssetDoc = setDoc; window._fsdeleteDoc = deleteDoc;
-window._fscollection = collection; window._fsgetDocs = getDocs;
+window._fscollection = collection; window._fsgetDocs = getDocs; window._fsquery = query; window._fswhere = where;
 
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -350,7 +350,7 @@ onAuthStateChanged(auth, async (user) => {
 function initApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-content').style.display = 'block';
-  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v7 พ.ย.-06c`;
+  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v9 พ.ย.-06e`;
   window.setupForm();
 }
 </script>
@@ -503,7 +503,7 @@ async function startTasting() {
   // instant it's created, before anyone (including the creator) has
   // submitted a single score.
   try {
-    await window._fssetDoc(window._fsdoc(window._db, 'shared', sessionRecord.id), { key: sessionRecord.id, branch: window._currentStaff.branch, value: JSON.stringify(sessionRecord) });
+    await window._fssetDoc(window._fsdoc(window._db, 'taste', sessionRecord.id), { key: sessionRecord.id, branch, value: JSON.stringify(sessionRecord) });
   } catch(e) {
     showToast('เปิด Session ไม่สำเร็จ: ' + (e.code ? e.code + ' · ' : '') + e.message);
     return;
@@ -681,7 +681,7 @@ async function submitTasting() {
   };
 
   try {
-    await window._fssetDoc(window._fsdoc(window._db, 'shared', entry.id), { key: entry.id, branch: window._currentStaff.branch, value: JSON.stringify(entry) });
+    await window._fssetDoc(window._fsdoc(window._db, 'taste', entry.id), { key: entry.id, branch: entry.branch, value: JSON.stringify(entry) });
     showToast('บันทึกแล้ว ✓');
     autoSyncSession(entry.sessionKey);
     await showResult(entry);
@@ -696,7 +696,7 @@ async function showResult(myEntry) {
   { const rt = recipeText(currentSession && currentSession.recipe); document.getElementById('result-recipe').textContent = rt ? '🧪 ' + rt : ''; }
 
   try {
-    const snap = await window._fsgetDocs(window._fscollection(window._db, 'shared'));
+    const snap = await getSharedDocs();
     let sessionEntries = [];
     snap.forEach(d => {
       const data = d.data();
@@ -784,7 +784,7 @@ async function loadRecentSessions() {
   listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">กำลังโหลด...</div>';
   try {
     const filterBranch = document.getElementById('session-branch-filter').value;
-    const snap = await window._fsgetDocs(window._fscollection(window._db, 'shared'));
+    const snap = await getSharedDocs();
     let sessionRecords = [];
     let scoreEntries = [];
     snap.forEach(d => {
@@ -832,8 +832,25 @@ async function loadRecentSessions() {
 }
 
 // ═══ Nav tabs + shared data fetch ═══
+// Firestore rules only let non-admin staff read documents of their OWN branch,
+// and a query must say so explicitly. Admins (branch 'Area') read everything.
+async function getSharedDocs() {
+  const db = window._db;
+  // Taste Only now lives in its own 'taste' collection (readable by every staff so a
+  // guest and the host see the same session). Older data is still in 'shared'.
+  const tasteSnap = await window._fsgetDocs(window._fscollection(db, 'taste'));
+  let legacy = [];
+  try {
+    const col = window._fscollection(db, 'shared');
+    const q = window._currentStaff.branch === 'Area' ? col : window._fsquery(col, window._fswhere('branch', '==', window._currentStaff.branch));
+    legacy = (await window._fsgetDocs(q)).docs;
+  } catch (e) { /* no access to legacy data: fine */ }
+  const all = [...tasteSnap.docs, ...legacy];
+  return { docs: all, forEach: fn => all.forEach(fn) };
+}
+
 async function fetchAllTasteEntries() {
-  const snap = await window._fsgetDocs(window._fscollection(window._db, 'shared'));
+  const snap = await getSharedDocs();
   let entries = [];
   snap.forEach(d => {
     const data = d.data();
@@ -928,12 +945,16 @@ async function clearTestData() {
   if (typed === null || typed.trim() !== 'ล้าง') { st.textContent = 'ยกเลิกแล้ว'; return; }
   st.textContent = 'กำลังลบ...';
   try {
-    const snap = await window._fsgetDocs(window._fscollection(window._db, 'shared'));
     const targets = [];
-    snap.forEach(d => { const k = d.data().key || ''; if (k.startsWith('taste:') || k.startsWith('tastesession:')) targets.push(d.id); });
+    for (const colName of ['shared', 'taste']) {
+      try {
+        const snap = await window._fsgetDocs(window._fscollection(window._db, colName));
+        snap.forEach(d => { const k = d.data().key || ''; if (k.startsWith('taste:') || k.startsWith('tastesession:')) targets.push([colName, d.id]); });
+      } catch(e) {}
+    }
     let done = 0, failed = 0;
-    for (const id of targets) {
-      try { await window._fsdeleteDoc(window._fsdoc(window._db, 'shared', id)); done++; } catch(e) { failed++; }
+    for (const [colName, id] of targets) {
+      try { await window._fsdeleteDoc(window._fsdoc(window._db, colName, id)); done++; } catch(e) { failed++; }
     }
     let sheetMsg = '';
     const cfg = await getSheetCfg(true);
@@ -998,7 +1019,7 @@ async function buildExportData(opts) {
   const myBranch = window._currentStaff.branch;
   const from = opts.sessionKey ? '' : document.getElementById('x-from').value;
   const to = opts.sessionKey ? '' : document.getElementById('x-to').value;
-  const snap = await window._fsgetDocs(window._fscollection(window._db, 'shared'));
+  const snap = await getSharedDocs();
   let entries = [], sessRecs = {};
   snap.forEach(d => {
     const data = d.data();
@@ -1128,7 +1149,7 @@ async function loadHistory() {
   listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">กำลังโหลด...</div>';
   try {
     const branch = sel.value;
-    const snap = await window._fsgetDocs(window._fscollection(window._db, 'shared'));
+    const snap = await getSharedDocs();
     const recs = {}, entries = [];
     snap.forEach(d => {
       const data = d.data();
