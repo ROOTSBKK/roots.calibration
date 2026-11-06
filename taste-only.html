@@ -93,6 +93,10 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
     <button class="nav-tab" onclick="showTab('branch')" data-tab="branch">🏢 สาขา</button>
     <button class="nav-tab" onclick="showTab('leaderboard')" data-tab="leaderboard">🏆 Leaderboard</button>
     <button class="nav-tab" onclick="showTab('export')" data-tab="export">📥 Export</button>
+    <span style="display:flex;align-items:center;gap:4px;padding:0 10px;flex-shrink:0">
+      <select id="range-sel" onchange="setRange(this.value)" style="width:auto;padding:4px 6px;font-size:12px"><option value="30">30 วันล่าสุด</option><option value="all">ทั้งหมด</option></select>
+      <button class="btn btn-secondary" style="width:auto;padding:4px 8px;font-size:12px" onclick="refreshData()">🔄</button>
+    </span>
   </div>
 
   <div class="wrap" id="page-setup">
@@ -350,7 +354,7 @@ onAuthStateChanged(auth, async (user) => {
 function initApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-content').style.display = 'block';
-  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v9 พ.ย.-06e`;
+  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v10 พ.ย.-06a`;
   window.setupForm();
 }
 </script>
@@ -503,7 +507,7 @@ async function startTasting() {
   // instant it's created, before anyone (including the creator) has
   // submitted a single score.
   try {
-    await window._fssetDoc(window._fsdoc(window._db, 'taste', sessionRecord.id), { key: sessionRecord.id, branch, value: JSON.stringify(sessionRecord) });
+    await window._fssetDoc(window._fsdoc(window._db, 'taste', sessionRecord.id), { key: sessionRecord.id, branch, date: sessionRecord.date, value: JSON.stringify(sessionRecord) });
   } catch(e) {
     showToast('เปิด Session ไม่สำเร็จ: ' + (e.code ? e.code + ' · ' : '') + e.message);
     return;
@@ -681,8 +685,9 @@ async function submitTasting() {
   };
 
   try {
-    await window._fssetDoc(window._fsdoc(window._db, 'taste', entry.id), { key: entry.id, branch: entry.branch, value: JSON.stringify(entry) });
+    await window._fssetDoc(window._fsdoc(window._db, 'taste', entry.id), { key: entry.id, branch: entry.branch, date: entry.date, value: JSON.stringify(entry) });
     showToast('บันทึกแล้ว ✓');
+    _dcache.taste = {};
     autoSyncSession(entry.sessionKey);
     await showResult(entry);
   } catch(e) {
@@ -696,7 +701,7 @@ async function showResult(myEntry) {
   { const rt = recipeText(currentSession && currentSession.recipe); document.getElementById('result-recipe').textContent = rt ? '🧪 ' + rt : ''; }
 
   try {
-    const snap = await getSharedDocs();
+    const snap = await getSharedDocs({ since: myEntry.date, fresh: true });
     let sessionEntries = [];
     snap.forEach(d => {
       const data = d.data();
@@ -784,7 +789,7 @@ async function loadRecentSessions() {
   listEl.innerHTML = '<div style="color:var(--text3);font-size:13px">กำลังโหลด...</div>';
   try {
     const filterBranch = document.getElementById('session-branch-filter').value;
-    const snap = await getSharedDocs();
+    const snap = await getSharedDocs({ since: todayStr(), fresh: true });
     let sessionRecords = [];
     let scoreEntries = [];
     snap.forEach(d => {
@@ -834,18 +839,45 @@ async function loadRecentSessions() {
 // ═══ Nav tabs + shared data fetch ═══
 // Firestore rules only let non-admin staff read documents of their OWN branch,
 // and a query must say so explicitly. Admins (branch 'Area') read everything.
-async function getSharedDocs() {
-  const db = window._db;
-  // Taste Only now lives in its own 'taste' collection (readable by every staff so a
-  // guest and the host see the same session). Older data is still in 'shared'.
-  const tasteSnap = await window._fsgetDocs(window._fscollection(db, 'taste'));
+const _dcache = { taste: {}, legacy: null };
+window._tasteRange = '30';
+function daysAgoStr(n) {
+  const d = new Date(); d.setDate(d.getDate() - n);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function setRange(v) { window._tasteRange = v; showTab(window._activeTab || 'setup'); }
+function refreshData() { _dcache.taste = {}; _dcache.legacy = null; showTab(window._activeTab || 'setup'); showToast('รีเฟรชข้อมูลแล้ว'); }
+// opts: {all:true} full read, no cache (Export) · {since:'YYYY-MM-DD'} · {fresh:true} skip the 60s cache
+// Default = last 30 days (or everything if the range selector says "ทั้งหมด"), cached 60s.
+async function getSharedDocs(opts) {
+  opts = opts || {};
+  const db = window._db, now = Date.now();
+  const since = opts.all ? null : (opts.since || (window._tasteRange === 'all' ? null : daysAgoStr(30)));
+  const ck = since || 'ALL';
+  let tasteDocs;
+  const c = _dcache.taste[ck];
+  if (!opts.all && !opts.fresh && c && now - c.t < 60000) tasteDocs = c.docs;
+  else {
+    const col = window._fscollection(db, 'taste');
+    const q = since ? window._fsquery(col, window._fswhere('date', '>=', since)) : col;
+    tasteDocs = (await window._fsgetDocs(q)).docs;
+    if (!opts.all) _dcache.taste[ck] = { t: now, docs: tasteDocs };
+  }
+  // Older data lives in 'shared' (no date field → cannot filter server-side). Cache it 10 min.
   let legacy = [];
   try {
-    const col = window._fscollection(db, 'shared');
-    const q = window._currentStaff.branch === 'Area' ? col : window._fsquery(col, window._fswhere('branch', '==', window._currentStaff.branch));
-    legacy = (await window._fsgetDocs(q)).docs;
+    if (!opts.all && _dcache.legacy && now - _dcache.legacy.t < 600000) legacy = _dcache.legacy.docs;
+    else {
+      const col = window._fscollection(db, 'shared');
+      const q = window._currentStaff.branch === 'Area' ? col : window._fsquery(col, window._fswhere('branch', '==', window._currentStaff.branch));
+      legacy = (await window._fsgetDocs(q)).docs;
+      if (!opts.all) _dcache.legacy = { t: now, docs: legacy };
+    }
   } catch (e) { /* no access to legacy data: fine */ }
-  const all = [...tasteSnap.docs, ...legacy];
+  if (since) legacy = legacy.filter(d => {
+    try { const v = JSON.parse(d.data().value); return !v.date || v.date >= since; } catch (e) { return true; }
+  });
+  const all = [...tasteDocs, ...legacy];
   return { docs: all, forEach: fn => all.forEach(fn) };
 }
 
@@ -872,6 +904,7 @@ function groupBySession(entries) {
 }
 
 function showTab(tab) {
+  window._activeTab = tab;
   ['setup','team','history','branch','leaderboard','export'].forEach(t => {
     document.getElementById('page-'+t).style.display = (t===tab) ? 'block' : 'none';
   });
@@ -1019,7 +1052,7 @@ async function buildExportData(opts) {
   const myBranch = window._currentStaff.branch;
   const from = opts.sessionKey ? '' : document.getElementById('x-from').value;
   const to = opts.sessionKey ? '' : document.getElementById('x-to').value;
-  const snap = await getSharedDocs();
+  const snap = opts.sessionKey ? await getSharedDocs({ since: opts.sessionKey.split('|')[0], fresh: true }) : await getSharedDocs({ all: true });
   let entries = [], sessRecs = {};
   snap.forEach(d => {
     const data = d.data();
