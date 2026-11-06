@@ -321,7 +321,22 @@ async function afterLogin(user) {
     await signOut(auth);
     return;
   }
-  window._currentStaff = staffDoc.data();
+  const sd = staffDoc.data() || {};
+  // Tolerate sloppy staff docs: trim the name, match the branch ignoring
+  // case/spaces, and stop with a clear message instead of failing later.
+  const known = Object.keys(STAFF_DATA); // includes 'Area' (Boss, Eve, Lhing, Nu, Ball are registered under Area)
+  const rawBranch = String(sd.branch ?? sd.Branch ?? '').trim();
+  const lev = (x, y) => { const d = Array.from({length: x.length + 1}, (_, i) => [i, ...Array(y.length).fill(0)]); for (let j = 1; j <= y.length; j++) d[0][j] = j; for (let i = 1; i <= x.length; i++) for (let j = 1; j <= y.length; j++) d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (x[i-1] === y[j-1] ? 0 : 1)); return d[x.length][y.length]; };
+  const rb = rawBranch.toLowerCase().replace(/[^a-z]/g, '');
+  // exact (any case) first, else the closest known branch if it is within a few typos (e.g. praditmanutum -> Praditmanutham)
+  const fixedBranch = known.find(b => b.toLowerCase() === rawBranch.toLowerCase()) || (rb && known.map(b => [b, lev(b.toLowerCase(), rb)]).filter(([b, n]) => n <= Math.floor(b.length / 4)).sort((p, q) => p[1] - q[1])[0] || [])[0];
+  const fixedName = String(sd.name ?? sd.Name ?? '').trim();
+  if (!fixedName || !fixedBranch) {
+    document.getElementById('login-status').textContent = 'ข้อมูลพนักงานไม่ครบ/สะกดไม่ตรง (name="' + fixedName + '", branch="' + rawBranch + '") กรุณาแจ้ง Boss ให้แก้ใน staff';
+    await signOut(auth);
+    return;
+  }
+  window._currentStaff = { ...sd, name: fixedName, branch: fixedBranch };
   window._currentStaffEmail = email;
   initApp();
 }
@@ -335,7 +350,7 @@ onAuthStateChanged(auth, async (user) => {
 function initApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-content').style.display = 'block';
-  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch}`;
+  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v7 พ.ย.-06c`;
   window.setupForm();
 }
 </script>
@@ -367,7 +382,7 @@ const ACCEPT_ATTRS = ['acidity','bitterness'];
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2200);
+  setTimeout(() => t.classList.remove('show'), msg.length > 40 ? 7000 : 2200);
 }
 
 function setupForm() {
@@ -380,13 +395,10 @@ function setupForm() {
   // Non-Area staff always taste at their own branch — lock it so login
   // alone decides the branch, no dropdown to fumble with. Area still
   // floats between branches, so they keep the picker.
-  if (isArea) {
-    branchSel.innerHTML = branches.map(b => `<option value="${b}" ${b===window._currentStaff.branch?'selected':''}>${b}</option>`).join('');
-    branchSel.disabled = false;
-  } else {
-    branchSel.innerHTML = `<option value="${window._currentStaff.branch}">${window._currentStaff.branch}</option>`;
-    branchSel.disabled = true;
-  }
+  // Everyone can pick any branch (visiting staff open/join shots at the
+  // branch they are visiting); it defaults to their own branch.
+  branchSel.innerHTML = branches.map(b => `<option value="${b}" ${b===window._currentStaff.branch?'selected':''}>${b}${b!==window._currentStaff.branch&&!isArea?' (ไปชิมเป็น Guest)':''}</option>`).join('');
+  branchSel.disabled = false;
   branchSel.onchange = () => { loadRecentSessions(); };
 
   // Session list filter — Area can browse any branch, everyone else is
@@ -491,9 +503,9 @@ async function startTasting() {
   // instant it's created, before anyone (including the creator) has
   // submitted a single score.
   try {
-    await window._fssetDoc(window._fsdoc(window._db, 'shared', sessionRecord.id), { key: sessionRecord.id, branch, value: JSON.stringify(sessionRecord) });
+    await window._fssetDoc(window._fsdoc(window._db, 'shared', sessionRecord.id), { key: sessionRecord.id, branch: window._currentStaff.branch, value: JSON.stringify(sessionRecord) });
   } catch(e) {
-    showToast('เปิด Session ไม่สำเร็จ: ' + e.message);
+    showToast('เปิด Session ไม่สำเร็จ: ' + (e.code ? e.code + ' · ' : '') + e.message);
     return;
   }
 
@@ -519,7 +531,7 @@ function cancelTasting() {
 function dedupeLatest(entries) {
   const best = {};
   entries.forEach(e => {
-    const k = e.sessionKey + '||' + String(e.taster || '').trim().toLowerCase();
+    const k = e.sessionKey + '||' + String(e.taster || '').trim().toLowerCase() + '||' + String(e.homeBranch || e.branch || '').toLowerCase();
     if (!best[k] || (e.created || 0) > (best[k].created || 0)) best[k] = e;
   });
   const keep = new Set(Object.values(best));
@@ -669,12 +681,12 @@ async function submitTasting() {
   };
 
   try {
-    await window._fssetDoc(window._fsdoc(window._db, 'shared', entry.id), { key: entry.id, branch: entry.branch, value: JSON.stringify(entry) });
+    await window._fssetDoc(window._fsdoc(window._db, 'shared', entry.id), { key: entry.id, branch: window._currentStaff.branch, value: JSON.stringify(entry) });
     showToast('บันทึกแล้ว ✓');
     autoSyncSession(entry.sessionKey);
     await showResult(entry);
   } catch(e) {
-    showToast('บันทึกไม่สำเร็จ: ' + e.message);
+    showToast('บันทึกไม่สำเร็จ: ' + (e.code ? e.code + ' · ' : '') + e.message);
   }
 }
 
