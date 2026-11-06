@@ -67,12 +67,14 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 .aa-box{border:2px solid var(--text);border-radius:10px;overflow:hidden;margin-bottom:14px}
-.aa-bh{background:#efe6dd;padding:8px 12px;font-weight:700;display:flex;justify-content:space-between;font-size:14px}
+.aa-bh{background:#3e2a1f;color:#fff;padding:12px 14px;font-weight:800;display:flex;justify-content:space-between;align-items:center;font-size:20px}
+.aa-bh span+span{font-size:12px;font-weight:600;opacity:.85}
 .aa-scroll{overflow-x:auto}
 .aa-t{border-collapse:collapse;width:100%;font-size:12.5px;min-width:520px}
 .aa-t th{background:#f8f9fa;border:1px solid #e3e3e3;padding:5px 6px;text-align:center;font-size:11px;color:#666;font-weight:600}
 .aa-t td{border:1px solid #e3e3e3;padding:5px 6px;text-align:center}
-.aa-t td.n{text-align:left;font-weight:700}
+.aa-t td.n{text-align:left;font-weight:800;font-size:15px;color:#3e2a1f}
+.aa-t td.nt{text-align:left;min-width:170px;font-weight:700;font-size:13px}
 .aa-g{background:#b7e1cd}.aa-y{background:#fff2cc}.aa-r{background:#f4c7c3}.aa-x{background:#f1f3f4;color:#9aa0a6}
 .aa-chip{display:inline-block;padding:1px 7px;border-radius:3px;margin-right:4px}
 .aa-tot td{background:#faf6f1;font-weight:700}
@@ -293,7 +295,7 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
       <div class="card-title">📊 Attribute Analysis — % ที่ชิมตรงกับตัวเทียบ</div>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;font-size:12px;color:var(--text3)">
         ช่วงในตาราง:
-        <select id="aa-period" onchange="loadAttrAnalysis()" style="width:auto;padding:4px 8px;font-size:12px"><option value="week">7 วันล่าสุด</option><option value="all">ทั้งช่วงข้อมูล</option></select>
+        <select id="aa-period" onchange="loadAttrAnalysis()" style="width:auto;padding:4px 8px;font-size:12px"><option value="all">ทั้งช่วงข้อมูล</option><option value="week">7 วันล่าสุด</option></select>
       </div>
       <div id="aa-legend" style="font-size:11.5px;color:var(--text3);margin-bottom:10px"><span class="aa-chip aa-g">80%+</span><span class="aa-chip aa-y">60–79%</span><span class="aa-chip aa-r">&lt;60%</span><span class="aa-chip aa-x">ข้อมูลน้อย (&lt;3 รายการ)</span> · ต่าง 1 ระดับนับครึ่ง · 📈📉 เทียบ 7 วันก่อนหน้า</div>
       <div id="aa-content"><div style="color:var(--text3);font-size:13px">กำลังโหลด...</div></div>
@@ -380,7 +382,7 @@ onAuthStateChanged(auth, async (user) => {
 function initApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-content').style.display = 'block';
-  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v11 พ.ย.-06f`;
+  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v11 พ.ย.-06i`;
   window.setupForm();
 }
 </script>
@@ -675,11 +677,11 @@ function computeScore(myEntry, sessionEntries) {
   return { total: Math.round(total), refSource: ref.source };
 }
 
-// Rank 1 = เหมือน (score ≥80, green) · Rank 2 = คล้าย (50-79, amber) · Rank 3 = ไม่เหมือน (<50, red)
-// Same 80/50 breakpoints already used for score coloring throughout the app.
+// Rank 1 = เหมือน (score ≥90, green) · Rank 2 = คล้าย (50-89, amber) · Rank 3 = ไม่เหมือน (<50, red)
+// 90/50 breakpoints (Rank 1 raised from 80 to 90 on 2026-11-06).
 function getRank(score) {
   if (score === null || score === undefined) return { rank: null, label: '—', color: 'var(--text3)' };
-  if (score >= 80) return { rank: 1, label: 'เหมือน', color: 'var(--green)' };
+  if (score >= 90) return { rank: 1, label: 'เหมือน', color: 'var(--green)' };
   if (score >= 50) return { rank: 2, label: 'คล้าย', color: 'var(--amber)' };
   return { rank: 3, label: 'ไม่เหมือน', color: 'var(--red)' };
 }
@@ -1398,7 +1400,7 @@ async function loadBranchOverview() {
     contentEl.innerHTML = branches.map(b => {
       const scores = branchScores[b];
       const avg = Math.round(scores.reduce((s,v)=>s+v,0) / scores.length);
-      const col = avg>=80?'var(--green)':avg>=50?'var(--amber)':'var(--red)';
+      const col = avg>=90?'var(--green)':avg>=50?'var(--amber)':'var(--red)';
       return `<div class="entry-card"><div class="entry-top"><span>${b}</span><span style="color:${col}">${avg}</span></div><div class="entry-meta">${scores.length} รายการ</div></div>`;
     }).join('');
   } catch(e) {
@@ -1437,7 +1439,7 @@ async function loadLeaderboard() {
     if (!ranked.length) { contentEl.innerHTML = '<div style="color:var(--text3);font-size:13px">ยังไม่มีคะแนนที่สมบูรณ์พอจะจัดอันดับได้</div>'; return; }
 
     contentEl.innerHTML = ranked.map((p, i) => {
-      const col = p.avg>=80?'var(--green)':p.avg>=50?'var(--amber)':'var(--red)';
+      const col = p.avg>=90?'var(--green)':p.avg>=50?'var(--amber)':'var(--red)';
       return `<div class="lb-row">
         <div class="lb-rank">${i+1}</div>
         <div class="lb-name">${p.name}<div style="font-size:10.5px;color:var(--text3);font-weight:400">${p.count} รายการ</div></div>
@@ -1570,20 +1572,26 @@ function aaSheetPayload(entries) {
     prev: r.prev === null ? null : Math.round(r.prev), trend: aaTrendText(r.d), spark: r.spark, hist: r.hist, weak: r.weak, note: r.note });
   const now = new Date();
   return {
-    updated: aaFmt2(now), period: '7 วันล่าสุด เทียบ 7 วันก่อนหน้า',
-    branches: aaCompute(entries, true, 'Area', 'week').map(b => ({
+    updated: aaFmt2(now), period: 'ทุก Session ที่มีทั้งหมด',
+    branches: aaCompute(entries, true, 'Area', 'all').map(b => ({
       name: b.name, head: b.head, rows: b.rows.map(slim).concat([slim(b.total)]),
       summary: b.rows.filter(r => r.small).length ? 'ข้อมูลยังน้อย (ไม่ขึ้นกราฟ): ' + b.rows.filter(r => r.small).map(r => r.name).join(', ') : ''
     }))
   };
 }
 function aaFmt2(x) { return todayStr() + ' ' + String(x.getHours()).padStart(2,'0') + ':' + String(x.getMinutes()).padStart(2,'0'); }
+// สีพื้นหลังช่องข้อสังเกต: เขียว=ตรงดี · เหลือง=ควรจับตา · แดง=มีรสที่ตรงต่ำ (<60%) · เทา=ข้อมูลน้อย
+function aaNoteCls(r) {
+  if (r.small) return 'x';
+  if (String(r.note || '').indexOf('✅') === 0) return 'g';
+  return (r.cls || []).indexOf('r') >= 0 ? 'r' : 'y';
+}
 function aaRowHtml(r) {
   const tds = r.small
     ? '<td class="aa-x" colspan="3">ข้อมูลยังน้อย</td>'
     : r.pcts.map((p, i) => `<td class="aa-${r.cls[i]}">${Math.round(p)}%</td>`).join('');
   return `<tr class="${r.isTotal ? 'aa-tot' : ''}"><td class="n">${r.name}</td><td>${r.n}</td>${tds}` +
-    `<td>${r.small ? '—' : '<b>' + Math.round(r.avg) + '%</b>'}</td><td style="text-align:left;min-width:170px">${r.note}</td></tr>`;
+    `<td>${r.small ? '—' : '<b>' + Math.round(r.avg) + '%</b>'}</td><td class="nt aa-${aaNoteCls(r)}">${r.note}</td></tr>`;
 }
 async function loadAttrAnalysis() {
   const el = document.getElementById('aa-content');
