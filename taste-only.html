@@ -380,7 +380,7 @@ onAuthStateChanged(auth, async (user) => {
 function initApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-content').style.display = 'block';
-  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v11 พ.ย.-06b`;
+  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v11 พ.ย.-06c`;
   window.setupForm();
 }
 </script>
@@ -1158,7 +1158,7 @@ async function buildExportData(opts) {
     });
   });
   const out = { entries: entryRows, sessions: sessionRows };
-  if (!opts.sessionKey && isArea) { try { out.attr = aaSheetPayload(entries); } catch (e) { /* analysis is optional */ } }
+  if (!opts.sessionKey && isArea) { try { out.attr = aaSheetPayload(entries); } catch (e) { out.attrError = e.message || String(e); } }
   return out;
 }
 
@@ -1203,7 +1203,7 @@ async function sendToSheet() {
     if (!data.entries.length) { st.textContent = 'ไม่มีข้อมูลในช่วงที่เลือก'; return; }
     const r = await pushToSheet(cfg.url, data);
     if (r.ok === false) st.textContent = '❌ ส่งไม่สำเร็จ: ' + r.msg;
-    else st.textContent = (r.ok ? '✅ Apps Script ยืนยันแล้ว: ' : '📨 ส่งแล้ว (ยืนยันคำตอบไม่ได้) ') + data.entries.length + ' คนชิม / ' + data.sessions.length + ' รอบ — เปิด Sheet ตรวจดู';
+    else st.textContent = (r.ok ? '✅ Apps Script ยืนยันแล้ว: ' : '📨 ส่งแล้ว (ยืนยันคำตอบไม่ได้) ') + data.entries.length + ' คนชิม / ' + data.sessions.length + ' รอบ' + (data.attr ? ' + Attribute ' + data.attr.branches.length + ' สาขา' : data.attrError ? ' · ⚠️ Attribute คำนวณไม่สำเร็จ: ' + data.attrError : ' · (ไม่ส่ง Attribute: ต้องเป็น Area)') + ' — เปิด Sheet ตรวจดู';
   } catch(e) { st.textContent = 'ส่งไม่สำเร็จ: ' + e.message; }
 }
 
