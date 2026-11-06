@@ -69,7 +69,7 @@ input,select{width:100%;padding:9px 10px;border:1.5px solid var(--bg3);border-ra
 .aa-box{border:2px solid var(--text);border-radius:10px;overflow:hidden;margin-bottom:14px}
 .aa-bh{background:#efe6dd;padding:8px 12px;font-weight:700;display:flex;justify-content:space-between;font-size:14px}
 .aa-scroll{overflow-x:auto}
-.aa-t{border-collapse:collapse;width:100%;font-size:12.5px;min-width:560px}
+.aa-t{border-collapse:collapse;width:100%;font-size:12.5px;min-width:520px}
 .aa-t th{background:#f8f9fa;border:1px solid #e3e3e3;padding:5px 6px;text-align:center;font-size:11px;color:#666;font-weight:600}
 .aa-t td{border:1px solid #e3e3e3;padding:5px 6px;text-align:center}
 .aa-t td.n{text-align:left;font-weight:700}
@@ -380,7 +380,7 @@ onAuthStateChanged(auth, async (user) => {
 function initApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-content').style.display = 'block';
-  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v11 พ.ย.-06d`;
+  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v11 พ.ย.-06f`;
   window.setupForm();
 }
 </script>
@@ -1465,11 +1465,11 @@ function aaCanonBranch(b) {
   return k || String(b || '').trim();
 }
 function aaCls(p, n) { return n < AA_MIN ? 'x' : p >= 80 ? 'g' : p >= 60 ? 'y' : 'r'; }
-function aaNew() { return { n: 0, s: { sweetness: 0, acidity: 0, bitterness: 0 } }; }
-function aaAdd(map, k, vals) { const w = map[k] || (map[k] = aaNew()); w.n++; AA_ATTRS.forEach(a => { w.s[a] += vals[a]; }); }
+function aaNew() { return { n: 0, s: { sweetness: 0, acidity: 0, bitterness: 0 }, d: { sweetness: 0, acidity: 0, bitterness: 0 } }; }
+function aaAdd(map, k, vals, diffs) { const w = map[k] || (map[k] = aaNew()); w.n++; AA_ATTRS.forEach(a => { w.s[a] += vals[a]; w.d[a] += diffs[a]; }); }
 function aaMerge(weeks, keys) {
   const o = aaNew();
-  keys.forEach(k => { const w = weeks[k]; if (!w) return; o.n += w.n; AA_ATTRS.forEach(a => { o.s[a] += w.s[a]; }); });
+  keys.forEach(k => { const w = weeks[k]; if (!w) return; o.n += w.n; AA_ATTRS.forEach(a => { o.s[a] += w.s[a]; o.d[a] += w.d[a]; }); });
   return o;
 }
 function aaPct(agg, a) { return agg.n ? agg.s[a] / agg.n * 100 : null; }
@@ -1482,6 +1482,20 @@ function aaSpark(weeks) {
     out += (out ? ' ' : '') + ((!w || !w.n) ? '·' : AA_BARS[Math.min(7, Math.floor(aaAvg(w) / 12.5))]);
   }
   return out;
+}
+// Observation text: which attributes the person tastes stronger / weaker than the reference
+function aaNote(cur, pcts) {
+  const items = AA_ATTRS.map((a, i) => ({ a, pct: pcts[i], bias: cur.d[a] / cur.n })).sort((x, y) => x.pct - y.pct);
+  const lbl = x => ATTR_LABELS[x.a];
+  const more = items.filter(x => x.pct < 90 && x.bias > 0.3);
+  const less = items.filter(x => x.pct < 90 && x.bias < -0.3);
+  const shaky = items.filter(x => x.pct < 70 && Math.abs(x.bias) <= 0.3);
+  const parts = [];
+  if (more.length) parts.push('รับ ' + more.map(lbl).join(', ') + ' มากกว่า');
+  if (less.length) parts.push('รับ ' + less.map(lbl).join(', ') + ' น้อยกว่า');
+  if (shaky.length) parts.push(shaky.map(lbl).join(', ') + ' ไม่คงที่');
+  if (!more.length && !less.length) return shaky.length ? 'ไม่เอนเอียงชัดเจน (' + parts[0] + ')' : '✅ ตรงดี';
+  return parts.join(' · ');
 }
 function aaRowData(name, weeks, period, isTotal) {
   const cur = period === 'week' ? aaMerge(weeks, [0]) : aaMerge(weeks, Object.keys(weeks));
@@ -1496,7 +1510,8 @@ function aaRowData(name, weeks, period, isTotal) {
     cls: small ? null : pcts.map(p => aaCls(p, cur.n)),
     avg: small ? null : aaAvg(cur), prev, d,
     spark: aaSpark(weeks),
-    hist: [3, 2, 1, 0].map(k => weeks[k] && weeks[k].n ? Math.round(aaAvg(weeks[k])) : null),
+    note: small ? '—' : aaNote(cur, pcts),
+    hist: [3, 2, 1, 0].map(k => weeks[k] && weeks[k].n >= AA_MIN ? Math.round(aaAvg(weeks[k])) : null),
     weak: small ? '—' : ATTR_LABELS[AA_ATTRS[pcts.indexOf(Math.min(...pcts))]]
   };
 }
@@ -1513,10 +1528,15 @@ function aaCompute(entries, isArea, myBranch, period) {
       const home = aaCanonBranch(e.homeBranch || e.branch);
       if (!isArea && home !== myBranch) return;
       const ref = personalRef(ref0, e, es);
-      const vals = {};
-      AA_ATTRS.forEach(a => { vals[a] = scoreIntensityRef(e.intensity[a], ref, a); });
+      const vals = {}, diffs = {};
+      AA_ATTRS.forEach(a => {
+        vals[a] = scoreIntensityRef(e.intensity[a], ref, a);
+        const alts = ref.intensityTies?.[a] || [ref.intensity[a]];
+        const near = alts.reduce((m, r) => Math.abs(e.intensity[a] - r) < Math.abs(e.intensity[a] - m) ? r : m, alts[0]);
+        diffs[a] = e.intensity[a] - near;
+      });
       const b = people[home] || (people[home] = {});
-      aaAdd(b[e.taster] || (b[e.taster] = {}), aaBucket(e.date), vals);
+      aaAdd(b[e.taster] || (b[e.taster] = {}), aaBucket(e.date), vals, diffs);
     });
   });
   const order = Object.keys(STAFF_DATA);
@@ -1526,7 +1546,7 @@ function aaCompute(entries, isArea, myBranch, period) {
     const teamWeeks = {};
     names.forEach(n => Object.entries(people[b][n]).forEach(([k, w]) => {
       const t = teamWeeks[k] || (teamWeeks[k] = aaNew());
-      t.n += w.n; AA_ATTRS.forEach(a => { t.s[a] += w.s[a]; });
+      t.n += w.n; AA_ATTRS.forEach(a => { t.s[a] += w.s[a]; t.d[a] += w.d[a]; });
     }));
     const rows = names.map(n => aaRowData(n, people[b][n], period, false));
     const total = aaRowData('รวมสาขา', teamWeeks, period, true);
@@ -1547,13 +1567,13 @@ function aaCompute(entries, isArea, myBranch, period) {
 function aaSheetPayload(entries) {
   const slim = r => ({ t: r.isTotal ? 1 : 0, name: r.name, n: r.n, small: r.small ? 1 : 0,
     p: r.pcts ? r.pcts.map(Math.round) : null, c: r.cls, avg: r.avg === null ? null : Math.round(r.avg),
-    prev: r.prev === null ? null : Math.round(r.prev), trend: aaTrendText(r.d), spark: r.spark, hist: r.hist, weak: r.weak });
+    prev: r.prev === null ? null : Math.round(r.prev), trend: aaTrendText(r.d), spark: r.spark, hist: r.hist, weak: r.weak, note: r.note });
   const now = new Date();
   return {
     updated: aaFmt2(now), period: '7 วันล่าสุด เทียบ 7 วันก่อนหน้า',
     branches: aaCompute(entries, true, 'Area', 'week').map(b => ({
       name: b.name, head: b.head, rows: b.rows.map(slim).concat([slim(b.total)]),
-      summary: b.parts.map(x => x[0] + ' ' + x[1]).join('  ·  ')
+      summary: b.rows.filter(r => r.small).length ? 'ข้อมูลยังน้อย (ไม่ขึ้นกราฟ): ' + b.rows.filter(r => r.small).map(r => r.name).join(', ') : ''
     }))
   };
 }
@@ -1562,10 +1582,8 @@ function aaRowHtml(r) {
   const tds = r.small
     ? '<td class="aa-x" colspan="3">ข้อมูลยังน้อย</td>'
     : r.pcts.map((p, i) => `<td class="aa-${r.cls[i]}">${Math.round(p)}%</td>`).join('');
-  const trend = r.d === null ? '<td class="aa-x">—</td>' : r.d > 0 ? `<td class="aa-up">${aaTrendText(r.d)}</td>` : r.d < 0 ? `<td class="aa-dn">${aaTrendText(r.d)}</td>` : '<td>➖ 0</td>';
   return `<tr class="${r.isTotal ? 'aa-tot' : ''}"><td class="n">${r.name}</td><td>${r.n}</td>${tds}` +
-    `<td>${r.small ? '—' : '<b>' + Math.round(r.avg) + '%</b>'}</td><td>${r.prev !== null ? Math.round(r.prev) + '%' : '—'}</td>${trend}` +
-    `<td style="letter-spacing:1px;color:#666">${r.spark}</td><td>${r.weak}</td></tr>`;
+    `<td>${r.small ? '—' : '<b>' + Math.round(r.avg) + '%</b>'}</td><td style="text-align:left;min-width:170px">${r.note}</td></tr>`;
 }
 async function loadAttrAnalysis() {
   const el = document.getElementById('aa-content');
@@ -1578,9 +1596,9 @@ async function loadAttrAnalysis() {
     const boxes = aaCompute(entries, isArea, myBranch, period);
     if (!boxes.length) { el.innerHTML = '<div style="color:var(--text3);font-size:13px">ยังไม่มีข้อมูลที่มีตัวเทียบ (ต้องมี 2 คนขึ้นไป หรือมี Boss)</div>'; return; }
     el.innerHTML = boxes.map(b => `<div class="aa-box"><div class="aa-bh"><span>🏢 ${b.name}</span><span>${b.head}</span></div>
-      <div class="aa-scroll"><table class="aa-t"><tr><th style="width:90px">คน</th><th>ครั้ง</th><th>Sweet</th><th>Acid</th><th>Bitter</th><th>เฉลี่ย</th><th>7 วันก่อน</th><th>แนวโน้ม</th><th>4 สัปดาห์</th><th>จุดอ่อน</th></tr>
+      <div class="aa-scroll"><table class="aa-t"><tr><th style="width:90px">คน</th><th>ครั้ง</th><th>Sweet</th><th>Acid</th><th>Bitter</th><th>เฉลี่ย</th><th>ข้อสังเกต</th></tr>
       ${b.rows.map(aaRowHtml).join('')}${aaRowHtml(b.total)}</table></div>
-      ${b.parts.length ? `<div class="aa-sum">${b.parts.map(x => x[0] + ' <b>' + x[1] + '</b>').join(' &nbsp;·&nbsp; ')}</div>` : ''}</div>`).join('');
+      ${b.rows.some(r => r.small) ? `<div class="aa-sum">ข้อมูลยังน้อย: ${b.rows.filter(r => r.small).map(r => r.name).join(', ')}</div>` : ''}</div>`).join('');
   } catch (e) {
     el.innerHTML = '<div style="color:var(--text3);font-size:13px">โหลดไม่สำเร็จ: ' + (e.message || e) + '</div>';
   }
