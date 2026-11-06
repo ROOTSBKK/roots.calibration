@@ -354,7 +354,7 @@ onAuthStateChanged(auth, async (user) => {
 function initApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-content').style.display = 'block';
-  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v10 พ.ย.-06a`;
+  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v10 พ.ย.-06d`;
   window.setupForm();
 }
 </script>
@@ -931,11 +931,25 @@ let _sheetCfg = null;
 async function getSheetCfg(force) {
   if (_sheetCfg && !force) return _sheetCfg;
   let url = SHEET_WEBHOOK_URL, link = '';
+  const isArea = window._currentStaff && window._currentStaff.branch === 'Area';
+  let found = false;
+  // 1) new home: 'taste' collection (every signed-in staff can read it, so auto-sync works on all devices)
   try {
-    const d = await window._fsgetDoc(window._fsdoc(window._db, 'shared', 'config:taste-sheet'));
-    if (d.exists()) { const v = JSON.parse(d.data().value); url = url || v.url || ''; link = v.link || ''; }
+    const d = await window._fsgetDoc(window._fsdoc(window._db, 'taste', 'config:taste-sheet'));
+    if (d.exists()) { const v = JSON.parse(d.data().value); url = url || v.url || ''; link = v.link || ''; found = true; }
   } catch(e) {}
+  // 2) old home: 'shared' (only Area can read it)
+  if (!found) {
+    try {
+      const d = await window._fsgetDoc(window._fsdoc(window._db, 'shared', 'config:taste-sheet'));
+      if (d.exists()) { const v = JSON.parse(d.data().value); url = url || v.url || ''; link = v.link || ''; }
+    } catch(e) {}
+  }
   if (!url) { try { url = localStorage.getItem('taste_sheet_url') || ''; } catch(e) {} }
+  // Area migrates the URL to the new place automatically
+  if (isArea && url && !found) {
+    try { await window._fssetDoc(window._fsdoc(window._db, 'taste', 'config:taste-sheet'), { key: 'config:taste-sheet', branch: 'Area', value: JSON.stringify({ url, link, by: window._currentStaff.name, updated: Date.now() }) }); } catch(e) {}
+  }
   _sheetCfg = { url, link };
   return _sheetCfg;
 }
@@ -962,7 +976,7 @@ async function saveSheetCfg() {
   if (url && !/^https:\/\/script\.google\.com\/.+\/exec$/.test(url)) { st.textContent = 'URL ต้องขึ้นต้น https://script.google.com และลงท้าย /exec'; return; }
   try { localStorage.setItem('taste_sheet_url', url); } catch(e) {}
   try {
-    await window._fssetDoc(window._fsdoc(window._db, 'shared', 'config:taste-sheet'), { key: 'config:taste-sheet', branch: 'Area', value: JSON.stringify({ url, link, by: window._currentStaff.name, updated: Date.now() }) });
+    await window._fssetDoc(window._fsdoc(window._db, 'taste', 'config:taste-sheet'), { key: 'config:taste-sheet', branch: 'Area', value: JSON.stringify({ url, link, by: window._currentStaff.name, updated: Date.now() }) });
     st.textContent = '✅ บันทึกแล้ว — ทุกเครื่องจะใช้ URL นี้';
   } catch(e) {
     st.textContent = 'บันทึกขึ้นระบบไม่สำเร็จ (' + e.message + ') — เก็บไว้ในเครื่องนี้แทน';
