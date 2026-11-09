@@ -382,7 +382,7 @@ onAuthStateChanged(auth, async (user) => {
 function initApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-content').style.display = 'block';
-  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v11 พ.ย.-09a`;
+  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v11 พ.ย.-09c`;
   window.setupForm();
 }
 </script>
@@ -643,15 +643,18 @@ function determineReference(sessionEntries) {
     return { source: 'boss', bossName: 'Boss', intensity: bossEntry.intensity, accept: bossEntry.accept };
   }
   if (sessionEntries.length < 2) return null; // 2 people = pairwise comparison, 3+ = majority
+  return buildMajorityRef(sessionEntries, sessionEntries.length === 2 ? 'pair' : 'majority');
+}
+function buildMajorityRef(entries, source) {
   const intensity = {};
-  ATTRS.forEach(a => { intensity[a] = calcMode(sessionEntries.map(e => e.intensity[a])); });
+  ATTRS.forEach(a => { intensity[a] = calcMode(entries.map(e => e.intensity[a])); });
   const accept = {};
-  ACCEPT_ATTRS.forEach(a => { accept[a] = majorityAccept(sessionEntries, a); });
+  ACCEPT_ATTRS.forEach(a => { accept[a] = majorityAccept(entries, a); });
   const intensityTies = {};
-  ATTRS.forEach(a => { intensityTies[a] = calcModes(sessionEntries.map(e => e.intensity[a])); });
+  ATTRS.forEach(a => { intensityTies[a] = calcModes(entries.map(e => e.intensity[a])); });
   const acceptTiesMap = {};
-  ACCEPT_ATTRS.forEach(a => { acceptTiesMap[a] = acceptTies(sessionEntries, a); });
-  return { source: sessionEntries.length === 2 ? 'pair' : 'majority', intensity, accept, intensityTies, acceptTies: acceptTiesMap };
+  ACCEPT_ATTRS.forEach(a => { acceptTiesMap[a] = acceptTies(entries, a); });
+  return { source, intensity, accept, intensityTies, acceptTies: acceptTiesMap };
 }
 
 // Computes the full Taste Only score (0-100) for one entry against the
@@ -660,6 +663,11 @@ function determineReference(sessionEntries) {
 // With exactly 2 tasters (no Boss) each person is scored against the OTHER
 // person, so both get the same similarity score and order doesn't matter.
 function personalRef(ref, myEntry, sessionEntries) {
+  // เสียงส่วนใหญ่: ไม่นับเสียงของตัวเอง (ตัวเทียบ = คนอื่นในวงเท่านั้น) — เกณฑ์ 2026-11-09
+  if (ref && ref.source === 'majority') {
+    const others = sessionEntries.filter(e => e !== myEntry && e.id !== myEntry.id);
+    return others.length >= 2 ? buildMajorityRef(others, 'majority') : ref;
+  }
   if (!ref || ref.source !== 'pair') return ref;
   const other = sessionEntries.find(e => e.id !== myEntry.id) || sessionEntries.find(e => e !== myEntry);
   return other ? { source: 'pair', intensity: other.intensity, accept: other.accept || {} } : ref;
@@ -1143,12 +1151,12 @@ async function buildExportData(opts) {
         taste_balance: e.tasteBalance ?? '', tactile: e.tactile ?? '',
         ref_source: ref ? (ref.source === 'boss' ? 'Boss' : ref.source === 'pair' ? 'Pair' : 'Majority') : '', score: total, rank: rk,
         time_recorded: fmtTime(e.created),
-        ...Object.fromEntries(DIR_ATTRS.map(a => [a + '_vs', (ref && !(ref.source === 'boss' && e.taster === 'Boss')) ? dirLabel(e.intensity[a], ref.intensity[a]) : '']))
+        ...Object.fromEntries(DIR_ATTRS.map(a => [a + '_vs', (ref && !(ref.source === 'boss' && e.taster === 'Boss')) ? dirLabelRef(e.intensity[a], personalRef(ref, e, es), a) : '']))
       });
     });
     const dirCounts = {};
     DIR_ATTRS.forEach(a => {
-      const labels = es.map(e => (ref && !(ref.source === 'boss' && e.taster === 'Boss')) ? dirLabel(e.intensity[a], ref.intensity[a]) : '').filter(Boolean);
+      const labels = es.map(e => (ref && !(ref.source === 'boss' && e.taster === 'Boss')) ? dirLabelRef(e.intensity[a], personalRef(ref, e, es), a) : '').filter(Boolean);
       dirCounts[a + '_same'] = labels.filter(l => l === 'ทิศทางเดียวกัน').length;
       dirCounts[a + '_close'] = labels.filter(l => l === 'คล้ายกัน').length;
       dirCounts[a + '_diff'] = labels.filter(l => l === 'แตกต่างกัน').length;
@@ -1180,6 +1188,14 @@ const DIR_ATTRS = ['acidity','sweetness','bitterness'];
 function dirLabel(my, ref) {
   if (my == null || ref == null) return '';
   const d = Math.abs(my - ref);
+  return d === 0 ? 'ทิศทางเดียวกัน' : d === 1 ? 'คล้ายกัน' : 'แตกต่างกัน';
+}
+
+// เหมือน dirLabel แต่ใช้ตัวเทียบเดียวกับการให้คะแนน: ไม่นับเสียงตัวเอง + ค่าที่เสมอกันนับถูกทุกค่า (ใช้ค่าที่ใกล้ที่สุด)
+function dirLabelRef(my, ref, attr) {
+  if (my == null || !ref) return '';
+  const alts = ref.intensityTies?.[attr] || [ref.intensity[attr]];
+  const d = Math.min(...alts.map(r => Math.abs(my - r)));
   return d === 0 ? 'ทิศทางเดียวกัน' : d === 1 ? 'คล้ายกัน' : 'แตกต่างกัน';
 }
 
