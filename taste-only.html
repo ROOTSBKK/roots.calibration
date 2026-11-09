@@ -382,7 +382,7 @@ onAuthStateChanged(auth, async (user) => {
 function initApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-content').style.display = 'block';
-  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v11 พ.ย.-06j`;
+  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v11 พ.ย.-09a`;
   window.setupForm();
 }
 </script>
@@ -664,6 +664,11 @@ function personalRef(ref, myEntry, sessionEntries) {
   const other = sessionEntries.find(e => e.id !== myEntry.id) || sessionEntries.find(e => e !== myEntry);
   return other ? { source: 'pair', intensity: other.intensity, accept: other.accept || {} } : ref;
 }
+// น้ำหนักคะแนน (รวม 100) — เกณฑ์ใหม่ 2026-11-09:
+//  ความเข้ม: Sweetness/Acidity/Bitterness รสละ 20 · Mouthfeel/Aftertaste รสละ 10  (รวม 80)
+//  Accept/Unaccept: Acidity/Bitterness ข้อละ 10 (รวม 20) · Accept ผิดแม้ 1 ข้อ → Rank สูงสุด 2
+const W_INT = { acidity: 20, sweetness: 20, bitterness: 20, mouthfeel: 10, aftertaste: 10 };
+const W_ACC = { acidity: 10, bitterness: 10 };
 function computeScore(myEntry, sessionEntries) {
   const ref0 = determineReference(sessionEntries);
   if (!ref0) return null;
@@ -672,17 +677,23 @@ function computeScore(myEntry, sessionEntries) {
   if (ref.source === 'boss' && myEntry.taster === 'Boss') return { total: null, isRefPerson: true, refSource: 'boss' };
 
   let total = 0;
-  ATTRS.forEach(a => { total += scoreIntensityRef(myEntry.intensity[a], ref, a) * 10; }); // 5 × 10 = 50
-  ACCEPT_ATTRS.forEach(a => { total += scoreAcceptRef(myEntry.accept?.[a], ref, a) * 25; }); // 2 × 25 = 50
-  return { total: Math.round(total), refSource: ref.source };
+  ATTRS.forEach(a => { total += scoreIntensityRef(myEntry.intensity[a], ref, a) * W_INT[a]; });
+  let acceptMiss = 0;
+  ACCEPT_ATTRS.forEach(a => {
+    const sc = scoreAcceptRef(myEntry.accept?.[a], ref, a);
+    total += sc * W_ACC[a];
+    if (sc < 1) acceptMiss++;
+  });
+  return { total: Math.round(total), refSource: ref.source, acceptMiss };
 }
 
 // Rank 1 = เหมือน (score ≥90, green) · Rank 2 = คล้าย (50-89, amber) · Rank 3 = ไม่เหมือน (<50, red)
+// ถ้า Accept/Unaccept ไม่ตรงตัวเทียบแม้ 1 ข้อ (acceptMiss>0) → ได้ Rank 1 ไม่ได้ (สูงสุด Rank 2)
 // 90/50 breakpoints (Rank 1 raised from 80 to 90 on 2026-11-06).
-function getRank(score) {
+function getRank(score, acceptMiss) {
   if (score === null || score === undefined) return { rank: null, label: '—', color: 'var(--text3)' };
-  if (score >= 90) return { rank: 1, label: 'เหมือน', color: 'var(--green)' };
-  if (score >= 50) return { rank: 2, label: 'คล้าย', color: 'var(--amber)' };
+  if (score >= 90 && !(acceptMiss > 0)) return { rank: 1, label: 'เหมือน', color: 'var(--green)' };
+  if (score >= 50 || score >= 90) return { rank: 2, label: 'คล้าย', color: 'var(--amber)' };
   return { rank: 3, label: 'ไม่เหมือน', color: 'var(--red)' };
 }
 
@@ -762,19 +773,19 @@ async function showResult(myEntry) {
 
     const total = result?.total ?? null;
     document.getElementById('result-score').textContent = total !== null ? total : '—';
-    const rankInfo = getRank(total);
+    const rankInfo = getRank(total, result?.acceptMiss);
     document.getElementById('result-rank').innerHTML = total !== null
       ? `<span style="color:${rankInfo.color}">Rank ${rankInfo.rank} — ${rankInfo.label}</span>`
       : '';
 
     const detail = [];
     ATTRS.forEach(a => {
-      const pts = scoreIntensityRef(myEntry.intensity[a], ref, a) * 10;
-      detail.push({ attr: a, mine: myEntry.intensity[a], ref: ref.intensity[a], pts, max: 10, kind: 'intensity' });
+      const pts = scoreIntensityRef(myEntry.intensity[a], ref, a) * W_INT[a];
+      detail.push({ attr: a, mine: myEntry.intensity[a], ref: ref.intensity[a], pts, max: W_INT[a], kind: 'intensity' });
     });
     ACCEPT_ATTRS.forEach(a => {
-      const pts = scoreAcceptRef(myEntry.accept?.[a], ref, a) * 25;
-      detail.push({ attr: a, mine: myEntry.accept?.[a], ref: ref.accept[a], pts, max: 25, kind: 'accept' });
+      const pts = scoreAcceptRef(myEntry.accept?.[a], ref, a) * W_ACC[a];
+      detail.push({ attr: a, mine: myEntry.accept?.[a], ref: ref.accept[a], pts, max: W_ACC[a], kind: 'accept' });
     });
 
     const fmtAccept = v => v === 'accept' ? '✓ Accept' : v === 'unaccept' ? '✕ Unaccept' : '—';
@@ -1122,7 +1133,7 @@ async function buildExportData(opts) {
     es.filter(visible).sort((a,b)=>a.created-b.created).forEach(e => {
       const sc = scored.find(x => x.e.id === e.id).sc;
       const total = sc && sc.total != null ? sc.total : '';
-      const rk = total === '' ? '' : getRank(total).rank;
+      const rk = total === '' ? '' : getRank(total, sc.acceptMiss).rank;
       entryRows.push({
         id: e.id, date: e.date, branch: e.branch, coffee: e.coffee,
         dose: rc.dose||'', yield: rc.yield||'', ratio: rc.ratio||'', time: rc.time||'', temp: rc.temp||'', grind: rc.grind||'',
@@ -1144,7 +1155,7 @@ async function buildExportData(opts) {
     });
     const totals = scored.map(x => x.sc && x.sc.total != null ? x.sc.total : null).filter(v => v !== null);
     const avg = a => es.length ? +(es.reduce((t,e)=>t+e.intensity[a],0)/es.length).toFixed(2) : '';
-    const ranks = totals.map(t => getRank(t).rank);
+    const ranks = scored.filter(x => x.sc && x.sc.total != null).map(x => getRank(x.sc.total, x.sc.acceptMiss).rank);
     sessionRows.push({
       id: key, date: es[0].date, branch: es[0].branch, coffee: es[0].coffee,
       dose: rc.dose||'', yield: rc.yield||'', ratio: rc.ratio||'', time: rc.time||'', temp: rc.temp||'', grind: rc.grind||'',
@@ -1257,7 +1268,7 @@ async function loadHistory() {
         const sc = computeScore(e, s.es);
         let tag = '<span style="color:var(--text3)">' + (s.es.length < 2 ? 'รอคนชิมเพิ่ม (ต้อง 2 คนขึ้นไป หรือมี Boss)' : 'รอตัวเทียบ') + '</span>';
         if (sc && sc.isRefPerson) tag = '<span style="color:var(--blue,#1A5FA8);font-weight:700">ตัวเทียบ</span>';
-        else if (sc && sc.total != null) { const rk = getRank(sc.total); tag = `<span style="color:${rk.color};font-weight:700">${sc.total} · ${rk.label}</span>`; }
+        else if (sc && sc.total != null) { const rk = getRank(sc.total, sc.acceptMiss); tag = `<span style="color:${rk.color};font-weight:700">${sc.total} · ${rk.label}</span>`; }
         const guest = e.isGuest ? ` <span style="font-size:10px;background:var(--bg2);border-radius:8px;padding:1px 6px">Guest ${escHtml(e.homeBranch||'')}</span>` : '';
         return `<div style="display:flex;justify-content:space-between;padding:3px 0;border-top:1px solid var(--bg3)"><span>${escHtml(e.taster)}${guest}</span>${tag}</div>`;
       }).join('');
@@ -1356,7 +1367,7 @@ async function loadTeamCompare() {
       html += `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">เทียบกับ: ${refTasterName ? 'Boss' : 'เสียงส่วนมากของทีม (Mode)'}</div>`;
       scored.forEach(({e, score}) => {
         const pct = score?.total;
-        const rankInfo = getRank(pct);
+        const rankInfo = getRank(pct, score?.acceptMiss);
         html += `<div class="entry-card"><div class="entry-top"><span>${e.taster}</span><span style="color:${rankInfo.color}">${pct ?? '—'} ${pct!==null&&pct!==undefined?`· Rank ${rankInfo.rank} ${rankInfo.label}`:''}</span></div></div>`;
       });
       html += '</div>';
