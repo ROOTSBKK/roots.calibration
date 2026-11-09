@@ -382,7 +382,7 @@ onAuthStateChanged(auth, async (user) => {
 function initApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-content').style.display = 'block';
-  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v11 พ.ย.-09d`;
+  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v11 พ.ย.-09g`;
   window.setupForm();
 }
 </script>
@@ -1552,17 +1552,13 @@ function aaSpark(weeks) {
 }
 // Observation text: which attributes the person tastes stronger / weaker than the reference
 function aaNote(cur, pcts) {
-  const items = AA_ATTRS.map((a, i) => ({ a, pct: pcts[i], bias: cur.d[a] / cur.n })).sort((x, y) => x.pct - y.pct);
-  const lbl = x => ATTR_LABELS[x.a];
-  const more = items.filter(x => x.pct < 90 && x.bias > 0.3);
-  const less = items.filter(x => x.pct < 90 && x.bias < -0.3);
-  const shaky = items.filter(x => x.pct < 70 && Math.abs(x.bias) <= 0.3);
-  const parts = [];
-  if (more.length) parts.push('รับ ' + more.map(lbl).join(', ') + ' มากกว่า');
-  if (less.length) parts.push('รับ ' + less.map(lbl).join(', ') + ' น้อยกว่า');
-  if (shaky.length) parts.push(shaky.map(lbl).join(', ') + ' ไม่คงที่');
-  if (!more.length && !less.length) return shaky.length ? 'ไม่เอนเอียงชัดเจน (' + parts[0] + ')' : '✅ ตรงดี';
-  return parts.join(' · ');
+  const items = AA_ATTRS.map((a, i) => ({ a, pct: pcts[i], bias: cur.d[a] / cur.n }));
+  // ✅ ตรงดี ได้ก็ต่อเมื่อทั้ง 3 รสเป็นสีเขียว (≥80%) — มีรสไหนเหลืองหรือแดง = ไม่ใช่ตรงดี
+  const weak = items.filter(x => aaCls(x.pct, cur.n) !== 'g').sort((x, y) => x.pct - y.pct);
+  if (!weak.length) return '✅ ตรงดี';
+  // บอกตรงๆ ว่าควรจับตารสไหน + ทิศทาง (รับมากกว่า/น้อยกว่า/ไม่คงที่)
+  const dir = x => x.bias > 0.3 ? 'รับมากกว่า' : x.bias < -0.3 ? 'รับน้อยกว่า' : 'ไม่คงที่';
+  return 'ควรจับตา: ' + weak.map(x => ATTR_LABELS[x.a] + ' ' + Math.round(x.pct) + '% (' + dir(x) + ')').join(' · ');
 }
 function aaRowData(name, weeks, period, isTotal) {
   const cur = period === 'week' ? aaMerge(weeks, [0]) : aaMerge(weeks, Object.keys(weeks));
