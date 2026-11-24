@@ -382,7 +382,7 @@ onAuthStateChanged(auth, async (user) => {
 function initApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-content').style.display = 'block';
-  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v11 พ.ย.-09g`;
+  document.getElementById('hdr-user').textContent = `${window._currentStaff.name} · ${window._currentStaff.branch} · v11 พ.ย.-09h`;
   window.setupForm();
 }
 </script>
@@ -464,6 +464,12 @@ function sessionKeyOf(date, branch, coffee) {
   return `${date}|${branch}|${coffee.trim().toLowerCase()}`;
 }
 
+// Round number lives in the sessionKey suffix: no suffix = round 1, '|r2' = round 2 ...
+function roundOf(sessionKey) {
+  const m = String(sessionKey || '').match(/\|r(\d+)$/);
+  return m ? parseInt(m[1], 10) : 1;
+}
+
 function resetTastingInputs() {
   currentIntensity = { acidity:3, sweetness:3, bitterness:3, mouthfeel:3, aftertaste:3 };
   currentAccept = { acidity:null, bitterness:null };
@@ -506,7 +512,8 @@ function recipeText(r) {
 function openTastingPage(session) {
   currentSession = session;
   resetTastingInputs();
-  document.getElementById('tasting-session-label').textContent = `${session.coffee} · ${session.branch} · ${session.date}`;
+  const rnd = roundOf(session.sessionKey);
+  document.getElementById('tasting-session-label').textContent = `${session.coffee}${rnd > 1 ? ' (รอบ ' + rnd + ')' : ''} · ${session.branch} · ${session.date}`;
   const rt = recipeText(session.recipe);
   document.getElementById('tasting-recipe').textContent = rt ? '🧪 ' + rt : '';
   const visiting = session.branch !== window._currentStaff.branch && !AREA_STAFF.includes(window._currentStaff.name);
@@ -521,10 +528,28 @@ async function startTasting() {
   const coffee = document.getElementById('f-coffee').value.trim();
   if (!coffee) { showToast('กรุณาเลือกกาแฟ'); return; }
 
-  const sessionKey = sessionKeyOf(date, branch, coffee);
+  // Same coffee + branch + day already opened? Offer a new round (รอบ 2, 3 ...)
+  // instead of silently merging into the first session.
+  const baseKey = sessionKeyOf(date, branch, coffee);
+  let sessionKey = baseKey;
+  try {
+    const snap = await getSharedDocs({ since: date, fresh: true });
+    const keys = new Set();
+    snap.forEach(d => {
+      const data = d.data();
+      if (data.key && data.key.startsWith('tastesession:')) {
+        try { const r = JSON.parse(data.value); if (r.sessionKey === baseKey || String(r.sessionKey).startsWith(baseKey + '|r')) keys.add(r.sessionKey); } catch (err) {}
+      }
+    });
+    if (keys.size) {
+      const next = Math.max(...[...keys].map(roundOf)) + 1;
+      if (!confirm(`มี Session "${coffee}" ที่ ${branch} วันนี้แล้ว (${keys.size} รอบ)\n\nกด OK = เปิดเป็นรอบ ${next} ใหม่\nกด Cancel = ยกเลิก แล้วไปกด "เข้าร่วม" รอบเดิมในลิสต์`)) return;
+      sessionKey = baseKey + '|r' + next;
+    }
+  } catch (e) { /* offline/read error: fall back to the base key */ }
   const sessionRecord = {
     id: 'tastesession:' + Date.now() + ':' + Math.random().toString(36).slice(2,7),
-    sessionKey, date, branch, coffee,
+    sessionKey, date, branch, coffee, round: roundOf(sessionKey),
     recipe: readRecipe(),
     createdBy: window._currentStaff.name,
     created: Date.now()
@@ -908,7 +933,7 @@ async function loadRecentSessions() {
     }
     listEl.innerHTML = sessions.map((s, i) => `
       <div class="entry-card">
-        <div class="entry-top"><span>${s.coffee}</span><span style="color:var(--text3)">${s.count} คนชิมแล้ว</span></div>
+        <div class="entry-top"><span>${s.coffee}${(roundOf(s.sessionKey) > 1 || sessions.some(o => o !== s && o.coffee === s.coffee)) ? ' · รอบ ' + roundOf(s.sessionKey) : ''}</span><span style="color:var(--text3)">${s.count} คนชิมแล้ว</span></div>
         <div class="entry-meta">${s.branch} · ${s.date} · เปิดโดย ${s.createdBy||'—'}</div>
         ${s.recipe ? `<div class="entry-meta">🧪 ${recipeText(s.recipe)}</div>` : ''}
         <button class="btn btn-secondary" style="margin-top:8px;padding:8px" onclick="joinSession(${i})">👥 เข้าร่วมชิม Session นี้</button>
@@ -1327,7 +1352,7 @@ async function loadHistory() {
         return `<div style="display:flex;justify-content:space-between;padding:3px 0;border-top:1px solid var(--bg3)"><span>${escHtml(e.taster)}${guest}</span>${tag}</div>`;
       }).join('');
       return `<div class="entry-card">
-        <div class="entry-top"><span>${escHtml(s.coffee)}</span><span style="color:var(--text3)">${escHtml(s.date)}</span></div>
+        <div class="entry-top"><span>${escHtml(s.coffee)}${roundOf(s.key) > 1 ? ' · รอบ ' + roundOf(s.key) : ''}</span><span style="color:var(--text3)">${escHtml(s.date)}</span></div>
         <div class="entry-meta">เปิดโดย ${escHtml(s.openedBy || '—')} · ${s.es.length} คนชิม${ref ? ' · ตัวเทียบ: ' + (ref.source === 'boss' ? 'Boss' : ref.source === 'pair' ? 'เทียบกันเอง 2 คน' : 'เสียงส่วนมาก') : ''}</div>
         ${s.recipe ? `<div class="entry-meta">🧪 ${escHtml(recipeText(s.recipe))}</div>` : ''}
         <div style="margin-top:6px">${rows || '<div style="color:var(--text3)">ยังไม่มีคนชิม</div>'}</div>
